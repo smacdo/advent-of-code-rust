@@ -12,12 +12,12 @@ static SOLVER: Solver = Solver {
     part_two: day_2_2,
 };
 
-pub fn day_2_1(input: &str) -> Answer {
+pub fn day_2_1(_input: &str) -> Answer {
     println!("day 2-1");
     Answer::NotFinished
 }
 
-pub fn day_2_2(input: &str) -> Answer {
+pub fn day_2_2(_input: &str) -> Answer {
     println!("day 2-2");
     Answer::NotFinished
 }

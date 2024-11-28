@@ -1,4 +1,5 @@
 use std::{
+    fs,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -20,35 +21,53 @@ impl ClientOptions {
         }
     }
 
-    pub fn with_config_file<P: AsRef<Path>>(mut self, path: P) -> Self {
-        // TODO: implement loading a config file.
-        // TODO: add test
-        self
+    pub fn with_config_file<P: AsRef<Path>>(self, path: P) -> Self {
+        // TODO: raise error if the file does not exist
+        // TODO: raise error if JSON parsing fails
+        // TODO: add tests
+        let config_text = fs::read_to_string(&path).expect("config file should exist");
+        self.with_json_config(&config_text)
+            .expect("json parsing failed")
     }
 
     pub fn with_local_dir_config(mut self) -> Self {
-        // TODO: implement loading current directory config
-        // TODO: add test
+        // TODO: log if file is found/not found
+        // TODO: add tests
+        let local_config_path = std::env::current_dir()
+            .expect("current_dir is expected to work")
+            .join("aoc_settings.json");
+
+        if local_config_path.exists() {
+            self = self.with_config_file(local_config_path);
+        }
+
         self
     }
 
-    pub fn with_user_config(mut self) -> Self {
+    pub fn with_user_config(self) -> Self {
         // TODO: implement loading config from path relative to home directory.
         // TODO: check if env variable has changed the user config path.
-        // TODO: add test
+        // TODO: log if file is found/not found
+        // TODO: add tests
         self
     }
 
     pub fn with_env_vars(mut self) -> Self {
+        // TODO: log when keys are found and used
+        // TODO: tests
         const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
 
         if let Ok(v) = std::env::var(SESSION_ID_ENV_KEY) {
+            tracing::debug!(
+                "using session id `{}` from env var {}",
+                v,
+                SESSION_ID_ENV_KEY
+            );
             self.session_id = Some(v);
         }
 
         // TODO: add key for cache directory.
         // TODO: add key for encryption token.
-        // TODO: test
 
         self
     }
@@ -65,7 +84,7 @@ impl ClientOptions {
         ) {
             if group.contains_key(key) {
                 match &group[key] {
-                    serde_json::Value::String(s) => setter(&s),
+                    serde_json::Value::String(s) => setter(s),
                     _ => {
                         // TODO: convert to Error
                         panic!("{} key must be a string value", key)
@@ -75,6 +94,8 @@ impl ClientOptions {
         }
 
         let j: serde_json::Value = serde_json::from_str(json_config)?;
+
+        // TODO: log each key that is found and used.
 
         match j {
             serde_json::Value::Object(group) => {
@@ -177,7 +198,7 @@ mod tests {
         }
         "#;
 
-        let options = ClientOptions::new().with_json_config(&json_data).unwrap();
+        let options = ClientOptions::new().with_json_config(json_data).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert_eq!(
@@ -196,7 +217,7 @@ mod tests {
         }
         "#;
 
-        let options = ClientOptions::new().with_json_config(&json_data).unwrap();
+        let options = ClientOptions::new().with_json_config(json_data).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert!(options.cache_dir.is_none());

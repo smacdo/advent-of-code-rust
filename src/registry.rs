@@ -48,8 +48,8 @@ impl SolverRegistry {
 
     pub fn run_all(&self) {
         // TODO: move this out of registry and into CLI main.
-        for (_year, solvers_for_year) in &self.solvers {
-            for (_day, s) in solvers_for_year {
+        for solvers_for_year in self.solvers.values() {
+            for s in solvers_for_year.values() {
                 let a1 = (s.part_one)("");
                 let a2 = (s.part_two)("");
 

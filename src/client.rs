@@ -8,18 +8,53 @@ use crate::{
 
 pub trait Client {}
 
+#[derive(Debug)]
 pub struct WebClient {
     config: ClientConfig,
+    http_client: reqwest::blocking::Client,
 }
 
 impl WebClient {
+    const ADVENT_OF_CODE_DOMAIN: &'static str = "adventofcode.com";
+    const ADVENT_OF_CODE_URL: &'static str = "https://adventofcode.com";
+
     pub fn new() -> Self {
         Self::with_options(Default::default())
     }
 
     pub fn with_options(options: ClientOptions) -> Self {
+        // Convert client options into a actual configuration values.
+        // TODO: validate config settings are sane.
+        let config = ClientConfig::new(options);
+
+        // Create an HTTP client for interacting with the Advent of Code website.
+        // TODO: verify dev@smacdo.com email OK
+        let cookies: reqwest::cookie::Jar = Default::default();
+        let cookie_data = format!(
+            "session={}; Domain={}",
+            config.session_id,
+            Self::ADVENT_OF_CODE_DOMAIN
+        );
+
+        tracing::debug!(
+            "adding session id to cookie jar with value `{}`",
+            cookie_data
+        );
+
+        cookies.add_cookie_str(
+            &cookie_data,
+            &Self::ADVENT_OF_CODE_URL.parse::<reqwest::Url>().unwrap(),
+        );
+
+        let http_client = reqwest::blocking::ClientBuilder::new()
+            .cookie_provider(cookies.into())
+            .user_agent("github.com/smacdo/advent-of-code-rust [email: dev@smacdo.com]")
+            .build()
+            .expect("unexpected error when constructing reqwest http client");
+
         Self {
-            config: ClientConfig::new(options),
+            config,
+            http_client,
         }
     }
 
@@ -53,14 +88,46 @@ impl WebClient {
     }
 
     pub fn get_input(&self, day: Day, year: Year) -> String {
+        // TODO: convert execute expect into errors.
+
+        // Format the URL to fetch puzzle input.
+        let url = format!(
+            "{}/{}/day/{}/input",
+            Self::ADVENT_OF_CODE_URL,
+            year.0,
+            day.0
+        );
+
+        tracing::debug!(
+            "creating url to get puzzle input for day {} year {} with url = `{}`",
+            day.0,
+            year.0,
+            url
+        );
+
+        // Download the puzzle input to a string.
+        let request = self
+            .http_client
+            .get(url)
+            .build()
+            .expect("unexpected error when building HTTP GET request for `get_input`");
+
+        self.http_client
+            .execute(request)
+            .expect("unexpected error when HTTP GET for `get_input`")
+            .text()
+            .expect("unexpected error don't know what")
+
+        // TODO: Check for "Puzzle inputs differ by user.  Please log in to get your puzzle input."
+        // TODO: ^^^ above text comes with HTTP 400
+        // TODO: If the session id is set when this happens its either bad or timed out.
+    }
+
+    pub fn submit_answer(&mut self, _answer: Answer, _part: Part, _day: Day, _year: Year) {
         todo!()
     }
 
-    pub fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) {
-        todo!()
-    }
-
-    pub fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
+    pub fn get_puzzle(&self, _day: Day, _year: Year) -> Puzzle {
         todo!()
     }
 
@@ -75,7 +142,7 @@ impl Default for WebClient {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ClientConfig {
     pub session_id: String,
     pub cache_dir: PathBuf,
@@ -102,7 +169,7 @@ impl ClientConfig {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{NaiveDate, NaiveTime, TimeZone, Utc};
+    use chrono::{NaiveDate, NaiveTime, TimeZone};
     use chrono_tz::US::Eastern;
 
     use super::*;
@@ -150,7 +217,7 @@ mod tests {
 
     #[test]
     fn list_years_when_date_aoc_start() {
-        let client = web_client_with_time(2015, 03, 10, 11, 15, 7);
+        let client = web_client_with_time(2015, 3, 10, 11, 15, 7);
         assert_eq!(client.years(), vec![]);
     }
 
