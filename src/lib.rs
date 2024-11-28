@@ -1,8 +1,20 @@
-#[derive(Clone, Debug)]
+use client::WebClient;
+
+pub mod client;
+pub mod registry;
+pub mod settings;
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Day(pub usize);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Year(pub usize);
+
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub enum Part {
+    One,
+    Twp,
+}
 
 #[derive(Clone, Debug)]
 pub enum Answer {
@@ -11,37 +23,19 @@ pub enum Answer {
     Int(isize),
 }
 
-pub type SolverFn = fn(&str) -> Answer;
-
 #[derive(Clone, Debug)]
-pub struct Solver {
+pub struct Puzzle {
     pub day: Day,
     pub year: Year,
     pub title: Option<String>,
-    pub part_one: SolverFn,
-    pub part_two: SolverFn,
 }
 
-pub struct SolverRegistry {
-    solvers: Vec<Solver>,
+pub fn get_input(day: Day, year: Year) -> String {
+    let client: WebClient = Default::default();
+    todo!();
 }
 
-impl SolverRegistry {
-    pub fn new(solvers: &[Solver]) -> Self {
-        Self {
-            solvers: solvers.into(),
-        }
-    }
-
-    pub fn run_all(&self) {
-        for s in &self.solvers {
-            let a1 = (s.part_one)("");
-            let a2 = (s.part_two)("");
-
-            println!(
-                "day {}, year {}: part 1 = `{:?}`, part 2 = `{:?}`",
-                s.day.0, s.year.0, a1, a2
-            );
-        }
-    }
+pub fn solve(answer: Answer, part: Part, day: Day, year: Year) {
+    let client: WebClient = Default::default();
+    todo!();
 }

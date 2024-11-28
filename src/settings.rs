@@ -1,0 +1,198 @@
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+};
+
+pub struct ClientOptions {
+    pub session_id: Option<String>,
+    pub cache_dir: Option<PathBuf>,
+    pub encryption_token: Option<String>,
+}
+
+impl ClientOptions {
+    pub fn new() -> Self {
+        Self {
+            session_id: None,
+            cache_dir: None,
+            encryption_token: None,
+        }
+    }
+
+    pub fn with_config_file<P: AsRef<Path>>(mut self, path: P) -> Self {
+        // TODO: implement loading a config file.
+        // TODO: add test
+        self
+    }
+
+    pub fn with_local_dir_config(mut self) -> Self {
+        // TODO: implement loading current directory config
+        // TODO: add test
+        self
+    }
+
+    pub fn with_user_config(mut self) -> Self {
+        // TODO: implement loading config from path relative to home directory.
+        // TODO: check if env variable has changed the user config path.
+        // TODO: add test
+        self
+    }
+
+    pub fn with_env_vars(mut self) -> Self {
+        const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
+
+        if let Ok(v) = std::env::var(SESSION_ID_ENV_KEY) {
+            self.session_id = Some(v);
+        }
+
+        // TODO: add key for cache directory.
+        // TODO: add key for encryption token.
+        // TODO: test
+
+        self
+    }
+
+    pub fn with_json_config(mut self, json_config: &str) -> serde_json::Result<Self> {
+        const SESSION_ID_KEY: &str = "session_id";
+        const CACHE_DIR_KEY: &str = "cache_dir";
+        const ENCRYPTION_TOKEN_KEY: &str = "encryption_token";
+
+        fn try_get_key<F: FnOnce(&str)>(
+            group: &serde_json::Map<String, serde_json::Value>,
+            key: &str,
+            setter: F,
+        ) {
+            if group.contains_key(key) {
+                match &group[key] {
+                    serde_json::Value::String(s) => setter(&s),
+                    _ => {
+                        // TODO: convert to Error
+                        panic!("{} key must be a string value", key)
+                    }
+                };
+            }
+        }
+
+        let j: serde_json::Value = serde_json::from_str(json_config)?;
+
+        match j {
+            serde_json::Value::Object(group) => {
+                try_get_key(&group, SESSION_ID_KEY, |v| {
+                    self.session_id = Some(v.to_string())
+                });
+
+                try_get_key(&group, CACHE_DIR_KEY, |v| {
+                    self.cache_dir = Some(PathBuf::from_str(v).unwrap())
+                });
+
+                try_get_key(&group, ENCRYPTION_TOKEN_KEY, |v| {
+                    self.encryption_token = Some(v.to_string())
+                });
+            }
+            _ => {
+                // TODO: convert to Error
+                panic!("expected json config to be an object");
+            }
+        }
+
+        Ok(self)
+    }
+
+    pub fn with_session_id<S: Into<String>>(mut self, session_id: S) -> Self {
+        self.session_id = Some(session_id.into());
+        self
+    }
+
+    pub fn with_cache_dir<P: Into<PathBuf>>(mut self, cache_dir: P) -> Self {
+        self.cache_dir = Some(cache_dir.into());
+        self
+    }
+
+    pub fn with_encryption_token<S: Into<String>>(mut self, encryption_token: S) -> Self {
+        self.encryption_token = Some(encryption_token.into());
+        self
+    }
+}
+
+impl Default for ClientOptions {
+    fn default() -> Self {
+        Self::new()
+            .with_user_config()
+            .with_local_dir_config()
+            .with_env_vars()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn client_options_are_none_by_default() {
+        let options = ClientOptions::new();
+        assert!(options.session_id.is_none());
+        assert!(options.cache_dir.is_none());
+        assert!(options.encryption_token.is_none());
+    }
+
+    #[test]
+    fn client_can_overwrite_options() {
+        let options = ClientOptions::new()
+            .with_encryption_token("12345")
+            .with_encryption_token("54321");
+
+        assert!(options.session_id.is_none());
+        assert!(options.cache_dir.is_none());
+        assert_eq!(options.encryption_token, Some("54321".to_string()));
+    }
+
+    #[test]
+    fn set_client_options_with_builder_funcs() {
+        let options = ClientOptions::new()
+            .with_session_id("MY_SESSION_ID")
+            .with_cache_dir("MY_CACHE_DIR")
+            .with_encryption_token("MY_PASSWORD");
+
+        assert_eq!(options.session_id, Some("MY_SESSION_ID".to_string()));
+        assert_eq!(
+            options.cache_dir,
+            Some(PathBuf::from_str("MY_CACHE_DIR").unwrap())
+        );
+        assert_eq!(options.encryption_token, Some("MY_PASSWORD".to_string()));
+    }
+
+    #[test]
+    fn set_client_options_from_json() {
+        let json_data = r#"
+        {
+            "session_id": "12345",
+            "cache_dir": "path/to/cache",
+            "encryption_token": "foobar"
+        }
+        "#;
+
+        let options = ClientOptions::new().with_json_config(&json_data).unwrap();
+
+        assert_eq!(options.session_id, Some("12345".to_string()));
+        assert_eq!(
+            options.cache_dir,
+            Some(PathBuf::from_str("path/to/cache").unwrap())
+        );
+        assert_eq!(options.encryption_token, Some("foobar".to_string()));
+    }
+
+    #[test]
+    fn set_client_options_from_json_ignores_missing_fields() {
+        let json_data = r#"
+        {
+            "session_id": "12345",
+            "encryption_token_XXXX": "foobar"
+        }
+        "#;
+
+        let options = ClientOptions::new().with_json_config(&json_data).unwrap();
+
+        assert_eq!(options.session_id, Some("12345".to_string()));
+        assert!(options.cache_dir.is_none());
+        assert!(options.encryption_token.is_none());
+    }
+}

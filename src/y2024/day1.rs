@@ -1,4 +1,5 @@
-use advent_of_code_rust::{Answer, Day, Solver, Year};
+use advent_of_code_rust::registry::Solver;
+use advent_of_code_rust::{Answer, Day, Year};
 use linkme::distributed_slice;
 
 use crate::SOLVERS;
@@ -7,7 +8,6 @@ use crate::SOLVERS;
 static SOLVER: Solver = Solver {
     day: Day(1),
     year: Year(2024),
-    title: None,
     part_one: day_1_1,
     part_two: day_1_2,
 };
