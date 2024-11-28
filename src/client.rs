@@ -1,6 +1,10 @@
 use std::{path::PathBuf, str::FromStr};
 
-use crate::{settings::ClientOptions, Answer, Day, Part, Puzzle, Year};
+use chrono::Datelike;
+
+use crate::{
+    settings::ClientOptions, utils::get_puzzle_unlock_time, Answer, Day, Part, Puzzle, Year,
+};
 
 pub trait Client {}
 
@@ -20,11 +24,32 @@ impl WebClient {
     }
 
     pub fn years(&self) -> Vec<Year> {
-        todo!()
+        let start_time = self.config.start_time;
+        let unlock_time = get_puzzle_unlock_time(start_time.year().into());
+
+        let mut end_year = start_time.year();
+
+        if start_time < unlock_time {
+            end_year -= 1;
+        }
+
+        (2015..(end_year + 1)).map(|y| y.into()).collect()
     }
 
-    pub fn days(&self, year: Year) -> Vec<Day> {
-        todo!()
+    pub fn days(&self, year: Year) -> Option<Vec<Day>> {
+        let start_time = self.config.start_time;
+        let eastern_start_time = start_time.with_timezone(&chrono_tz::US::Eastern);
+        let requested_year = year.0 as i32;
+
+        match eastern_start_time.year().cmp(&requested_year) {
+            std::cmp::Ordering::Less => None,
+            std::cmp::Ordering::Equal => Some(
+                (1..(eastern_start_time.day() + 1))
+                    .map(|d| d.into())
+                    .collect(),
+            ),
+            std::cmp::Ordering::Greater => Some((0..25).map(|d| d.into()).collect()),
+        }
     }
 
     pub fn get_input(&self, day: Day, year: Year) -> String {
@@ -55,6 +80,7 @@ pub struct ClientConfig {
     pub session_id: String,
     pub cache_dir: PathBuf,
     pub encryption_token: String,
+    pub start_time: chrono::DateTime<chrono::Utc>,
 }
 
 impl ClientConfig {
@@ -69,6 +95,83 @@ impl ClientConfig {
             encryption_token: options
                 .encryption_token
                 .expect("encryption token must be set"),
+            start_time: options.fake_time.unwrap_or(chrono::Utc::now()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::{NaiveDate, NaiveTime, TimeZone, Utc};
+    use chrono_tz::US::Eastern;
+
+    use super::*;
+
+    fn web_client_with_time(
+        year: i32,
+        month: u32,
+        day: u32,
+        hour: u32,
+        min: u32,
+        sec: u32,
+    ) -> WebClient {
+        WebClient::with_options(
+            ClientOptions::new()
+                .with_session_id("UNIT_TEST_SESSION_ID")
+                .with_encryption_token("UNIT_TEST_PASSWORD")
+                .with_cache_dir("DO_NOT_USE")
+                .with_fake_time(
+                    Eastern
+                        .from_local_datetime(
+                            &NaiveDate::from_ymd_opt(year, month, day)
+                                .unwrap()
+                                .and_time(NaiveTime::from_hms_opt(hour, min, sec).unwrap()),
+                        )
+                        .unwrap()
+                        .with_timezone(&chrono::Utc),
+                ),
+        )
+    }
+
+    #[test]
+    fn list_years_when_date_is_after_start() {
+        let client = web_client_with_time(2018, 12, 1, 0, 0, 0);
+        assert_eq!(
+            client.years(),
+            vec![Year(2015), Year(2016), Year(2017), Year(2018)]
+        );
+    }
+
+    #[test]
+    fn list_years_when_date_is_before_start() {
+        let client = web_client_with_time(2018, 11, 30, 23, 59, 59);
+        assert_eq!(client.years(), vec![Year(2015), Year(2016), Year(2017)]);
+    }
+
+    #[test]
+    fn list_years_when_date_aoc_start() {
+        let client = web_client_with_time(2015, 03, 10, 11, 15, 7);
+        assert_eq!(client.years(), vec![]);
+    }
+
+    #[test]
+    fn list_days_before_start() {
+        let client = web_client_with_time(2020, 11, 30, 23, 59, 59);
+        assert_eq!(client.days(Year(2020)), None);
+    }
+
+    #[test]
+    fn list_days_at_start() {
+        let client = web_client_with_time(2020, 12, 1, 0, 0, 0);
+        assert_eq!(client.days(Year(2020)), Some(vec![Day(1)]));
+    }
+
+    #[test]
+    fn list_days_in_middle() {
+        let client = web_client_with_time(2020, 12, 6, 0, 0, 0);
+        assert_eq!(
+            client.days(Year(2020)),
+            Some(vec![Day(1), Day(2), Day(3), Day(4), Day(5), Day(6)])
+        );
     }
 }

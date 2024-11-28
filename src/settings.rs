@@ -7,6 +7,7 @@ pub struct ClientOptions {
     pub session_id: Option<String>,
     pub cache_dir: Option<PathBuf>,
     pub encryption_token: Option<String>,
+    pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl ClientOptions {
@@ -15,6 +16,7 @@ impl ClientOptions {
             session_id: None,
             cache_dir: None,
             encryption_token: None,
+            fake_time: None,
         }
     }
 
@@ -109,6 +111,11 @@ impl ClientOptions {
 
     pub fn with_encryption_token<S: Into<String>>(mut self, encryption_token: S) -> Self {
         self.encryption_token = Some(encryption_token.into());
+        self
+    }
+
+    pub fn with_fake_time(mut self, fake_time: chrono::DateTime<chrono::Utc>) -> Self {
+        self.fake_time = Some(fake_time);
         self
     }
 }
