@@ -40,7 +40,7 @@ impl From<Year> for i32 {
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Part {
     One,
-    Twp,
+    Two,
 }
 
 #[derive(Clone, Debug)]
@@ -48,6 +48,16 @@ pub enum Answer {
     NotFinished,
     String(String),
     Int(isize),
+}
+
+impl ToString for Answer {
+    fn to_string(&self) -> String {
+        match self {
+            Answer::NotFinished => "__NOT_FINISHED__".to_string(),
+            Answer::String(v) => v.to_string(),
+            Answer::Int(v) => v.to_string(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -62,7 +72,7 @@ pub fn get_input(day: Day, year: Year) -> String {
     client.get_input(day, year)
 }
 
-pub fn submit_answer(answer: Answer, part: Part, day: Day, year: Year) {
+pub fn submit_answer(answer: Answer, part: Part, day: Day, year: Year) -> String {
     let mut client: WebClient = Default::default();
     client.submit_answer(answer, part, day, year)
 }

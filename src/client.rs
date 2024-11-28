@@ -88,7 +88,7 @@ impl WebClient {
     }
 
     pub fn get_input(&self, day: Day, year: Year) -> String {
-        // TODO: convert execute expect into errors.
+        // TODO: convert expect into errors.
 
         // Format the URL to fetch puzzle input.
         let url = format!(
@@ -123,8 +123,55 @@ impl WebClient {
         // TODO: If the session id is set when this happens its either bad or timed out.
     }
 
-    pub fn submit_answer(&mut self, _answer: Answer, _part: Part, _day: Day, _year: Year) {
-        todo!()
+    pub fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> String {
+        // TODO: convert expect into errors.
+
+        // Convert the answer to a string for final submission.
+        // TODO: Check for and error out if the answer is not finished.
+        assert!(!matches!(answer, Answer::NotFinished));
+        let answer_text = answer.to_string();
+
+        // Format the URL for posting answers.
+        let url = format!(
+            "{}/{}/day/{}/answer",
+            Self::ADVENT_OF_CODE_URL,
+            year.0,
+            day.0
+        );
+
+        tracing::debug!(
+            "creating url to post puzzle answer for part {:?} day {} year {} answer `{}` with url = `{}`",
+            part,
+            day.0,
+            year.0,
+            answer_text,
+            url
+        );
+
+        // Send the puzzle answer.
+        self.http_client
+            .post(url)
+            .form(&[
+                (
+                    "level",
+                    if part == Part::One {
+                        "1".to_string()
+                    } else {
+                        "2".to_string()
+                    },
+                ),
+                ("answer", answer_text),
+            ])
+            .send()
+            .unwrap()
+            .text()
+            .unwrap()
+
+        // TODO: HANDLE: You don't seem to be solving the right level.  Did you already complete it?
+        // TODO: Handle this:
+        // ```
+        // That's not the right answer.  If you're stuck, make sure you're using the full input data; there are also some general tips on the <a href="/2023/about">about page</a>, or you can ask for hints on the <a href="https://www.reddit.com/r/adventofcode/" target="_blank">subreddit</a>.  Please wait one minute before trying again.
+        // ```
     }
 
     pub fn get_puzzle(&self, _day: Day, _year: Year) -> Puzzle {
