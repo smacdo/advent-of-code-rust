@@ -1,6 +1,7 @@
 use client::WebClient;
 
 pub mod client;
+pub mod data;
 pub mod registry;
 pub mod settings;
 pub mod utils;
@@ -45,15 +46,44 @@ pub enum Part {
 
 #[derive(Clone, Debug)]
 pub enum Answer {
-    NotFinished,
     String(String),
-    Int(isize),
+    Int(i64),
+}
+
+impl From<String> for Answer {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<i64> for Answer {
+    fn from(value: i64) -> Self {
+        Self::Int(value)
+    }
+}
+
+impl From<i32> for Answer {
+    fn from(value: i32) -> Self {
+        Self::Int(value as i64)
+    }
+}
+
+impl From<isize> for Answer {
+    fn from(value: isize) -> Self {
+        Self::Int(value as i64)
+    }
+}
+
+impl From<usize> for Answer {
+    fn from(value: usize) -> Self {
+        assert!(value as u64 <= i64::MAX as u64);
+        Self::Int(value as i64)
+    }
 }
 
 impl ToString for Answer {
     fn to_string(&self) -> String {
         match self {
-            Answer::NotFinished => "__NOT_FINISHED__".to_string(),
             Answer::String(v) => v.to_string(),
             Answer::Int(v) => v.to_string(),
         }

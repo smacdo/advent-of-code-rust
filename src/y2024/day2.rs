@@ -1,4 +1,4 @@
-use advent_of_code_rust::registry::Solver;
+use advent_of_code_rust::registry::{Result, Solver, SolverError};
 use advent_of_code_rust::{Answer, Day, Year};
 use linkme::distributed_slice;
 
@@ -12,12 +12,12 @@ static SOLVER: Solver = Solver {
     part_two: day_2_2,
 };
 
-pub fn day_2_1(_input: &str) -> Answer {
+pub fn day_2_1(_input: &str) -> Result<Answer> {
     println!("day 2-1");
-    Answer::NotFinished
+    Err(SolverError::NotFinished)
 }
 
-pub fn day_2_2(_input: &str) -> Answer {
+pub fn day_2_2(_input: &str) -> Result<Answer> {
     println!("day 2-2");
-    Answer::NotFinished
+    Err(SolverError::NotFinished)
 }

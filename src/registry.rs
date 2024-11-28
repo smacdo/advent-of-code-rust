@@ -1,8 +1,19 @@
 use std::collections::HashMap;
 
+use thiserror::Error;
+
 use crate::{Answer, Day, Year};
 
-pub type SolverFn = fn(&str) -> Answer;
+#[derive(Error, Debug)]
+pub enum SolverError {
+    #[error("there is not answer because the solver is not finished")]
+    NotFinished,
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+pub type Result<T> = core::result::Result<T, SolverError>;
+pub type SolverFn = fn(&str) -> Result<Answer>;
 
 #[derive(Clone, Debug)]
 pub struct Solver {

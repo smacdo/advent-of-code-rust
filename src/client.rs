@@ -127,8 +127,6 @@ impl WebClient {
         // TODO: convert expect into errors.
 
         // Convert the answer to a string for final submission.
-        // TODO: Check for and error out if the answer is not finished.
-        assert!(!matches!(answer, Answer::NotFinished));
         let answer_text = answer.to_string();
 
         // Format the URL for posting answers.
