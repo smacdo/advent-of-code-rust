@@ -1,6 +1,6 @@
 mod y2024;
 
-use advent_of_code_rust::{
+use advent_of_code_data::{
     registry::{Solver, SolverRegistry},
     submit_answer, Answer, Day, Part, Year,
 };

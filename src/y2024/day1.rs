@@ -1,5 +1,5 @@
-use advent_of_code_rust::registry::{Result, Solver, SolverError};
-use advent_of_code_rust::{Answer, Day, Year};
+use advent_of_code_data::registry::{Result, Solver, SolverError};
+use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 
 use crate::SOLVERS;

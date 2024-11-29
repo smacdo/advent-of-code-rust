@@ -1,19 +1,36 @@
-[package]
-name = "advent-of-code-rust"
-version = "0.1.0"
+[workspace]
+members = [
+  "crates/*",
+]
+
+[workspace.package]
 edition = "2021"
+license = "Apache-2.0"
+homepage = "https://github.com/smacdo/advent-of-code-rust"
+repository = "https://github.com/smacdo/advent-of-code-rust"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+[workspace.dependencies]
 anyhow = "1.0.93"
 chrono = "0.4.38"
 chrono-tz = "0.10.0"
-clap = "4.5.21"
-linkme = "0.3.31"
 reqwest = { version = "0.12.9", features = ["blocking", "cookies"] }
 serde_json = "1.0.133"
 tempfile = "3.14.0"
 thiserror = "2.0.3"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.18"
+
+[package]
+name = "advent-of-code-rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+advent-of-code-data = { path = "./crates/advent-of-code-data" }
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+clap = "4.5.21"
+linkme = "0.3.31"
