@@ -28,43 +28,26 @@ impl PuzzleCache {
         }
     }
 
-    pub fn try_load_input(&self, day: Day, year: Year) -> Option<String> {
-        let input_path = Self::input_file_path(&self.cache_dir, day, year);
-
-        if input_path.exists() {
-            Some(
-                std::fs::read_to_string(Self::input_file_path(&self.cache_dir, day, year)).unwrap(),
-            )
-        } else {
-            None
-        }
+    pub fn load_input(&self, day: Day, year: Year) -> std::io::Result<String> {
+        std::fs::read_to_string(Self::input_file_path(&self.cache_dir, day, year))
     }
 
-    pub fn load(&self, day: Day, year: Year) -> Puzzle {
+    pub fn load_answers(&self, part: Part, day: Day, year: Year) -> std::io::Result<Answers> {
         // TODO: Convert unwraps into Errors.
+        Ok(Answers::deserialize_from_str(&std::fs::read_to_string(
+            Self::answers_file_path(&self.cache_dir, part, day, year),
+        )?))
+    }
+
+    pub fn load_puzzle(&self, day: Day, year: Year) -> Puzzle {
+        // TODO: Convert unwraps into Errors.
+        // TODO: Create default input or answers if the files don't exist.
         Puzzle {
             day,
             year,
-            input: std::fs::read_to_string(Self::input_file_path(&self.cache_dir, day, year))
-                .unwrap(),
-            part_one_answers: Answers::deserialize_from_str(
-                &std::fs::read_to_string(Self::answers_file_path(
-                    &self.cache_dir,
-                    Part::One,
-                    day,
-                    year,
-                ))
-                .unwrap(),
-            ),
-            part_two_answers: Answers::deserialize_from_str(
-                &std::fs::read_to_string(Self::answers_file_path(
-                    &self.cache_dir,
-                    Part::Two,
-                    day,
-                    year,
-                ))
-                .unwrap(),
-            ),
+            input: self.load_input(day, year).unwrap(),
+            part_one_answers: self.load_answers(Part::One, day, year).unwrap(),
+            part_two_answers: self.load_answers(Part::Two, day, year).unwrap(),
         }
     }
 
@@ -74,23 +57,40 @@ impl PuzzleCache {
         let puzzle_dir = Self::dir_for_puzzle(&self.cache_dir, puzzle.day, puzzle.year);
         std::fs::create_dir_all(puzzle_dir).unwrap();
 
-        std::fs::write(
-            Self::input_file_path(&self.cache_dir, puzzle.day, puzzle.year),
-            puzzle.input,
-        )
-        .unwrap();
+        self.save_input(&puzzle.input, puzzle.day, puzzle.year)
+            .unwrap();
 
-        std::fs::write(
-            Self::answers_file_path(&self.cache_dir, Part::One, puzzle.day, puzzle.year),
-            puzzle.part_one_answers.serialize_to_string(),
-        )
-        .unwrap();
+        self.save_answers(&puzzle.part_one_answers, Part::One, puzzle.day, puzzle.year)
+            .unwrap();
 
-        std::fs::write(
-            Self::answers_file_path(&self.cache_dir, Part::Two, puzzle.day, puzzle.year),
-            puzzle.part_two_answers.serialize_to_string(),
-        )
-        .unwrap();
+        self.save_answers(&puzzle.part_two_answers, Part::Two, puzzle.day, puzzle.year)
+            .unwrap();
+    }
+
+    pub fn save_input(&self, input: &str, day: Day, year: Year) -> std::io::Result<()> {
+        let input_path = Self::input_file_path(&self.cache_dir, day, year);
+        let mut puzzle_dir = input_path.clone();
+        puzzle_dir.pop();
+
+        std::fs::create_dir_all(puzzle_dir).unwrap();
+
+        std::fs::write(input_path, input)
+    }
+
+    pub fn save_answers(
+        &self,
+        answers: &Answers,
+        part: Part,
+        day: Day,
+        year: Year,
+    ) -> std::io::Result<()> {
+        let answers_path = Self::answers_file_path(&self.cache_dir, part, day, year);
+        let mut puzzle_dir = answers_path.clone();
+        puzzle_dir.pop();
+
+        std::fs::create_dir_all(puzzle_dir).unwrap();
+
+        std::fs::write(answers_path, answers.serialize_to_string())
     }
 
     pub fn dir_for_puzzle(cache_dir: &Path, day: Day, year: Year) -> PathBuf {

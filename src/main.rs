@@ -2,7 +2,7 @@ mod y2024;
 
 use advent_of_code_rust::{
     registry::{Solver, SolverRegistry},
-    Answer, Day, Part, Year,
+    submit_answer, Answer, Day, Part, Year,
 };
 use linkme::distributed_slice;
 
@@ -18,7 +18,8 @@ fn main() {
     let var_name = SolverRegistry::new(&SOLVERS);
     let solvers = var_name;
 
-    advent_of_code_rust::get_input(Day(1), Year(2023));
+    //advent_of_code_rust::get_input(Day(1), Year(2023));
+    //submit_answer(Answer::Int(11), Part::One, Day(12), Year(2023));
     //println!("{}", advent_of_code_rust::get_input(Day(1), Year(2023)));
     //println!(
     //    "SUBMIT: {}",

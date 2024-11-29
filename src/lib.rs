@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use client::WebClient;
+use data::CheckResult;
 use thiserror::Error;
 
 pub mod cache;
@@ -158,7 +159,7 @@ pub fn get_input(day: Day, year: Year) -> String {
     client.get_input(day, year)
 }
 
-pub fn submit_answer(answer: Answer, part: Part, day: Day, year: Year) -> String {
+pub fn submit_answer(answer: Answer, part: Part, day: Day, year: Year) -> CheckResult {
     let mut client: WebClient = Default::default();
     client.submit_answer(answer, part, day, year)
 }

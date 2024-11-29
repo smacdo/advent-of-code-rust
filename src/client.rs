@@ -4,7 +4,7 @@ use chrono::Datelike;
 
 use crate::{
     cache::PuzzleCache,
-    data::{Answers, Puzzle},
+    data::{CheckResult, Puzzle},
     settings::ClientOptions,
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
@@ -100,7 +100,8 @@ impl WebClient {
         // TODO: Convert expects and unwraps into errors.
 
         // Check if the input is cached locally before hitting the server.
-        if let Some(input) = self.puzzle_cache.try_load_input(day, year) {
+        // TODO: Return an error if the result is anything other than missing file.
+        if let Ok(input) = self.puzzle_cache.load_input(day, year) {
             return input;
         }
 
@@ -134,32 +135,49 @@ impl WebClient {
 
         // TODO: Only write input if there were no errors from above.
         // TODO: Do not overwrite answers if they already exist (eg input was deleted).
-        self.puzzle_cache.save(Puzzle {
-            day,
-            year,
-            input: input.clone(),
-            part_one_answers: Answers::new(),
-            part_two_answers: Answers::new(),
-        });
-
+        // TODO: Report errors.
+        self.puzzle_cache.save_input(&input, day, year).unwrap();
         input
     }
 
-    pub fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> String {
+    pub fn submit_answer(
+        &mut self,
+        answer: Answer,
+        part: Part,
+        day: Day,
+        year: Year,
+    ) -> CheckResult {
         // TODO: Convert expects and unwraps into errors.
+        tracing::debug!(
+            "submitting answer `{:?}` for part {} day {} year {}",
+            answer,
+            part,
+            day,
+            year
+        );
 
         // Check the cache to see if this answer can be checked locally without
         // having to hit the server.
-        // TODO: Add error handling if the puzzle couldn't be loaded from cache.
-        // (It should be an error because the input should already be cached!)
-        let puzzle = self.puzzle_cache.load(day, year);
+        //
+        // TODO: Warn if the input isn't available because it's likely something
+        //       went wrong if we're submitting an answer without having cached
+        //       the input.
+        let mut answers = self
+            .puzzle_cache
+            .load_answers(part, day, year)
+            .unwrap_or_default();
 
-        // TODO: add cache handling, and early return if answered.
+        if let Some(check_result) = answers.check(&answer) {
+            // TODO: fix the return type by changing it to `CheckResult`.
+            tracing::debug!("answer cache returned {:?}", check_result);
+            return check_result;
+        }
 
-        // Convert the answer to a string for final submission.
+        // Submit to server.
         let answer_text = answer.to_string();
 
         // Format the URL for posting answers.
+        /*
         let url = format!("{}/{}/day/{}/answer", Self::ADVENT_OF_CODE_URL, year, day);
 
         tracing::debug!(
@@ -172,7 +190,8 @@ impl WebClient {
         );
 
         // Send the puzzle answer.
-        self.http_client
+        let response = self
+            .http_client
             .post(url)
             .form(&[
                 (
@@ -188,19 +207,65 @@ impl WebClient {
             .send()
             .unwrap()
             .text()
-            .unwrap()
+            .unwrap();
 
-        // TODO: HANDLE: You don't seem to be solving the right level.  Did you already complete it?
-        // TODO: Handle this:
-        // ```
-        // That's not the right answer.  If you're stuck, make sure you're using the full input data; there are also some general tips on the <a href="/2023/about">about page</a>, or you can ask for hints on the <a href="https://www.reddit.com/r/adventofcode/" target="_blank">subreddit</a>.  Please wait one minute before trying again.
-        // ```
+        tracing::debug!("server response for answer: {}", response);
+        */
+        let response = "That's not the right answer.";
 
-        // TODO: add the resposne to the answer cache.
+        // Handle special cases.
+        // TODO: Remove this special casing if possible.
+        if response.contains("gave an answer too recently") {
+            // TODO: Extract the time to wait.
+            // TODO: Cache the amount of time to wait or otherwise handle it.
+            panic!("TODO: add handling for server response `gave an answer too recently`");
+        }
+
+        if response.contains("you already complete it") {
+            panic!("TODO: add handling for server response `you already complete it`");
+        }
+
+        // Translate the response into a result.
+        let responses_texts = &[
+            ("not the right answer", CheckResult::Wrong),
+            ("the right answer", CheckResult::Correct),
+            ("answer is too low", CheckResult::TooLow),
+            ("answer is too high", CheckResult::TooHigh),
+        ];
+
+        let check_result = responses_texts
+            .iter()
+            .find(|x| response.contains(x.0))
+            .map(|x| x.1.clone())
+            .expect("expect server response text to map to predetermined response in LUT");
+
+        // Write the response to the answers database and then save it back to
+        // the puzzle cache.
+        match check_result {
+            CheckResult::Correct => {
+                answers.set_correct_answer(answer);
+            }
+            CheckResult::Wrong => {
+                answers.add_wrong_answer(answer);
+            }
+            CheckResult::TooLow => {
+                answers.set_low_bounds(answer);
+            }
+            CheckResult::TooHigh => {
+                answers.set_high_bounds(answer);
+            }
+        };
+
+        // TODO: Report errors.
+        self.puzzle_cache
+            .save_answers(&answers, part, day, year)
+            .unwrap();
+
+        check_result
     }
 
     pub fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
-        self.puzzle_cache.load(day, year)
+        self.puzzle_cache.load_puzzle(day, year)
     }
 
     // TODO: personal leaderboard

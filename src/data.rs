@@ -96,7 +96,7 @@ impl Answers {
     /// a solution to the puzzle using the Advent of Code client. The caller
     /// should then update this object with the response depending on if the
     /// client say it was correct or incorrect.
-    pub fn check(&self, answer: Answer) -> Option<CheckResult> {
+    pub fn check(&self, answer: &Answer) -> Option<CheckResult> {
         // Check the answer against the optional low and high value boundaries.
         match (answer.to_i64(), &self.low_bounds, &self.high_bounds) {
             (Some(answer), Some(low), _) if answer <= *low => {
@@ -108,7 +108,7 @@ impl Answers {
 
         // Check if the answer is matches any known incorrect answers.
         for wrong_answer in &self.wrong_answers {
-            if wrong_answer == &answer {
+            if wrong_answer == answer {
                 return Some(CheckResult::Wrong);
             }
         }
@@ -116,7 +116,7 @@ impl Answers {
         // Now see if the answer matches the correct answer or return `None` if
         // the correct answer is not known.
         match &self.correct_answer {
-            Some(correct) if correct == &answer => Some(CheckResult::Correct),
+            Some(correct) if correct == answer => Some(CheckResult::Correct),
             Some(_) => Some(CheckResult::Wrong),
             None => None,
         }
@@ -128,6 +128,11 @@ impl Answers {
         // TODO: Error if the wrong answer has a newline.
         if self.wrong_answers.iter().all(|x| x != &answer) {
             self.wrong_answers.push(answer);
+        } else {
+            tracing::warn!(
+                "skipped adding duplicate wrong answer to answers cache: `{}`",
+                answer
+            );
         }
     }
 
@@ -310,7 +315,7 @@ mod tests {
         answers.add_wrong_answer(Answer::from_str("stop").unwrap());
 
         assert_eq!(
-            answers.check(Answer::from_str("hello").unwrap()),
+            answers.check(&Answer::from_str("hello").unwrap()),
             Some(CheckResult::Correct)
         );
     }
@@ -324,11 +329,11 @@ mod tests {
         answers.add_wrong_answer(Answer::from_str("stop").unwrap());
 
         assert_eq!(
-            answers.check(Answer::from_str("abc").unwrap()),
+            answers.check(&Answer::from_str("abc").unwrap()),
             Some(CheckResult::Wrong)
         );
         assert_eq!(
-            answers.check(Answer::from_str("stop").unwrap()),
+            answers.check(&Answer::from_str("stop").unwrap()),
             Some(CheckResult::Wrong)
         );
     }
@@ -366,31 +371,31 @@ mod tests {
     #[test]
     fn check_answer_uses_low_bounds_if_set() {
         let mut answers = Answers::new();
-        assert!(answers.check(Answer::Int(100)).is_none());
+        assert!(answers.check(&Answer::Int(100)).is_none());
 
         answers.set_low_bounds(Answer::Int(90));
 
-        assert_eq!(answers.check(Answer::Int(85)), Some(CheckResult::TooLow));
-        assert_eq!(answers.check(Answer::Int(90)), Some(CheckResult::TooLow));
-        assert!(answers.check(Answer::Int(100)).is_none());
+        assert_eq!(answers.check(&Answer::Int(85)), Some(CheckResult::TooLow));
+        assert_eq!(answers.check(&Answer::Int(90)), Some(CheckResult::TooLow));
+        assert!(answers.check(&Answer::Int(100)).is_none());
 
         answers.add_wrong_answer(Answer::Int(90));
-        assert_eq!(answers.check(Answer::Int(90)), Some(CheckResult::TooLow));
+        assert_eq!(answers.check(&Answer::Int(90)), Some(CheckResult::TooLow));
     }
 
     #[test]
     fn check_answer_uses_high_bounds_if_set() {
         let mut answers = Answers::new();
-        assert!(answers.check(Answer::Int(100)).is_none());
+        assert!(answers.check(&Answer::Int(100)).is_none());
 
         answers.set_high_bounds(Answer::Int(90));
 
-        assert_eq!(answers.check(Answer::Int(100)), Some(CheckResult::TooHigh));
-        assert_eq!(answers.check(Answer::Int(90)), Some(CheckResult::TooHigh));
-        assert!(answers.check(Answer::Int(85)).is_none());
+        assert_eq!(answers.check(&Answer::Int(100)), Some(CheckResult::TooHigh));
+        assert_eq!(answers.check(&Answer::Int(90)), Some(CheckResult::TooHigh));
+        assert!(answers.check(&Answer::Int(85)).is_none());
 
         answers.add_wrong_answer(Answer::Int(90));
-        assert_eq!(answers.check(Answer::Int(90)), Some(CheckResult::TooHigh));
+        assert_eq!(answers.check(&Answer::Int(90)), Some(CheckResult::TooHigh));
     }
 
     #[test]
@@ -400,12 +405,12 @@ mod tests {
         answers.set_low_bounds(Answer::Int(96));
         answers.set_high_bounds(Answer::Int(103));
 
-        assert_eq!(answers.check(Answer::Int(107)), Some(CheckResult::TooHigh));
-        assert_eq!(answers.check(Answer::Int(103)), Some(CheckResult::TooHigh));
-        assert_eq!(answers.check(Answer::Int(100)), None);
-        assert_eq!(answers.check(Answer::Int(98)), None);
-        assert_eq!(answers.check(Answer::Int(96)), Some(CheckResult::TooLow));
-        assert_eq!(answers.check(Answer::Int(-5)), Some(CheckResult::TooLow));
+        assert_eq!(answers.check(&Answer::Int(107)), Some(CheckResult::TooHigh));
+        assert_eq!(answers.check(&Answer::Int(103)), Some(CheckResult::TooHigh));
+        assert_eq!(answers.check(&Answer::Int(100)), None);
+        assert_eq!(answers.check(&Answer::Int(98)), None);
+        assert_eq!(answers.check(&Answer::Int(96)), Some(CheckResult::TooLow));
+        assert_eq!(answers.check(&Answer::Int(-5)), Some(CheckResult::TooLow));
     }
 
     #[test]
@@ -419,19 +424,19 @@ mod tests {
         answers.add_wrong_answer(Answer::from_str("xyz").unwrap());
 
         assert_eq!(
-            answers.check(Answer::from_str("55").unwrap()),
+            answers.check(&Answer::from_str("55").unwrap()),
             Some(CheckResult::TooHigh)
         );
-        assert_eq!(answers.check(Answer::Int(55)), Some(CheckResult::TooHigh));
+        assert_eq!(answers.check(&Answer::Int(55)), Some(CheckResult::TooHigh));
 
-        assert_eq!(answers.check(Answer::Int(10)), None);
-        assert_eq!(answers.check(Answer::from_str("10").unwrap()), None);
+        assert_eq!(answers.check(&Answer::Int(10)), None);
+        assert_eq!(answers.check(&Answer::from_str("10").unwrap()), None);
 
         assert_eq!(
-            answers.check(Answer::from_str("-74").unwrap()),
+            answers.check(&Answer::from_str("-74").unwrap()),
             Some(CheckResult::TooLow)
         );
-        assert_eq!(answers.check(Answer::Int(-74)), Some(CheckResult::TooLow));
+        assert_eq!(answers.check(&Answer::Int(-74)), Some(CheckResult::TooLow));
     }
 
     #[test]
@@ -447,29 +452,29 @@ mod tests {
         answers.add_wrong_answer(Answer::from_str("xyz").unwrap());
 
         assert_eq!(
-            answers.check(Answer::from_str("-9").unwrap()),
+            answers.check(&Answer::from_str("-9").unwrap()),
             Some(CheckResult::Wrong)
         );
-        assert_eq!(answers.check(Answer::Int(-9)), Some(CheckResult::Wrong));
+        assert_eq!(answers.check(&Answer::Int(-9)), Some(CheckResult::Wrong));
         assert_eq!(
-            answers.check(Answer::from_str("1").unwrap()),
+            answers.check(&Answer::from_str("1").unwrap()),
             Some(CheckResult::Wrong)
         );
-        assert_eq!(answers.check(Answer::Int(1)), Some(CheckResult::Wrong));
+        assert_eq!(answers.check(&Answer::Int(1)), Some(CheckResult::Wrong));
         assert_eq!(
-            answers.check(Answer::from_str("xyz").unwrap()),
+            answers.check(&Answer::from_str("xyz").unwrap()),
             Some(CheckResult::Wrong)
         );
         assert_eq!(
-            answers.check(Answer::from_str("100").unwrap()),
+            answers.check(&Answer::from_str("100").unwrap()),
             Some(CheckResult::TooHigh)
         );
-        assert_eq!(answers.check(Answer::Int(100)), Some(CheckResult::TooHigh));
+        assert_eq!(answers.check(&Answer::Int(100)), Some(CheckResult::TooHigh));
         assert_eq!(
-            answers.check(Answer::from_str("-100").unwrap()),
+            answers.check(&Answer::from_str("-100").unwrap()),
             Some(CheckResult::TooLow)
         );
-        assert_eq!(answers.check(Answer::Int(-100)), Some(CheckResult::TooLow));
+        assert_eq!(answers.check(&Answer::Int(-100)), Some(CheckResult::TooLow));
     }
 
     #[test]
@@ -479,15 +484,15 @@ mod tests {
         answers.set_correct_answer(Answer::from_str("yes").unwrap());
 
         assert_eq!(
-            answers.check(Answer::from_str("yes").unwrap()),
+            answers.check(&Answer::from_str("yes").unwrap()),
             Some(CheckResult::Correct)
         );
         assert_eq!(
-            answers.check(Answer::from_str("no").unwrap()),
+            answers.check(&Answer::from_str("no").unwrap()),
             Some(CheckResult::Wrong)
         );
         assert_eq!(
-            answers.check(Answer::from_str("maybe").unwrap()),
+            answers.check(&Answer::from_str("maybe").unwrap()),
             Some(CheckResult::Wrong)
         );
     }
