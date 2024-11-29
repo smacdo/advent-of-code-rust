@@ -3,7 +3,11 @@ use std::{path::PathBuf, str::FromStr};
 use chrono::Datelike;
 
 use crate::{
-    settings::ClientOptions, utils::get_puzzle_unlock_time, Answer, Day, Part, Puzzle, Year,
+    cache::PuzzleCache,
+    data::{Answers, Puzzle},
+    settings::ClientOptions,
+    utils::get_puzzle_unlock_time,
+    Answer, Day, Part, Year,
 };
 
 pub trait Client {}
@@ -12,6 +16,7 @@ pub trait Client {}
 pub struct WebClient {
     config: ClientConfig,
     http_client: reqwest::blocking::Client,
+    puzzle_cache: PuzzleCache,
 }
 
 impl WebClient {
@@ -52,9 +57,13 @@ impl WebClient {
             .build()
             .expect("unexpected error when constructing reqwest http client");
 
+        let puzzle_dir = config.puzzle_dir.clone();
+        let encryption_token = config.encryption_token.clone();
+
         Self {
             config,
             http_client,
+            puzzle_cache: PuzzleCache::new(puzzle_dir, Some(encryption_token)),
         }
     }
 
@@ -88,7 +97,12 @@ impl WebClient {
     }
 
     pub fn get_input(&self, day: Day, year: Year) -> String {
-        // TODO: convert expect into errors.
+        // TODO: Convert expects and unwraps into errors.
+
+        // Check if the input is cached locally before hitting the server.
+        if let Some(input) = self.puzzle_cache.try_load_input(day, year) {
+            return input;
+        }
 
         // Format the URL to fetch puzzle input.
         let url = format!("{}/{}/day/{}/input", Self::ADVENT_OF_CODE_URL, year, day);
@@ -107,19 +121,40 @@ impl WebClient {
             .build()
             .expect("unexpected error when building HTTP GET request for `get_input`");
 
-        self.http_client
+        let input = self
+            .http_client
             .execute(request)
             .expect("unexpected error when HTTP GET for `get_input`")
             .text()
-            .expect("unexpected error don't know what")
+            .expect("unexpected error don't know what");
 
         // TODO: Check for "Puzzle inputs differ by user.  Please log in to get your puzzle input."
         // TODO: ^^^ above text comes with HTTP 400
         // TODO: If the session id is set when this happens its either bad or timed out.
+
+        // TODO: Only write input if there were no errors from above.
+        // TODO: Do not overwrite answers if they already exist (eg input was deleted).
+        self.puzzle_cache.save(Puzzle {
+            day,
+            year,
+            input: input.clone(),
+            part_one_answers: Answers::new(),
+            part_two_answers: Answers::new(),
+        });
+
+        input
     }
 
     pub fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> String {
-        // TODO: convert expect into errors.
+        // TODO: Convert expects and unwraps into errors.
+
+        // Check the cache to see if this answer can be checked locally without
+        // having to hit the server.
+        // TODO: Add error handling if the puzzle couldn't be loaded from cache.
+        // (It should be an error because the input should already be cached!)
+        let puzzle = self.puzzle_cache.load(day, year);
+
+        // TODO: add cache handling, and early return if answered.
 
         // Convert the answer to a string for final submission.
         let answer_text = answer.to_string();
@@ -160,10 +195,12 @@ impl WebClient {
         // ```
         // That's not the right answer.  If you're stuck, make sure you're using the full input data; there are also some general tips on the <a href="/2023/about">about page</a>, or you can ask for hints on the <a href="https://www.reddit.com/r/adventofcode/" target="_blank">subreddit</a>.  Please wait one minute before trying again.
         // ```
+
+        // TODO: add the resposne to the answer cache.
     }
 
-    pub fn get_puzzle(&self, _day: Day, _year: Year) -> Puzzle {
-        todo!()
+    pub fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
+        self.puzzle_cache.load(day, year)
     }
 
     // TODO: personal leaderboard
@@ -180,7 +217,7 @@ impl Default for WebClient {
 #[derive(Default, Debug)]
 pub struct ClientConfig {
     pub session_id: String,
-    pub cache_dir: PathBuf,
+    pub puzzle_dir: PathBuf,
     pub encryption_token: String,
     pub start_time: chrono::DateTime<chrono::Utc>,
 }
@@ -191,9 +228,9 @@ impl ClientConfig {
         // TODO: verify directory exists
         Self {
             session_id: options.session_id.expect("session id must be set"),
-            cache_dir: options
-                .cache_dir
-                .unwrap_or(PathBuf::from_str(".aoc_client_cache").unwrap()),
+            puzzle_dir: options
+                .puzzle_dir
+                .unwrap_or(PathBuf::from_str(".puzzles").unwrap()),
             encryption_token: options
                 .encryption_token
                 .expect("encryption token must be set"),
@@ -221,7 +258,7 @@ mod tests {
             ClientOptions::new()
                 .with_session_id("UNIT_TEST_SESSION_ID")
                 .with_encryption_token("UNIT_TEST_PASSWORD")
-                .with_cache_dir("DO_NOT_USE")
+                .with_puzzle_dir("DO_NOT_USE")
                 .with_fake_time(
                     Eastern
                         .from_local_datetime(

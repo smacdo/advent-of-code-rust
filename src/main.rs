@@ -17,7 +17,9 @@ fn main() {
 
     let var_name = SolverRegistry::new(&SOLVERS);
     let solvers = var_name;
-    //println!("{}", get_input(Day(1), Year(2023)));
+
+    advent_of_code_rust::get_input(Day(1), Year(2023));
+    //println!("{}", advent_of_code_rust::get_input(Day(1), Year(2023)));
     //println!(
     //    "SUBMIT: {}",
     //    submit_answer(Answer::Int(42), Part::One, Day(12), Year(2023))

@@ -3,6 +3,7 @@ use std::str::FromStr;
 use client::WebClient;
 use thiserror::Error;
 
+pub mod cache;
 pub mod client;
 pub mod data;
 pub mod registry;
@@ -150,13 +151,6 @@ impl From<usize> for Answer {
         assert!(value as u64 <= i64::MAX as u64);
         Self::Int(value as i64)
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct Puzzle {
-    pub day: Day,
-    pub year: Year,
-    pub title: Option<String>,
 }
 
 pub fn get_input(day: Day, year: Year) -> String {

@@ -6,7 +6,7 @@ use std::{
 
 pub struct ClientOptions {
     pub session_id: Option<String>,
-    pub cache_dir: Option<PathBuf>,
+    pub puzzle_dir: Option<PathBuf>,
     pub encryption_token: Option<String>,
     pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -15,7 +15,7 @@ impl ClientOptions {
     pub fn new() -> Self {
         Self {
             session_id: None,
-            cache_dir: None,
+            puzzle_dir: None,
             encryption_token: None,
             fake_time: None,
         }
@@ -66,7 +66,7 @@ impl ClientOptions {
             self.session_id = Some(v);
         }
 
-        // TODO: add key for cache directory.
+        // TODO: add key for puzzle directory.
         // TODO: add key for encryption token.
 
         self
@@ -74,7 +74,7 @@ impl ClientOptions {
 
     pub fn with_json_config(mut self, json_config: &str) -> serde_json::Result<Self> {
         const SESSION_ID_KEY: &str = "session_id";
-        const CACHE_DIR_KEY: &str = "cache_dir";
+        const PUZZLE_DIR_KEY: &str = "puzzle_dir";
         const ENCRYPTION_TOKEN_KEY: &str = "encryption_token";
 
         fn try_get_key<F: FnOnce(&str)>(
@@ -103,8 +103,8 @@ impl ClientOptions {
                     self.session_id = Some(v.to_string())
                 });
 
-                try_get_key(&group, CACHE_DIR_KEY, |v| {
-                    self.cache_dir = Some(PathBuf::from_str(v).unwrap())
+                try_get_key(&group, PUZZLE_DIR_KEY, |v| {
+                    self.puzzle_dir = Some(PathBuf::from_str(v).unwrap())
                 });
 
                 try_get_key(&group, ENCRYPTION_TOKEN_KEY, |v| {
@@ -125,8 +125,8 @@ impl ClientOptions {
         self
     }
 
-    pub fn with_cache_dir<P: Into<PathBuf>>(mut self, cache_dir: P) -> Self {
-        self.cache_dir = Some(cache_dir.into());
+    pub fn with_puzzle_dir<P: Into<PathBuf>>(mut self, puzzle_dir: P) -> Self {
+        self.puzzle_dir = Some(puzzle_dir.into());
         self
     }
 
@@ -158,7 +158,7 @@ mod tests {
     fn client_options_are_none_by_default() {
         let options = ClientOptions::new();
         assert!(options.session_id.is_none());
-        assert!(options.cache_dir.is_none());
+        assert!(options.puzzle_dir.is_none());
         assert!(options.encryption_token.is_none());
     }
 
@@ -169,7 +169,7 @@ mod tests {
             .with_encryption_token("54321");
 
         assert!(options.session_id.is_none());
-        assert!(options.cache_dir.is_none());
+        assert!(options.puzzle_dir.is_none());
         assert_eq!(options.encryption_token, Some("54321".to_string()));
     }
 
@@ -177,12 +177,12 @@ mod tests {
     fn set_client_options_with_builder_funcs() {
         let options = ClientOptions::new()
             .with_session_id("MY_SESSION_ID")
-            .with_cache_dir("MY_CACHE_DIR")
+            .with_puzzle_dir("MY_CACHE_DIR")
             .with_encryption_token("MY_PASSWORD");
 
         assert_eq!(options.session_id, Some("MY_SESSION_ID".to_string()));
         assert_eq!(
-            options.cache_dir,
+            options.puzzle_dir,
             Some(PathBuf::from_str("MY_CACHE_DIR").unwrap())
         );
         assert_eq!(options.encryption_token, Some("MY_PASSWORD".to_string()));
@@ -193,7 +193,7 @@ mod tests {
         let json_data = r#"
         {
             "session_id": "12345",
-            "cache_dir": "path/to/cache",
+            "puzzle_dir": "path/to/puzzle/dir",
             "encryption_token": "foobar"
         }
         "#;
@@ -202,8 +202,8 @@ mod tests {
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert_eq!(
-            options.cache_dir,
-            Some(PathBuf::from_str("path/to/cache").unwrap())
+            options.puzzle_dir,
+            Some(PathBuf::from_str("path/to/puzzle/dir").unwrap())
         );
         assert_eq!(options.encryption_token, Some("foobar".to_string()));
     }
@@ -220,7 +220,7 @@ mod tests {
         let options = ClientOptions::new().with_json_config(json_data).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
-        assert!(options.cache_dir.is_none());
+        assert!(options.puzzle_dir.is_none());
         assert!(options.encryption_token.is_none());
     }
 }

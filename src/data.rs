@@ -3,12 +3,38 @@ use std::{
     str::FromStr,
 };
 
-use crate::Answer;
+use crate::{Answer, Day, Part, Year};
 
 pub const CORRECT_ANSWER_CHAR: char = '=';
 pub const WRONG_ANSWER_CHAR: char = 'X';
 pub const LOW_ANSWER_CHAR: char = '[';
 pub const HIGH_ANSWER_CHAR: char = ']';
+
+/// Stores puzzle input and answer data.
+#[derive(Debug, PartialEq)]
+pub struct Puzzle {
+    pub day: Day,
+    pub year: Year,
+    pub input: String,
+    pub part_one_answers: Answers,
+    pub part_two_answers: Answers,
+}
+
+impl Puzzle {
+    pub fn answers(&self, part: Part) -> &Answers {
+        match part {
+            Part::One => &self.part_one_answers,
+            Part::Two => &self.part_two_answers,
+        }
+    }
+
+    pub fn answers_mut(&mut self, part: Part) -> &mut Answers {
+        match part {
+            Part::One => &mut self.part_one_answers,
+            Part::Two => &mut self.part_two_answers,
+        }
+    }
+}
 
 /// Represents the various outcomes of checking an answer against an answers
 /// database.
@@ -164,6 +190,14 @@ impl Answers {
         }
     }
 
+    pub fn serialize_to_string(&self) -> String {
+        // TODO: Convert unwraps into Errors.
+        let mut buf = BufWriter::new(Vec::new());
+        self.serialize(&mut buf);
+
+        String::from_utf8(buf.into_inner().unwrap()).unwrap()
+    }
+
     pub fn serialize<W: Write>(&self, writer: &mut BufWriter<W>) {
         // TODO: Verify that both correct and wrong answers do not have newlines.
         // TODO: Convert unwraps to Errors.
@@ -197,7 +231,13 @@ impl Answers {
         }
     }
 
-    pub fn deserialize<R: Read>(reader: &mut BufReader<R>) -> Answers {
+    pub fn deserialize_from_str(text: &str) -> Self {
+        // TODO: Convert unwraps to Errors.
+        let mut buf = BufReader::new(text.as_bytes());
+        Self::deserialize(&mut buf)
+    }
+
+    pub fn deserialize<R: Read>(reader: &mut BufReader<R>) -> Self {
         // TODO: Convert unwraps to Errors.
         let mut answers = Answers::new();
 
@@ -452,16 +492,9 @@ mod tests {
         );
     }
 
-    fn serialize_answers(answers: &Answers) -> String {
-        let mut buf = BufWriter::new(Vec::new());
-        answers.serialize(&mut buf);
-
-        String::from_utf8(buf.into_inner().unwrap()).unwrap()
-    }
-
     #[test]
     fn serialize_answers_to_text() {
-        let text = serialize_answers(&Answers {
+        let text = Answers {
             correct_answer: Some(Answer::Int(12)),
             wrong_answers: vec![
                 Answer::Int(-9),
@@ -471,14 +504,15 @@ mod tests {
             ],
             low_bounds: Some(-50),
             high_bounds: Some(25),
-        });
+        }
+        .serialize_to_string();
 
         assert_eq!(text, "= 12\n[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
     }
 
     #[test]
     fn serialize_answers_to_text_with_no_correct() {
-        let text = serialize_answers(&Answers {
+        let text = Answers {
             correct_answer: None,
             wrong_answers: vec![
                 Answer::Int(-9),
@@ -488,14 +522,15 @@ mod tests {
             ],
             low_bounds: Some(-50),
             high_bounds: Some(25),
-        });
+        }
+        .serialize_to_string();
 
         assert_eq!(text, "[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
     }
 
     #[test]
     fn serialize_answers_to_text_with_missing_correct_and_high() {
-        let text = serialize_answers(&Answers {
+        let text = Answers {
             correct_answer: None,
             wrong_answers: vec![
                 Answer::Int(-9),
@@ -505,19 +540,15 @@ mod tests {
             ],
             low_bounds: Some(-50),
             high_bounds: None,
-        });
+        }
+        .serialize_to_string();
 
         assert_eq!(text, "[ -50\nX -9\nX 1\nX 100\nX xyz\n");
     }
 
-    fn deserialize_answers(text: &str) -> Answers {
-        let mut buf = BufReader::new(text.as_bytes());
-        Answers::deserialize(&mut buf)
-    }
-
     #[test]
     fn deserialize_answers_from_text() {
-        let answers = deserialize_answers("= 12\n[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
+        let answers = Answers::deserialize_from_str("= 12\n[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
         assert_eq!(
             answers,
             Answers {
@@ -536,7 +567,7 @@ mod tests {
 
     #[test]
     fn deserialize_answers_to_text_with_no_correct() {
-        let answers = deserialize_answers("[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
+        let answers = Answers::deserialize_from_str("[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
         assert_eq!(
             answers,
             Answers {
@@ -555,7 +586,7 @@ mod tests {
 
     #[test]
     fn deserialize_answers_to_text_with_missing_correct_and_high() {
-        let answers = deserialize_answers("[ -50\nX -9\nX 1\nX 100\nX xyz\n");
+        let answers = Answers::deserialize_from_str("[ -50\nX -9\nX 1\nX 100\nX xyz\n");
         assert_eq!(
             answers,
             Answers {
@@ -574,7 +605,7 @@ mod tests {
 
     #[test]
     fn deserialize_answers_with_spaces() {
-        let answers = deserialize_answers("= hello world\nX foobar\nX one two three\n");
+        let answers = Answers::deserialize_from_str("= hello world\nX foobar\nX one two three\n");
         assert_eq!(
             answers,
             Answers {
