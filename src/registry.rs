@@ -65,8 +65,8 @@ impl SolverRegistry {
                 let a2 = (s.part_two)("");
 
                 println!(
-                    "day {}, year {}: part 1 = `{:?}`, part 2 = `{:?}`",
-                    s.day.0, s.year.0, a1, a2
+                    "day {}, year {}: part 1 = `{:#?}`, part 2 = `{:#?}`",
+                    s.day, s.year, a1, a2
                 );
             }
         }

@@ -91,17 +91,12 @@ impl WebClient {
         // TODO: convert expect into errors.
 
         // Format the URL to fetch puzzle input.
-        let url = format!(
-            "{}/{}/day/{}/input",
-            Self::ADVENT_OF_CODE_URL,
-            year.0,
-            day.0
-        );
+        let url = format!("{}/{}/day/{}/input", Self::ADVENT_OF_CODE_URL, year, day);
 
         tracing::debug!(
             "creating url to get puzzle input for day {} year {} with url = `{}`",
-            day.0,
-            year.0,
+            day,
+            year,
             url
         );
 
@@ -130,18 +125,13 @@ impl WebClient {
         let answer_text = answer.to_string();
 
         // Format the URL for posting answers.
-        let url = format!(
-            "{}/{}/day/{}/answer",
-            Self::ADVENT_OF_CODE_URL,
-            year.0,
-            day.0
-        );
+        let url = format!("{}/{}/day/{}/answer", Self::ADVENT_OF_CODE_URL, year, day);
 
         tracing::debug!(
             "creating url to post puzzle answer for part {:?} day {} year {} answer `{}` with url = `{}`",
             part,
-            day.0,
-            year.0,
+            day,
+            year,
             answer_text,
             url
         );
