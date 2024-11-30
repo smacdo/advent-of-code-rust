@@ -10,7 +10,13 @@ use crate::{
     Answer, Day, Part, Year,
 };
 
-pub trait Client {}
+pub trait Client {
+    fn years(&self) -> Vec<Year>;
+    fn days(&self, year: Year) -> Option<Vec<Day>>;
+    fn get_input(&self, day: Day, year: Year) -> String;
+    fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> CheckResult;
+    fn get_puzzle(&self, day: Day, year: Year) -> Puzzle;
+}
 
 #[derive(Debug)]
 pub struct WebClient {
@@ -66,8 +72,10 @@ impl WebClient {
             puzzle_cache: PuzzleCache::new(puzzle_dir, Some(encryption_token)),
         }
     }
+}
 
-    pub fn years(&self) -> Vec<Year> {
+impl Client for WebClient {
+    fn years(&self) -> Vec<Year> {
         let start_time = self.config.start_time;
         let unlock_time = get_puzzle_unlock_time(start_time.year().into());
 
@@ -80,7 +88,7 @@ impl WebClient {
         (2015..(end_year + 1)).map(|y| y.into()).collect()
     }
 
-    pub fn days(&self, year: Year) -> Option<Vec<Day>> {
+    fn days(&self, year: Year) -> Option<Vec<Day>> {
         let start_time = self.config.start_time;
         let eastern_start_time = start_time.with_timezone(&chrono_tz::US::Eastern);
         let requested_year = year.0 as i32;
@@ -96,7 +104,7 @@ impl WebClient {
         }
     }
 
-    pub fn get_input(&self, day: Day, year: Year) -> String {
+    fn get_input(&self, day: Day, year: Year) -> String {
         // TODO: Convert expects and unwraps into errors.
 
         // Check if the input is cached locally before hitting the server.
@@ -140,13 +148,7 @@ impl WebClient {
         input
     }
 
-    pub fn submit_answer(
-        &mut self,
-        answer: Answer,
-        part: Part,
-        day: Day,
-        year: Year,
-    ) -> CheckResult {
+    fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> CheckResult {
         // TODO: Convert expects and unwraps into errors.
         tracing::debug!(
             "submitting answer `{:?}` for part {} day {} year {}",
@@ -215,6 +217,8 @@ impl WebClient {
 
         // Handle special cases.
         // TODO: Remove this special casing if possible.
+        // TODO: Look into "You don't seem to be solving the right level.  Did you already complete it?"
+        //       Is this only returned for errors on solved levels?
         if response.contains("gave an answer too recently") {
             // TODO: Extract the time to wait.
             // TODO: Cache the amount of time to wait or otherwise handle it.
@@ -264,7 +268,7 @@ impl WebClient {
         check_result
     }
 
-    pub fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
+    fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
         self.puzzle_cache.load_puzzle(day, year)
     }
 

@@ -1,4 +1,4 @@
-use advent_of_code_data::registry::{Result, Solver, SolverError};
+use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 
@@ -8,8 +8,14 @@ use crate::SOLVERS;
 static SOLVER: Solver = Solver {
     day: Day(2),
     year: Year(2024),
-    part_one: day_2_1,
-    part_two: day_2_2,
+    part_one: SolverPart {
+        func: day_2_1,
+        examples: &[],
+    },
+    part_two: SolverPart {
+        func: day_2_2,
+        examples: &[],
+    },
 };
 
 pub fn day_2_1(_input: &str) -> Result<Answer> {

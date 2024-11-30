@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use client::WebClient;
+use client::{Client, WebClient};
 use data::CheckResult;
 use thiserror::Error;
 
@@ -8,6 +8,7 @@ pub mod cache;
 pub mod client;
 pub mod data;
 pub mod registry;
+pub mod runner;
 pub mod settings;
 pub mod utils;
 

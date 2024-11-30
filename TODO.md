@@ -6,3 +6,9 @@
 
 # SDK Improvements
 - Logging all the things
+
+# Runner Improvements
+- Move registry.rs, runner.rs -> rudolph package
+- Use per-function registration and de-dup in registry.
+- #[PuzzleSolver(day=,year=,part=)]
+- #[Example(answer=,input=)]
