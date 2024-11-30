@@ -6,6 +6,7 @@
 
 # SDK Improvements
 - Logging all the things
+- Reject submissions for future dates automatically unless forced
 
 # Runner Improvements
 - Move registry.rs, runner.rs -> rudolph package

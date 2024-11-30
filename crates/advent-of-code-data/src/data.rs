@@ -3,6 +3,8 @@ use std::{
     str::FromStr,
 };
 
+use serde::{Deserialize, Serialize};
+
 use crate::{Answer, Day, Part, Year};
 
 pub const CORRECT_ANSWER_CHAR: char = '=';
@@ -281,6 +283,21 @@ impl Answers {
 impl Default for Answers {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct User {
+    pub session_id: String,
+    pub submit_wait_until: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl User {
+    pub fn new<S: Into<String>>(session_id: S) -> Self {
+        Self {
+            session_id: session_id.into(),
+            submit_wait_until: None,
+        }
     }
 }
 

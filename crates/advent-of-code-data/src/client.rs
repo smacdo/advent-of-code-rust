@@ -1,14 +1,22 @@
 use std::{path::PathBuf, str::FromStr};
 
-use chrono::Datelike;
+use chrono::{Datelike, Duration};
+use regex::Regex;
+use thiserror::Error;
 
 use crate::{
-    cache::PuzzleCache,
+    cache::{PuzzleCache, UserDataCache},
     data::{CheckResult, Puzzle},
     settings::ClientOptions,
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
 };
+
+#[derive(Debug, Error)]
+pub enum ClientError {
+    #[error("the answer was submitted too soon, please wait before trying again")]
+    TooSoon,
+}
 
 pub trait Client {
     fn years(&self) -> Vec<Year>;
@@ -23,6 +31,7 @@ pub struct WebClient {
     config: ClientConfig,
     http_client: reqwest::blocking::Client,
     puzzle_cache: PuzzleCache,
+    user_cache: UserDataCache,
 }
 
 impl WebClient {
@@ -66,10 +75,13 @@ impl WebClient {
         let puzzle_dir = config.puzzle_dir.clone();
         let encryption_token = config.encryption_token.clone();
 
+        // TODO: lets callers specify the user data cache.
+        // TODO: create a default user data cache.
         Self {
             config,
             http_client,
             puzzle_cache: PuzzleCache::new(puzzle_dir, Some(encryption_token)),
+            user_cache: UserDataCache::new(""),
         }
     }
 }
@@ -105,25 +117,27 @@ impl Client for WebClient {
     }
 
     fn get_input(&self, day: Day, year: Year) -> String {
+        tracing::trace!("get_input(day=`{day}`, year=`{year}`)",);
+
         // TODO: Convert expects and unwraps into errors.
 
-        // Check if the input is cached locally before hitting the server.
+        // Check if the input for this puzzle is cached locally before requesting
+        // it from the Advent of Code service.
         // TODO: Return an error if the result is anything other than missing file.
         if let Ok(input) = self.puzzle_cache.load_input(day, year) {
             return input;
         }
 
-        // Format the URL to fetch puzzle input.
+        // Fetch the puzzle input from the Advent of Code service.
         let url = format!("{}/{}/day/{}/input", Self::ADVENT_OF_CODE_URL, year, day);
 
         tracing::debug!(
-            "creating url to get puzzle input for day {} year {} with url = `{}`",
+            "url to get puzzle input for day {} year {}: `{}`",
             day,
             year,
             url
         );
 
-        // Download the puzzle input to a string.
         let request = self
             .http_client
             .get(url)
@@ -150,8 +164,8 @@ impl Client for WebClient {
 
     fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> CheckResult {
         // TODO: Convert expects and unwraps into errors.
-        tracing::debug!(
-            "submitting answer `{:?}` for part {} day {} year {}",
+        tracing::trace!(
+            "submit_answer(answer=`{:?}`, part=`{}`, day=`{}`, year=`{}`)",
             answer,
             part,
             day,
@@ -171,15 +185,26 @@ impl Client for WebClient {
 
         if let Some(check_result) = answers.check(&answer) {
             // TODO: fix the return type by changing it to `CheckResult`.
-            tracing::debug!("answer cache returned {:?}", check_result);
+            tracing::debug!("answer check result was found in the cache {check_result:?}");
             return check_result;
         }
 
-        // Submit to server.
-        let answer_text = answer.to_string();
+        // Check if there is an active time out on new submissions prior to
+        // submitting to the advent of code service.
+        let mut user = self.user_cache.load(&self.config.session_id);
 
-        // Format the URL for posting answers.
-        /*
+        if let Some(submit_wait_until) = user.submit_wait_until {
+            if chrono::Utc::now() <= submit_wait_until {
+                // TODO: Return an error with time remaining.
+                tracing::warn!("user cannot submit an answer until {submit_wait_until}");
+                panic!("cannot submit until {submit_wait_until}");
+            } else {
+                // TODO: remove the timeout and save.
+                tracing::debug!("user submission timeout has expired, ignoring");
+            }
+        }
+
+        // Submit to the answer to Advent of Code service.
         let url = format!("{}/{}/day/{}/answer", Self::ADVENT_OF_CODE_URL, year, day);
 
         tracing::debug!(
@@ -187,11 +212,10 @@ impl Client for WebClient {
             part,
             day,
             year,
-            answer_text,
+            answer,
             url
         );
 
-        // Send the puzzle answer.
         let response = self
             .http_client
             .post(url)
@@ -204,32 +228,52 @@ impl Client for WebClient {
                         "2".to_string()
                     },
                 ),
-                ("answer", answer_text),
+                ("answer", answer.to_string()),
             ])
             .send()
             .unwrap()
             .text()
             .unwrap();
 
-        tracing::debug!("server response for answer: {}", response);
-        */
-        let response = "That's not the right answer.";
+        tracing::debug!("advent of code servier response for answer: {answer}");
+
+        // Look for a minimum wait time in the text.
+        let extract_wait_time_funcs = &[
+            Self::extract_error_time_to_wait,
+            Self::extract_one_minute_time_to_wait,
+            Self::extract_wrong_answer_time_to_wait,
+        ];
+
+        if let Some(time_to_wait) = extract_wait_time_funcs
+            .iter()
+            .filter_map(|f| f(&response))
+            .next()
+        {
+            // Write back the amount of time to wait to avoid hitting the server
+            // on future submissions.
+            let wait_until = chrono::Utc::now() + time_to_wait;
+            tracing::debug!("setting time to wait ({time_to_wait}) to be {wait_until}");
+
+            user.submit_wait_until = Some(wait_until);
+            self.user_cache.save(&user);
+        }
 
         // Handle special cases.
         // TODO: Remove this special casing if possible.
         // TODO: Look into "You don't seem to be solving the right level.  Did you already complete it?"
         //       Is this only returned for errors on solved levels?
         if response.contains("gave an answer too recently") {
-            // TODO: Extract the time to wait.
-            // TODO: Cache the amount of time to wait or otherwise handle it.
-            panic!("TODO: add handling for server response `gave an answer too recently`");
+            // TODO: make sure the time to wait is correct from above.
+            // TODO: return an error rather than panic.
+            panic!("TODO: add Error for server response `gave an answer too recently`");
         }
 
         if response.contains("you already complete it") {
-            panic!("TODO: add handling for server response `you already complete it`");
+            // TODO: return an error rather than panic.
+            panic!("TODO: add Error for server response `you already complete it`");
         }
 
-        // Translate the response into a result.
+        // Translate the response text into a result.
         let responses_texts = &[
             ("not the right answer", CheckResult::Wrong),
             ("the right answer", CheckResult::Correct),
@@ -241,26 +285,31 @@ impl Client for WebClient {
             .iter()
             .find(|x| response.contains(x.0))
             .map(|x| x.1.clone())
-            .expect("expect server response text to map to predetermined response in LUT");
+            .unwrap_or_else(|| panic!("expect server response text to map to predetermined response in LUT. Response:\n```\n{response}\n```\n"));
 
         // Write the response to the answers database and then save it back to
         // the puzzle cache.
         match check_result {
             CheckResult::Correct => {
+                tracing::debug!("Setting correct answer as {answer}");
                 answers.set_correct_answer(answer);
             }
             CheckResult::Wrong => {
+                tracing::debug!("Setting wrong answer {answer}");
                 answers.add_wrong_answer(answer);
             }
             CheckResult::TooLow => {
+                tracing::debug!("Setting low bounds wrong answer {answer}");
                 answers.set_low_bounds(answer);
             }
             CheckResult::TooHigh => {
+                tracing::debug!("Setting high bounds wrong answer {answer}");
                 answers.set_high_bounds(answer);
             }
         };
 
         // TODO: Report errors.
+        tracing::debug!("Saving answers database to puzzle cache");
         self.puzzle_cache
             .save_answers(&answers, part, day, year)
             .unwrap();
@@ -275,6 +324,35 @@ impl Client for WebClient {
     // TODO: personal leaderboard
     // TODO: list of private leaderboards
     // TODO: show private leaderboard
+}
+
+impl WebClient {
+    fn extract_one_minute_time_to_wait(response: &str) -> Option<Duration> {
+        match response.contains("Please wait one minute before trying again") {
+            true => Some(Duration::minutes(5)),
+            false => None,
+        }
+    }
+
+    fn extract_wrong_answer_time_to_wait(response: &str) -> Option<Duration> {
+        let regex = Regex::new(r"please wait (\d) minutes?").unwrap();
+        regex
+            .captures(response)
+            .map(|c| Duration::minutes(c[1].parse::<i64>().unwrap()))
+    }
+
+    fn extract_error_time_to_wait(response: &str) -> Option<Duration> {
+        let regex = Regex::new(r"You have (\d+)m( (\d+)s)? left to wait").unwrap();
+        regex.captures(response).map(|c| {
+            let mut time_to_wait = Duration::minutes(c[1].parse::<i64>().unwrap());
+
+            if let Some(secs) = c.get(3) {
+                time_to_wait += Duration::seconds(secs.as_str().parse::<i64>().unwrap());
+            }
+
+            time_to_wait
+        })
+    }
 }
 
 impl Default for WebClient {

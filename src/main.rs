@@ -1,7 +1,7 @@
 mod y2024;
 
 use advent_of_code_data::{
-    client::{Client, WebClient}, data::CheckResult, registry::{Solver, SolverError, SolverRegistry}, runner::{RunnerEventHandler, SolverRunner}, Answer, Day, Part, Year
+    client::WebClient, data::CheckResult, registry::{Solver, SolverError, SolverRegistry}, runner::{RunnerEventHandler, SolverRunner}, Answer, Day, Part, Year
 };
 use clap::{Parser, Subcommand};
 use linkme::distributed_slice;
@@ -108,7 +108,7 @@ fn main() {
 pub struct ConsoleRunnerEventHandler {}
 
 impl RunnerEventHandler for ConsoleRunnerEventHandler {
-    fn on_start_solver(&mut self, solver: &Solver) {
+    fn on_start_solver(&mut self, _solver: &Solver) {
         // TODO: start measuring execution time for solver.
     }
 
@@ -125,11 +125,11 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
         // TODO: implement time recording.
     }
 
-    fn on_start_part(&mut self, solver: &Solver, part: Part) {}
+    fn on_start_part(&mut self, _solver: &Solver, _part: Part) {}
 
     fn on_finish_part(
         &mut self,
-        solver: &Solver,
+        _solver: &Solver,
         part: Part,
         result: &Result<(Answer, CheckResult), SolverError>,
     ) {
@@ -181,7 +181,7 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
 
     fn on_finish_solver(
         &mut self,
-        solver: &Solver,
+        _solver: &Solver,
     ) {
         // TODO: report total execution time for solver.
     }

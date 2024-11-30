@@ -15,3 +15,7 @@ That's not the right answer.  If you're stuck, make sure you're using the full i
 ```
 You gave an answer too recently; you have to wait after submitting an answer before trying again.  You have 3m 49s left to wait
 ```
+
+```
+Please don't repeatedly request this endpoint before it unlocks! The calendar countdown is synchronized with the server time; the link will be enabled on the calendar the instant this puzzle becomes available.
+```
