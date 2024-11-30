@@ -32,7 +32,7 @@ enum Commands {
 
         /// Restrict solvers to the given days only.
         #[arg(short, long)]
-        days: Option<Vec<usize>>,
+        day: Option<Vec<usize>>,
 
         /// Restrict solvers to the given year only.
         #[arg(short, long)]
@@ -42,7 +42,7 @@ enum Commands {
     Visualize {
         /// Day of puzzle.
         #[arg(short, long)]
-        days: usize,
+        day: usize,
 
         /// Year of puzzle.
         #[arg(short, long)]
@@ -74,7 +74,7 @@ fn main() {
     match &cli.command {
         Some(Commands::Run {
             unsolved: _unsolved,
-            days,
+            day: days,
             year,
         }) => {
             // TODO: Find the latest year for a default value if year unspecified.
@@ -110,7 +110,6 @@ pub struct ConsoleRunnerEventHandler {}
 impl RunnerEventHandler for ConsoleRunnerEventHandler {
     fn on_start_solver(&mut self, solver: &Solver) {
         // TODO: start measuring execution time for solver.
-        todo!()
     }
 
     fn on_part_examples_pass(&mut self, solver: &Solver, part: Part, count: usize) {
@@ -146,19 +145,19 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
         // solution never ran.
         match result {
             Ok((answer, CheckResult::Correct)) => {
-                println!("✅ {part}: {answer} [0.0s]");
+                println!("✅ part {part}: {answer} [0.0s]");
             },
             Ok((answer, CheckResult::Wrong)) => {
-                println!("❌ Wrong answer for pat {part}: {answer} [0.0s]")
+                println!("❌ Wrong answer for part {part}: {answer} [0.0s]")
             },
             Ok((answer, CheckResult::TooLow)) => {
-                println!("❌ Wrong answer for pat {part}: {answer} is too low [0.0s]")
+                println!("❌ Wrong answer for part {part}: {answer} is too low [0.0s]")
             },
             Ok((answer, CheckResult::TooHigh)) => {
-                println!("❌ Wrong answer for pat {part}: {answer} is too high [0.0s]")
+                println!("❌ Wrong answer for part {part}: {answer} is too high [0.0s]")
             },
             Err(SolverError::NotFinished) => {
-                println!("👻 Solver for {} is not finished", part);
+                println!("👻 Solver for part {} is not finished", part);
             },
             Err(SolverError::ExampleFailed { input, expected, actual,..})  => {
                 println!(
@@ -170,7 +169,7 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
                 );
             }
             Err(SolverError::TooSoon) => {
-                println!("⏱️ Solution for {part} submitted too soon, please wait a bit before trying again");
+                println!("⏱️ Solution for part {part} submitted too soon, please wait a bit before trying again");
             }
             Err(error) => {
                 // TODO: Better error reporting.
@@ -185,6 +184,5 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
         solver: &Solver,
     ) {
         // TODO: report total execution time for solver.
-        todo!()
     }
 }

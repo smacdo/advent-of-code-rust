@@ -84,7 +84,7 @@ impl SolverRegistry {
             .collect()
     }
 
-    pub fn solver(&self, _day: Day, _year: Year) -> &Solver {
-        todo!()
+    pub fn solver(&self, day: Day, year: Year) -> &Solver {
+        &self.solvers[&year][&day]
     }
 }

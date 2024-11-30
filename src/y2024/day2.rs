@@ -19,11 +19,9 @@ static SOLVER: Solver = Solver {
 };
 
 pub fn day_2_1(_input: &str) -> Result<Answer> {
-    println!("day 2-1");
     Err(SolverError::NotFinished)
 }
 
 pub fn day_2_2(_input: &str) -> Result<Answer> {
-    println!("day 2-2");
     Err(SolverError::NotFinished)
 }
