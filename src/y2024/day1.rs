@@ -51,8 +51,7 @@ pub fn day_1_1(input: &str) -> Result<Answer> {
         total_distance += distance;
     }
 
-    Ok(Answer::Int(total_distance))
-    //Err(SolverError::NotFinished)
+    Ok(total_distance.into())
 }
 
 pub fn day_1_2(input: &str) -> Result<Answer> {
@@ -67,18 +66,15 @@ pub fn day_1_2(input: &str) -> Result<Answer> {
         right.push(numbers[1]);
     }
 
-    // Calculate how many times each number appears in the two lists.
-    fn count_occurences(nums: &[i64]) -> HashMap<i64, i64> {
-        let mut counts: HashMap<i64, i64> = HashMap::new();
+    // Calculate how many times each number occurs in the right list.
+    let mut counts: HashMap<i64, i64> = HashMap::new();
 
-        for n in nums {
-            counts.entry(*n).and_modify(|e| *e += 1).or_insert(1);
-        }
-
-        counts
+    for n in right {
+        *counts.entry(n).or_default() += 1;
     }
 
-    let counts = count_occurences(&right);
+    // Calculate total similarity of the two lists by summing the product of
+    // each left value times the number of times it appears in the right.
     let mut total_similarity = 0;
 
     for n in left {
@@ -86,5 +82,5 @@ pub fn day_1_2(input: &str) -> Result<Answer> {
         total_similarity += similarity;
     }
 
-    Ok(Answer::Int(total_similarity))
+    Ok(total_similarity.into())
 }

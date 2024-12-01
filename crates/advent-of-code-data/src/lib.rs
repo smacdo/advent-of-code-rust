@@ -136,12 +136,6 @@ impl From<i64> for Answer {
     }
 }
 
-impl From<i32> for Answer {
-    fn from(value: i32) -> Self {
-        Self::Int(value as i64)
-    }
-}
-
 impl From<isize> for Answer {
     fn from(value: isize) -> Self {
         Self::Int(value as i64)
