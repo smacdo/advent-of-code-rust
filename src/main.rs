@@ -1,11 +1,10 @@
 mod y2024;
 
 use advent_of_code_data::{
-    client::WebClient,
-    data::CheckResult,
-    registry::{Solver, SolverError, SolverRegistry},
-    runner::{RunnerEventHandler, SolverRunner},
-    Answer, Day, Part, Year,
+    client::{Client, WebClient},
+    registry::{Solver, SolverRegistry},
+    runner::SolverRunner,
+    Day, Year,
 };
 use advent_of_code_rust::terminal_output::ConsoleRunnerEventHandler;
 use clap::{Parser, Subcommand};
@@ -45,6 +44,16 @@ enum Commands {
     },
     /// Runs a solver with visualization mode enabled.
     Visualize {
+        /// Day of puzzle.
+        #[arg(short, long)]
+        day: usize,
+
+        /// Year of puzzle.
+        #[arg(short, long)]
+        year: usize,
+    },
+    /// Prints the input for a puzzle.
+    Input {
         /// Day of puzzle.
         #[arg(short, long)]
         day: usize,
@@ -101,6 +110,9 @@ fn main() {
             }
 
             runner.run_all();
+        }
+        Some(Commands::Input { day, year }) => {
+            println!("{}", client.get_input(Day(*day), Year(*year)));
         }
         _ => {
             panic!("command not implemented yet")
