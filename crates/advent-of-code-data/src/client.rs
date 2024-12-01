@@ -155,6 +155,9 @@ impl Client for WebClient {
         // TODO: ^^^ above text comes with HTTP 400
         // TODO: If the session id is set when this happens its either bad or timed out.
 
+        // TODO: Handle:
+        // Please don't repeatedly request this endpoint before it unlocks! The calendar countdown is synchronized with the server time; the link will be enabled on the calendar the instant this puzzle becomes available.
+
         // TODO: Only write input if there were no errors from above.
         // TODO: Do not overwrite answers if they already exist (eg input was deleted).
         // TODO: Report errors.
