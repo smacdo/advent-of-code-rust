@@ -1,4 +1,8 @@
+use core::str;
 use std::path::{Path, PathBuf};
+
+use base64::{prelude::BASE64_STANDARD, Engine};
+use simple_crypt::{decrypt, encrypt};
 
 use crate::{
     data::{Answers, Puzzle, User},
@@ -9,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct PuzzleCache {
     cache_dir: PathBuf,
-    _encryption_token: Option<String>,
+    encryption_token: Option<String>,
 }
 
 impl PuzzleCache {
@@ -24,12 +28,35 @@ impl PuzzleCache {
         // TODO: Validate cache_dir is a directory, and is writable.
         Self {
             cache_dir: cache_dir.into(),
-            _encryption_token: encryption_token.map(|x| x.into()),
+            encryption_token: encryption_token.map(|x| x.into()),
         }
     }
 
     pub fn load_input(&self, day: Day, year: Year) -> std::io::Result<String> {
-        std::fs::read_to_string(Self::input_file_path(&self.cache_dir, day, year))
+        // TODO: Convert unwraps into Errors.
+
+        // Load the cached input file from disk.
+        let input_path = Self::input_file_path(&self.cache_dir, day, year);
+        tracing::debug!("input for puzzle day {day} year {year}: {input_path:?}");
+
+        let mut input_text = std::fs::read_to_string(input_path)?;
+
+        // Decrypt the input data.
+        // TODO: Add error check to see if input file is encrypted and the password
+        //       token is `None` leading to encrypted input passed to puzzle.
+        if let Some(encryption_token) = &self.encryption_token {
+            let encrypted_bytes = BASE64_STANDARD
+                .decode(input_text.as_bytes())
+                .expect("failed to base64 decode input data");
+            let input_bytes = decrypt(&encrypted_bytes, encryption_token.as_bytes())
+                .expect("failed to decrypt input text");
+            input_text = String::from_utf8(input_bytes)
+                .expect("failed to read decrypted input bytes as utf8 string");
+
+            tracing::debug!("succesfully decrypted input for puzzle day {day} year {year}")
+        }
+
+        Ok(input_text)
     }
 
     pub fn load_answers(&self, part: Part, day: Day, year: Year) -> std::io::Result<Answers> {
@@ -68,14 +95,31 @@ impl PuzzleCache {
     }
 
     pub fn save_input(&self, input: &str, day: Day, year: Year) -> std::io::Result<()> {
+        // TODO: Convert unwraps into Errors.
+        // Calculate the path to the puzzle's input file.
         let input_path = Self::input_file_path(&self.cache_dir, day, year);
+
+        // Create puzzle directory if it does not already exist.
         let mut puzzle_dir = input_path.clone();
         puzzle_dir.pop();
 
         std::fs::create_dir_all(puzzle_dir).unwrap();
 
-        tracing::debug!("saving input for day {day} year {year} to {input_path:?}");
-        std::fs::write(input_path, input)
+        // Write the input to disk, and optionally encrypt the input file when
+        // stored on disk.
+        if let Some(encryption_token) = &self.encryption_token {
+            // Encrypt then base64 encode for better version control handling.
+            let encrypted_data =
+                encrypt(input.as_bytes(), encryption_token.as_bytes()).expect("failed to encrypt");
+            let b64_encrypted_text = BASE64_STANDARD.encode(encrypted_data);
+
+            tracing::debug!("saving encrypted input for day {day} year {year} to {input_path:?}");
+            std::fs::write(input_path, b64_encrypted_text)
+        } else {
+            // No encryption.
+            tracing::debug!("saving unencrypted input for day {day} year {year} to {input_path:?}");
+            std::fs::write(input_path, input)
+        }
     }
 
     pub fn save_answers(

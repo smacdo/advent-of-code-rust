@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 
@@ -55,8 +55,6 @@ pub fn day_1_1(input: &str) -> Result<Answer> {
     for (a, b) in left.into_iter().zip(right.into_iter()) {
         let distance = (a - b).abs();
         total_distance += distance;
-
-        tracing::info!("({a}, {b}) distance {distance} => {total_distance}");
     }
 
     Ok(Answer::Int(total_distance))
