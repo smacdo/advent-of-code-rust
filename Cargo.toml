@@ -30,8 +30,10 @@ edition = "2021"
 [dependencies]
 advent-of-code-data = { path = "./crates/advent-of-code-data" }
 anyhow.workspace = true
+regex.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+
 clap = { version = "4.5.21", features = ["derive"] }
 linkme = "0.3.31"

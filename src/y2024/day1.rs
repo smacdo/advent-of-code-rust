@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
 
 use crate::SOLVERS;
@@ -32,14 +33,7 @@ pub fn day_1_1(input: &str) -> Result<Answer> {
     let mut right = Vec::<i64>::new();
 
     for line in input.lines() {
-        let numbers: Vec<i64> = line
-            .split_whitespace()
-            .map(|s| {
-                s.parse::<i64>()
-                    .inspect_err(|_| tracing::error!("BAD INTEGER: `{s}`"))
-                    .unwrap()
-            })
-            .collect();
+        let numbers = find_ints(line);
 
         left.push(numbers[0]);
         right.push(numbers[1]);
@@ -67,14 +61,7 @@ pub fn day_1_2(input: &str) -> Result<Answer> {
     let mut right = Vec::<i64>::new();
 
     for line in input.lines() {
-        let numbers: Vec<i64> = line
-            .split_whitespace()
-            .map(|s| {
-                s.parse::<i64>()
-                    .inspect_err(|_| tracing::error!("BAD INTEGER: `{s}`"))
-                    .unwrap()
-            })
-            .collect();
+        let numbers = find_ints(line);
 
         left.push(numbers[0]);
         right.push(numbers[1]);
