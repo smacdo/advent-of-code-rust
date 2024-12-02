@@ -10,7 +10,7 @@ pub mod data;
 pub mod registry;
 pub mod runner;
 pub mod settings;
-pub mod utils;
+mod utils;
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Day(pub usize);
@@ -127,6 +127,12 @@ impl std::fmt::Display for Answer {
 impl From<String> for Answer {
     fn from(value: String) -> Self {
         Self::String(value)
+    }
+}
+
+impl From<i32> for Answer {
+    fn from(value: i32) -> Self {
+        Self::Int(value as i64)
     }
 }
 
