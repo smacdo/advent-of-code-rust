@@ -1,4 +1,4 @@
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::utils;
 use linkme::distributed_slice;
@@ -27,8 +27,7 @@ static SOLVER: Solver = Solver {
     },
 };
 
-fn check_is_safe(levels: &[i64], dampener_count: usize) -> bool {
-    let mut dampeners_remaining: usize = dampener_count;
+fn check_is_safe(levels: &[i64]) -> bool {
     levels
         .windows(2) // Iterate over [n0, n1], [n1, n2], ...
         .map(|ab| ab[1] - ab[0]) // Calculate distance between [n, n+1]
@@ -62,17 +61,41 @@ pub fn day_2_1(input: &str) -> Result<Answer> {
     for report in input.lines() {
         let levels = utils::find_ints(report);
 
-        if check_is_safe(&levels, 0) {
-            tracing::debug!("Safe: {levels:?}");
+        if check_is_safe(&levels) {
             safe_reports_count += 1
-        } else {
-            tracing::debug!("Unsafe: {levels:?}");
         }
     }
 
     Ok(safe_reports_count.into())
 }
 
-pub fn day_2_2(_input: &str) -> Result<Answer> {
-    Err(SolverError::NotFinished)
+pub fn day_2_2(input: &str) -> Result<Answer> {
+    let mut safe_reports_count = 0;
+
+    for report in input.lines() {
+        let levels = utils::find_ints(report);
+
+        if check_is_safe(&levels) {
+            safe_reports_count += 1
+        } else {
+            // This is SUPER brute force and gross but hey it's worth a first
+            // attempt. I can always return later when I've thought of a nice
+            // way to do this.
+            for index_to_delete in 0..levels.len() {
+                let dont_worry_about_it: Vec<i64> = levels
+                    .iter()
+                    .enumerate()
+                    .filter(|(i, _)| *i != index_to_delete)
+                    .map(|(_, x)| *x)
+                    .collect();
+
+                if check_is_safe(&dont_worry_about_it) {
+                    safe_reports_count += 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(safe_reports_count.into())
 }
