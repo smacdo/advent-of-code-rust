@@ -55,6 +55,7 @@ impl SolverRunner {
 
     fn run(solver: &Solver, client: &mut dyn Client, events: &mut dyn RunnerEventHandler) {
         let parts = [Part::One, Part::Two];
+        let input = client.get_input(solver.day, solver.year).unwrap();
 
         events.on_start_solver(solver);
 
@@ -109,7 +110,6 @@ impl SolverRunner {
 
             // Run the solver against real puzzle input.
             // TODO: merge client errors and solver errors into reportable.
-            let input = client.get_input(solver.day, solver.year).unwrap();
             let solver_result = (solver_part.func)(&input);
 
             let final_result: Result<(Answer, CheckResult), RunnerError> = match solver_result {
