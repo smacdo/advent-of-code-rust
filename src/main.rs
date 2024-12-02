@@ -112,7 +112,7 @@ fn main() {
             runner.run_all();
         }
         Some(Commands::Input { day, year }) => {
-            println!("{}", client.get_input(Day(*day), Year(*year)));
+            println!("{}", client.get_input(Day(*day), Year(*year)).unwrap());
         }
         _ => {
             panic!("command not implemented yet")

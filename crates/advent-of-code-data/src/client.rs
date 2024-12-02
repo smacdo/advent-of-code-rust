@@ -14,15 +14,31 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum ClientError {
-    #[error("the answer was submitted too soon, please wait before trying again")]
-    TooSoon,
+    #[error("the answer was submitted too soon, please wait until {} trying again", .0)]
+    TooSoon(chrono::DateTime<chrono::Utc>),
+    #[error("the session id `{}` is invalid or has expired", .0)]
+    BadSessionId(String),
+    #[error("a puzzle could not be found for day {} year {}", .0, .1)]
+    PuzzleNotFound(Day, Year),
+    #[error("please wait submitting answers to the Advent of Code service until {}", .0)]
+    SubmitTimeOut(chrono::DateTime<chrono::Utc>),
+    #[error("a correct answer has already been submitted for day {} year {}", .0, .1)]
+    AlreadySubmittedAnswer(Day, Year),
+    #[error("an unknown HTTP {} error was returned by the Advent of Code service", .0)]
+    UnknownHttpError(reqwest::StatusCode),
 }
 
 pub trait Client {
     fn years(&self) -> Vec<Year>;
     fn days(&self, year: Year) -> Option<Vec<Day>>;
-    fn get_input(&self, day: Day, year: Year) -> String;
-    fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> CheckResult;
+    fn get_input(&self, day: Day, year: Year) -> Result<String, ClientError>;
+    fn submit_answer(
+        &mut self,
+        answer: Answer,
+        part: Part,
+        day: Day,
+        year: Year,
+    ) -> Result<CheckResult, ClientError>;
     fn get_puzzle(&self, day: Day, year: Year) -> Puzzle;
 }
 
@@ -116,7 +132,7 @@ impl Client for WebClient {
         }
     }
 
-    fn get_input(&self, day: Day, year: Year) -> String {
+    fn get_input(&self, day: Day, year: Year) -> Result<String, ClientError> {
         tracing::trace!("get_input(day=`{day}`, year=`{year}`)",);
 
         // TODO: Convert expects and unwraps into errors.
@@ -125,7 +141,7 @@ impl Client for WebClient {
         // it from the Advent of Code service.
         // TODO: Return an error if the result is anything other than missing file.
         if let Ok(input) = self.puzzle_cache.load_input(day, year) {
-            return input;
+            return Ok(input);
         }
 
         // Fetch the puzzle input from the Advent of Code service.
@@ -138,34 +154,40 @@ impl Client for WebClient {
             url
         );
 
-        let request = self
-            .http_client
-            .get(url)
-            .build()
-            .expect("unexpected error when building HTTP GET request for `get_input`");
+        let response = self.http_client.get(url).send().unwrap();
+        tracing::debug!("server responed with HTTP {}", response.status());
 
-        let input = self
-            .http_client
-            .execute(request)
-            .expect("unexpected error when HTTP GET for `get_input`")
-            .text()
-            .expect("unexpected error don't know what");
+        match response.status() {
+            reqwest::StatusCode::OK => {
+                // Cache the puzzle input on disk so we don't have to refetch it
+                // from the Advent of Code service.
+                let input = response.text().unwrap();
+                self.puzzle_cache.save_input(&input, day, year).unwrap();
 
-        // TODO: Check for "Puzzle inputs differ by user.  Please log in to get your puzzle input."
-        // TODO: ^^^ above text comes with HTTP 400
-        // TODO: If the session id is set when this happens its either bad or timed out.
+                // Return the input to the caller.
+                Ok(input)
+            }
+            reqwest::StatusCode::BAD_REQUEST => Err(ClientError::BadSessionId(
+                self.config.session_id.to_string(),
+            )),
+            reqwest::StatusCode::NOT_FOUND => {
+                // TODO: Return "Not available _yet_" if the requested data in the future.
+                Err(ClientError::PuzzleNotFound(day, year))
+            }
+            _ => Err(ClientError::UnknownHttpError(response.status())),
+        }
 
         // TODO: Handle:
         // Please don't repeatedly request this endpoint before it unlocks! The calendar countdown is synchronized with the server time; the link will be enabled on the calendar the instant this puzzle becomes available.
-
-        // TODO: Only write input if there were no errors from above.
-        // TODO: Do not overwrite answers if they already exist (eg input was deleted).
-        // TODO: Report errors.
-        self.puzzle_cache.save_input(&input, day, year).unwrap();
-        input
     }
 
-    fn submit_answer(&mut self, answer: Answer, part: Part, day: Day, year: Year) -> CheckResult {
+    fn submit_answer(
+        &mut self,
+        answer: Answer,
+        part: Part,
+        day: Day,
+        year: Year,
+    ) -> Result<CheckResult, ClientError> {
         // TODO: Convert expects and unwraps into errors.
         tracing::trace!(
             "submit_answer(answer=`{:?}`, part=`{}`, day=`{}`, year=`{}`)",
@@ -187,9 +209,8 @@ impl Client for WebClient {
             .unwrap_or_default();
 
         if let Some(check_result) = answers.check(&answer) {
-            // TODO: fix the return type by changing it to `CheckResult`.
             tracing::debug!("answer check result was found in the cache {check_result:?}");
-            return check_result;
+            return Ok(check_result);
         }
 
         // Check if there is an active time out on new submissions prior to
@@ -198,9 +219,8 @@ impl Client for WebClient {
 
         if let Some(submit_wait_until) = user.submit_wait_until {
             if chrono::Utc::now() <= submit_wait_until {
-                // TODO: Return an error with time remaining.
                 tracing::warn!("user cannot submit an answer until {submit_wait_until}");
-                panic!("cannot submit until {submit_wait_until}");
+                return Err(ClientError::SubmitTimeOut(submit_wait_until));
             } else {
                 // TODO: remove the timeout and save.
                 tracing::debug!("user submission timeout has expired, ignoring");
@@ -234,11 +254,26 @@ impl Client for WebClient {
                 ("answer", answer.to_string()),
             ])
             .send()
-            .unwrap()
-            .text()
             .unwrap();
+        tracing::debug!("server responed with HTTP {}", response.status());
 
-        tracing::debug!("advent of code servier response for answer: {answer}");
+        // Exit early if there were any fatal HTTP errors.
+        if response.status().is_client_error() || response.status().is_server_error() {
+            return match response.status() {
+                reqwest::StatusCode::BAD_REQUEST => Err(ClientError::BadSessionId(
+                    self.config.session_id.to_string(),
+                )),
+                reqwest::StatusCode::NOT_FOUND => {
+                    // TODO: Return "Not available _yet_" if the requested data in the future.
+                    Err(ClientError::PuzzleNotFound(day, year))
+                }
+                _ => Err(ClientError::UnknownHttpError(response.status())),
+            };
+        }
+
+        // Read the contents of the response.
+        let response_text = response.text().unwrap();
+        tracing::debug!("got advent of code servier response for answer: {answer}");
 
         // Look for a minimum wait time in the text.
         let extract_wait_time_funcs = &[
@@ -249,7 +284,7 @@ impl Client for WebClient {
 
         if let Some(time_to_wait) = extract_wait_time_funcs
             .iter()
-            .filter_map(|f| f(&response))
+            .filter_map(|f| f(&response_text))
             .next()
         {
             // Write back the amount of time to wait to avoid hitting the server
@@ -265,15 +300,12 @@ impl Client for WebClient {
         // TODO: Remove this special casing if possible.
         // TODO: Look into "You don't seem to be solving the right level.  Did you already complete it?"
         //       Is this only returned for errors on solved levels?
-        if response.contains("gave an answer too recently") {
-            // TODO: make sure the time to wait is correct from above.
-            // TODO: return an error rather than panic.
-            panic!("TODO: add Error for server response `gave an answer too recently`");
+        if response_text.contains("gave an answer too recently") {
+            return Err(ClientError::SubmitTimeOut(user.submit_wait_until.unwrap()));
         }
 
-        if response.contains("you already complete it") {
-            // TODO: return an error rather than panic.
-            panic!("TODO: add Error for server response `you already complete it`");
+        if response_text.contains("you already complete it") {
+            return Err(ClientError::AlreadySubmittedAnswer(day, year));
         }
 
         // Translate the response text into a result.
@@ -286,9 +318,9 @@ impl Client for WebClient {
 
         let check_result = responses_texts
             .iter()
-            .find(|x| response.contains(x.0))
+            .find(|x| response_text.contains(x.0))
             .map(|x| x.1.clone())
-            .unwrap_or_else(|| panic!("expect server response text to map to predetermined response in LUT. Response:\n```\n{response}\n```\n"));
+            .unwrap_or_else(|| panic!("expected server response text to map to predetermined response in LUT. Response:\n```\n{response_text}\n```\n"));
 
         // Write the response to the answers database and then save it back to
         // the puzzle cache.
@@ -317,7 +349,7 @@ impl Client for WebClient {
             .save_answers(&answers, part, day, year)
             .unwrap();
 
-        check_result
+        Ok(check_result)
     }
 
     fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {

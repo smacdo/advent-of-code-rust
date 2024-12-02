@@ -1,9 +1,19 @@
+use thiserror::Error;
+
 use crate::{
-    client::Client,
+    client::{Client, ClientError},
     data::CheckResult,
     registry::{Solver, SolverError},
     Answer, Part,
 };
+
+#[derive(Error, Debug)]
+pub enum RunnerError {
+    #[error(transparent)]
+    Client(#[from] ClientError),
+    #[error(transparent)]
+    Solver(#[from] SolverError),
+}
 
 pub trait RunnerEventHandler {
     fn on_start_solver(&mut self, solver: &Solver);
@@ -13,7 +23,7 @@ pub trait RunnerEventHandler {
         &mut self,
         solver: &Solver,
         part: Part,
-        result: &Result<(Answer, CheckResult), SolverError>,
+        result: &Result<(Answer, CheckResult), RunnerError>,
     );
     fn on_finish_solver(&mut self, solver: &Solver);
 }
@@ -75,7 +85,8 @@ impl SolverRunner {
                                     input: example.1.to_string(),
                                     expected: example.0.clone(),
                                     actual: answer,
-                                }),
+                                }
+                                .into()),
                             );
 
                             examples_pass = false;
@@ -97,17 +108,18 @@ impl SolverRunner {
             }
 
             // Run the solver against real puzzle input.
-            let input = client.get_input(solver.day, solver.year);
+            // TODO: merge client errors and solver errors into reportable.
+            let input = client.get_input(solver.day, solver.year).unwrap();
             let solver_result = (solver_part.func)(&input);
 
-            let final_result = match solver_result {
+            let final_result: Result<(Answer, CheckResult), RunnerError> = match solver_result {
                 Ok(answer) => {
-                    let check_result =
-                        client.submit_answer(answer.clone(), part, solver.day, solver.year);
-
-                    Ok((answer, check_result))
+                    match client.submit_answer(answer.clone(), part, solver.day, solver.year) {
+                        Ok(check_result) => Ok((answer, check_result)),
+                        Err(err) => Err(err.into()),
+                    }
                 }
-                Err(err) => Err(err),
+                Err(err) => Err(err.into()),
             };
 
             events.on_finish_part(solver, part, &final_result);

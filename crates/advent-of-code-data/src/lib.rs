@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use client::{Client, WebClient};
+use client::{Client, ClientError, WebClient};
 use data::CheckResult;
 use thiserror::Error;
 
@@ -142,19 +142,33 @@ impl From<isize> for Answer {
     }
 }
 
-impl From<usize> for Answer {
-    fn from(value: usize) -> Self {
-        assert!(value as u64 <= i64::MAX as u64);
-        Self::Int(value as i64)
+pub struct TooLargeForInt64;
+
+impl TryFrom<usize> for Answer {
+    type Error = TooLargeForInt64;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value as u64 <= i64::MAX as u64 {
+            Ok(Self::Int(value as i64))
+        } else {
+            Err(TooLargeForInt64)
+        }
     }
 }
 
-pub fn get_input(day: Day, year: Year) -> String {
+/// TODO: Good documentation.
+pub fn get_input(day: Day, year: Year) -> Result<String, ClientError> {
     let client: WebClient = Default::default();
     client.get_input(day, year)
 }
 
-pub fn submit_answer(answer: Answer, part: Part, day: Day, year: Year) -> CheckResult {
+/// TODO: Good documentation.
+pub fn submit_answer(
+    answer: Answer,
+    part: Part,
+    day: Day,
+    year: Year,
+) -> Result<CheckResult, ClientError> {
     let mut client: WebClient = Default::default();
     client.submit_answer(answer, part, day, year)
 }

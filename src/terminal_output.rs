@@ -1,4 +1,4 @@
-use advent_of_code_data::{data::CheckResult, registry::{Solver, SolverError}, runner::RunnerEventHandler, Answer, Part};
+use advent_of_code_data::{data::CheckResult, registry::{Solver, SolverError}, runner::{RunnerError, RunnerEventHandler}, Answer, Part};
 
 
 // TODO: measure elapsed times.
@@ -28,7 +28,7 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
         &mut self,
         _solver: &Solver,
         part: Part,
-        result: &Result<(Answer, CheckResult), SolverError>,
+        result: &Result<(Answer, CheckResult), RunnerError>,
     ) {
         // Calculate the time elapsed since the examples completed and this event
         // indicating it finished.
@@ -53,10 +53,10 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
             Ok((answer, CheckResult::TooHigh)) => {
                 println!("❌ Wrong answer for part {part}: {answer} is too high [0.0s]")
             },
-            Err(SolverError::NotFinished) => {
+            Err(RunnerError::Solver(SolverError::NotFinished)) => {
                 println!("👻 Solver for part {} is not finished", part);
             },
-            Err(SolverError::ExampleFailed { input, expected, actual,..})  => {
+            Err(RunnerError::Solver(SolverError::ExampleFailed { input, expected, actual,..}) ) => {
                 println!(
                     "👎 The example output for part {} is `{}` but the solver returned `{}` using input:\n```\n{}\n```",
                     part, 
@@ -65,7 +65,7 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
                     input
                 );
             }
-            Err(SolverError::TooSoon) => {
+            Err(RunnerError::Solver(SolverError::TooSoon)) => {
                 println!("⏱️ Solution for part {part} submitted too soon, please wait a bit before trying again");
             }
             Err(error) => {
