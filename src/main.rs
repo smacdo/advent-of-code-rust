@@ -99,7 +99,7 @@ fn main() {
             let requested_days = days.as_ref().expect("TODO: implement default fallback");
             let available_days = solver_registry.days(year);
             let mut runner =
-                SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler {}));
+                SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
 
             for requested_day in requested_days {
                 let requested_day = Day(*requested_day);

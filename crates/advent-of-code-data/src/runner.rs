@@ -109,7 +109,8 @@ impl SolverRunner {
             }
 
             // Run the solver against real puzzle input.
-            // TODO: merge client errors and solver errors into reportable.
+            // TODO: measure execution time without including anwers io cache time.
+            //       call on_finish_part immediately after solver result
             let solver_result = (solver_part.func)(&input);
 
             let final_result: Result<(Answer, CheckResult), RunnerError> = match solver_result {
