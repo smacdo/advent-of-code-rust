@@ -1,7 +1,9 @@
+mod protocol;
+
 use std::{path::PathBuf, str::FromStr};
 
-use chrono::{Datelike, Duration};
-use regex::Regex;
+use chrono::Datelike;
+use protocol::{AdventOfCodeHttpProtocol, AdventOfCodeProtocol};
 use thiserror::Error;
 
 use crate::{
@@ -12,7 +14,7 @@ use crate::{
     Answer, Day, Part, Year,
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ClientError {
     #[error("the answer was submitted too soon, please wait until {} trying again", .0)]
     TooSoon(chrono::DateTime<chrono::Utc>),
@@ -20,12 +22,12 @@ pub enum ClientError {
     BadSessionId(String),
     #[error("a puzzle could not be found for day {} year {}", .0, .1)]
     PuzzleNotFound(Day, Year),
-    #[error("please wait submitting answers to the Advent of Code service until {}", .0)]
-    SubmitTimeOut(chrono::DateTime<chrono::Utc>),
+    #[error("please wait {} before submitting another answer to the Advent of Code service", .0)]
+    SubmitTimeOut(chrono::Duration),
     #[error("a correct answer has already been submitted for day {} year {}", .0, .1)]
     AlreadySubmittedAnswer(Day, Year),
-    #[error("an unknown HTTP {} error was returned by the Advent of Code service", .0)]
-    UnknownHttpError(reqwest::StatusCode),
+    #[error("an unexpected HTTP {} error was returned by the Advent of Code service", .0)]
+    Http(reqwest::StatusCode),
 }
 
 pub trait Client {
@@ -45,49 +47,28 @@ pub trait Client {
 #[derive(Debug)]
 pub struct WebClient {
     config: ClientConfig,
-    http_client: reqwest::blocking::Client,
+    protocol: Box<dyn AdventOfCodeProtocol>,
     puzzle_cache: PuzzleCache,
     user_cache: UserDataCache,
 }
 
 impl WebClient {
-    const ADVENT_OF_CODE_DOMAIN: &'static str = "adventofcode.com";
-    const ADVENT_OF_CODE_URL: &'static str = "https://adventofcode.com";
-
     pub fn new() -> Self {
         Self::with_options(Default::default())
     }
 
     pub fn with_options(options: ClientOptions) -> Self {
+        let config = ClientConfig::new(options);
+        let advent_protocol = Box::new(AdventOfCodeHttpProtocol::new(&config));
+        Self::with_custom_impl(config, advent_protocol)
+    }
+
+    pub fn with_custom_impl(
+        config: ClientConfig,
+        advent_protocol: Box<dyn AdventOfCodeProtocol>,
+    ) -> Self {
         // Convert client options into a actual configuration values.
         // TODO: validate config settings are sane.
-        let config = ClientConfig::new(options);
-
-        // Create an HTTP client for interacting with the Advent of Code website.
-        // TODO: verify dev@smacdo.com email OK
-        let cookies: reqwest::cookie::Jar = Default::default();
-        let cookie_data = format!(
-            "session={}; Domain={}",
-            config.session_id,
-            Self::ADVENT_OF_CODE_DOMAIN
-        );
-
-        tracing::debug!(
-            "adding session id to cookie jar with value `{}`",
-            cookie_data
-        );
-
-        cookies.add_cookie_str(
-            &cookie_data,
-            &Self::ADVENT_OF_CODE_URL.parse::<reqwest::Url>().unwrap(),
-        );
-
-        let http_client = reqwest::blocking::ClientBuilder::new()
-            .cookie_provider(cookies.into())
-            .user_agent("github.com/smacdo/advent-of-code-rust [email: dev@smacdo.com]")
-            .build()
-            .expect("unexpected error when constructing reqwest http client");
-
         let puzzle_dir = config.puzzle_dir.clone();
         let encryption_token = config.encryption_token.clone();
 
@@ -95,7 +76,7 @@ impl WebClient {
         // TODO: create a default user data cache.
         Self {
             config,
-            http_client,
+            protocol: advent_protocol,
             puzzle_cache: PuzzleCache::new(puzzle_dir, Some(encryption_token)),
             user_cache: UserDataCache::new(""),
         }
@@ -137,48 +118,19 @@ impl Client for WebClient {
 
         // TODO: Convert expects and unwraps into errors.
 
-        // Check if the input for this puzzle is cached locally before requesting
+        // Check if the input for this puzzle is cached locally before fetching
         // it from the Advent of Code service.
-        // TODO: Return an error if the result is anything other than missing file.
         if let Ok(input) = self.puzzle_cache.load_input(day, year) {
             return Ok(input);
         }
 
         // Fetch the puzzle input from the Advent of Code service.
-        let url = format!("{}/{}/day/{}/input", Self::ADVENT_OF_CODE_URL, year, day);
+        let input = self.protocol.get_input(day, year)?;
 
-        tracing::debug!(
-            "url to get puzzle input for day {} year {}: `{}`",
-            day,
-            year,
-            url
-        );
-
-        let response = self.http_client.get(url).send().unwrap();
-        tracing::debug!("server responed with HTTP {}", response.status());
-
-        match response.status() {
-            reqwest::StatusCode::OK => {
-                // Cache the puzzle input on disk so we don't have to refetch it
-                // from the Advent of Code service.
-                let input = response.text().unwrap();
-                self.puzzle_cache.save_input(&input, day, year).unwrap();
-
-                // Return the input to the caller.
-                Ok(input)
-            }
-            reqwest::StatusCode::BAD_REQUEST => Err(ClientError::BadSessionId(
-                self.config.session_id.to_string(),
-            )),
-            reqwest::StatusCode::NOT_FOUND => {
-                // TODO: Return "Not available _yet_" if the requested data in the future.
-                Err(ClientError::PuzzleNotFound(day, year))
-            }
-            _ => Err(ClientError::UnknownHttpError(response.status())),
-        }
-
-        // TODO: Handle:
-        // Please don't repeatedly request this endpoint before it unlocks! The calendar countdown is synchronized with the server time; the link will be enabled on the calendar the instant this puzzle becomes available.
+        // Cache the puzzle input on disk before returning to avoid repeatedly
+        // fetching input from the Advent of Code service.
+        self.puzzle_cache.save_input(&input, day, year).unwrap();
+        Ok(input)
     }
 
     fn submit_answer(
@@ -218,9 +170,11 @@ impl Client for WebClient {
         let mut user = self.user_cache.load(&self.config.session_id);
 
         if let Some(submit_wait_until) = user.submit_wait_until {
-            if chrono::Utc::now() <= submit_wait_until {
+            if self.config.start_time <= submit_wait_until {
                 tracing::warn!("user cannot submit an answer until {submit_wait_until}");
-                return Err(ClientError::SubmitTimeOut(submit_wait_until));
+                return Err(ClientError::SubmitTimeOut(
+                    submit_wait_until - self.config.start_time,
+                ));
             } else {
                 // TODO: remove the timeout and save.
                 tracing::debug!("user submission timeout has expired, ignoring");
@@ -228,99 +182,17 @@ impl Client for WebClient {
         }
 
         // Submit to the answer to Advent of Code service.
-        let url = format!("{}/{}/day/{}/answer", Self::ADVENT_OF_CODE_URL, year, day);
+        let (check_result, time_to_wait) = self.protocol.submit_answer(&answer, part, day, year)?;
 
-        tracing::debug!(
-            "creating url to post puzzle answer for part {:?} day {} year {} answer `{}` with url = `{}`",
-            part,
-            day,
-            year,
-            answer,
-            url
-        );
-
-        let response = self
-            .http_client
-            .post(url)
-            .form(&[
-                (
-                    "level",
-                    if part == Part::One {
-                        "1".to_string()
-                    } else {
-                        "2".to_string()
-                    },
-                ),
-                ("answer", answer.to_string()),
-            ])
-            .send()
-            .unwrap();
-        tracing::debug!("server responed with HTTP {}", response.status());
-
-        // Exit early if there were any fatal HTTP errors.
-        if response.status().is_client_error() || response.status().is_server_error() {
-            return match response.status() {
-                reqwest::StatusCode::BAD_REQUEST => Err(ClientError::BadSessionId(
-                    self.config.session_id.to_string(),
-                )),
-                reqwest::StatusCode::NOT_FOUND => {
-                    // TODO: Return "Not available _yet_" if the requested data in the future.
-                    Err(ClientError::PuzzleNotFound(day, year))
-                }
-                _ => Err(ClientError::UnknownHttpError(response.status())),
-            };
-        }
-
-        // Read the contents of the response.
-        let response_text = response.text().unwrap();
-        tracing::debug!("got advent of code servier response for answer: {answer}");
-
-        // Look for a minimum wait time in the text.
-        let extract_wait_time_funcs = &[
-            Self::extract_error_time_to_wait,
-            Self::extract_one_minute_time_to_wait,
-            Self::extract_wrong_answer_time_to_wait,
-        ];
-
-        if let Some(time_to_wait) = extract_wait_time_funcs
-            .iter()
-            .filter_map(|f| f(&response_text))
-            .next()
-        {
-            // Write back the amount of time to wait to avoid hitting the server
-            // on future submissions.
+        // Write back the amount of time to wait to avoid hitting the server
+        // on future submissions.
+        if let Some(time_to_wait) = time_to_wait {
             let wait_until = chrono::Utc::now() + time_to_wait;
             tracing::debug!("setting time to wait ({time_to_wait}) to be {wait_until}");
 
             user.submit_wait_until = Some(wait_until);
             self.user_cache.save(&user);
         }
-
-        // Handle special cases.
-        // TODO: Remove this special casing if possible.
-        // TODO: Look into "You don't seem to be solving the right level.  Did you already complete it?"
-        //       Is this only returned for errors on solved levels?
-        if response_text.contains("gave an answer too recently") {
-            return Err(ClientError::SubmitTimeOut(user.submit_wait_until.unwrap()));
-        }
-
-        if response_text.contains("you already complete it") {
-            return Err(ClientError::AlreadySubmittedAnswer(day, year));
-        }
-
-        // Translate the response text into a result.
-        let responses_texts = &[
-            ("not the right answer", CheckResult::Wrong),
-            ("the right answer", CheckResult::Correct),
-            ("answer is too low", CheckResult::TooLow),
-            ("answer is too high", CheckResult::TooHigh),
-        ];
-
-        let check_result = responses_texts
-            .iter()
-            .find(|x| response_text.contains(x.0))
-            .map(|x| x.1.clone())
-            .unwrap_or_else(|| panic!("expected server response text to map to predetermined response in LUT. Response:\n```\n{response_text}\n```\n"));
 
         // Write the response to the answers database and then save it back to
         // the puzzle cache.
@@ -359,35 +231,6 @@ impl Client for WebClient {
     // TODO: personal leaderboard
     // TODO: list of private leaderboards
     // TODO: show private leaderboard
-}
-
-impl WebClient {
-    fn extract_one_minute_time_to_wait(response: &str) -> Option<Duration> {
-        match response.contains("Please wait one minute before trying again") {
-            true => Some(Duration::minutes(5)),
-            false => None,
-        }
-    }
-
-    fn extract_wrong_answer_time_to_wait(response: &str) -> Option<Duration> {
-        let regex = Regex::new(r"please wait (\d) minutes?").unwrap();
-        regex
-            .captures(response)
-            .map(|c| Duration::minutes(c[1].parse::<i64>().unwrap()))
-    }
-
-    fn extract_error_time_to_wait(response: &str) -> Option<Duration> {
-        let regex = Regex::new(r"You have (\d+)m( (\d+)s)? left to wait").unwrap();
-        regex.captures(response).map(|c| {
-            let mut time_to_wait = Duration::minutes(c[1].parse::<i64>().unwrap());
-
-            if let Some(secs) = c.get(3) {
-                time_to_wait += Duration::seconds(secs.as_str().parse::<i64>().unwrap());
-            }
-
-            time_to_wait
-        })
-    }
 }
 
 impl Default for WebClient {

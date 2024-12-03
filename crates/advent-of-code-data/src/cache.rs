@@ -28,6 +28,8 @@ pub struct PuzzleCache {
     encryption_token: Option<String>,
 }
 
+// TODO: Use '*.encrypted.txt' vs '*.txt' for encrypted data.
+
 impl PuzzleCache {
     const INPUT_FILE_NAME: &'static str = "input.txt";
     const PART_ONE_ANSWERS_FILE_NAME: &'static str = "part-1-answers.txt";
