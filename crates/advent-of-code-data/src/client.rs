@@ -353,7 +353,7 @@ impl Client for WebClient {
     }
 
     fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
-        self.puzzle_cache.load_puzzle(day, year)
+        self.puzzle_cache.load_puzzle(day, year).unwrap()
     }
 
     // TODO: personal leaderboard

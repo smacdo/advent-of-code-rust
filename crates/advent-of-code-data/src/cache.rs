@@ -1,15 +1,27 @@
-use core::str;
 use std::path::{Path, PathBuf};
 
 use base64::{prelude::BASE64_STANDARD, Engine};
+use core::str;
 use simple_crypt::{decrypt, encrypt};
+use thiserror::Error;
 
 use crate::{
     data::{Answers, Puzzle, User},
     Day, Part, Year,
 };
 
-// TODO: Support encryption and decryption.
+#[derive(Debug, Error)]
+pub enum CacheError {
+    #[error("base 64 decoding failed: {}", .0)]
+    DecodeBase64(#[from] base64::DecodeError),
+    #[error("decryption failed: {}", .0)]
+    Decryption(#[from] anyhow::Error),
+    #[error("decoding utf8 failed: {}", .0)]
+    DecodeUtf8(#[from] std::string::FromUtf8Error),
+    #[error("a file i/o error occured while reading/writing the cache: {}", .0)]
+    Io(#[from] std::io::Error),
+}
+
 #[derive(Debug)]
 pub struct PuzzleCache {
     cache_dir: PathBuf,
@@ -32,12 +44,18 @@ impl PuzzleCache {
         }
     }
 
-    pub fn load_input(&self, day: Day, year: Year) -> std::io::Result<String> {
-        // TODO: Convert unwraps into Errors.
+    pub fn try_load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
+        match self.load_input(day, year) {
+            Ok(input) => Ok(Some(input)),
+            Err(CacheError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
 
+    pub fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError> {
         // Load the cached input file from disk.
         let input_path = Self::input_file_path(&self.cache_dir, day, year);
-        tracing::debug!("input for puzzle day {day} year {year}: {input_path:?}");
+        tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
 
         let mut input_text = std::fs::read_to_string(input_path)?;
 
@@ -47,11 +65,10 @@ impl PuzzleCache {
         if let Some(encryption_token) = &self.encryption_token {
             let encrypted_bytes = BASE64_STANDARD
                 .decode(input_text.as_bytes())
-                .expect("failed to base64 decode input data");
+                .map_err(CacheError::DecodeBase64)?;
             let input_bytes = decrypt(&encrypted_bytes, encryption_token.as_bytes())
-                .expect("failed to decrypt input text");
-            input_text = String::from_utf8(input_bytes)
-                .expect("failed to read decrypted input bytes as utf8 string");
+                .map_err(CacheError::Decryption)?;
+            input_text = String::from_utf8(input_bytes).map_err(CacheError::DecodeUtf8)?;
 
             tracing::debug!("succesfully decrypted input for puzzle day {day} year {year}")
         }
@@ -59,23 +76,21 @@ impl PuzzleCache {
         Ok(input_text)
     }
 
-    pub fn load_answers(&self, part: Part, day: Day, year: Year) -> std::io::Result<Answers> {
-        // TODO: Convert unwraps into Errors.
+    pub fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError> {
         Ok(Answers::deserialize_from_str(&std::fs::read_to_string(
             Self::answers_file_path(&self.cache_dir, part, day, year),
         )?))
     }
 
-    pub fn load_puzzle(&self, day: Day, year: Year) -> Puzzle {
-        // TODO: Convert unwraps into Errors.
+    pub fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError> {
         // TODO: Create default input or answers if the files don't exist.
-        Puzzle {
+        Ok(Puzzle {
             day,
             year,
-            input: self.load_input(day, year).unwrap(),
-            part_one_answers: self.load_answers(Part::One, day, year).unwrap(),
-            part_two_answers: self.load_answers(Part::Two, day, year).unwrap(),
-        }
+            input: self.load_input(day, year)?,
+            part_one_answers: self.load_answers(Part::One, day, year)?,
+            part_two_answers: self.load_answers(Part::Two, day, year)?,
+        })
     }
 
     pub fn save(&self, puzzle: Puzzle) {
