@@ -66,7 +66,16 @@ impl RunnerEventHandler for ConsoleRunnerEventHandler {
         }
     }
 
-    fn on_start_part(&mut self, _solver: &Solver, _part: Part) {}
+    fn on_start_part(&mut self, solver: &Solver, part: Part) {
+        match part {
+            Part::One => {
+                self.times.get_mut(&(solver.day, solver.year)).unwrap().part_one_start = Some(Instant::now());
+            } ,
+            Part::Two => {
+                self.times.get_mut(&(solver.day, solver.year)).unwrap().part_two_start = Some(Instant::now());
+            },
+        }
+    }
 
     fn on_finish_part(
         &mut self,
