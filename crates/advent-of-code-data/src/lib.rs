@@ -148,6 +148,7 @@ impl From<isize> for Answer {
     }
 }
 
+#[derive(Debug)]
 pub struct TooLargeForInt64;
 
 impl TryFrom<usize> for Answer {
