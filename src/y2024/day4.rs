@@ -1,4 +1,4 @@
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 
@@ -26,19 +26,23 @@ MXMXAXMASX",
     },
     part_two: SolverPart {
         func: day_4_2,
-        examples: &[],
+        examples: &[(
+            Answer::Int(9),
+            ".M.S......
+..A..MSMS.
+.M.S.MAA..
+..A.ASMSM.
+.M.S.M....
+..........
+S.S.S.S.S.
+.A.A.A.A..
+M.M.M.M.M.
+..........",
+        )],
     },
 };
 
-pub fn clear_visited(visited: &mut Vec<Vec<bool>>) {
-    for y in 0..visited.len() {
-        for x in 0..visited[y].len() {
-            visited[y][x] = false;
-        }
-    }
-}
-
-pub fn is_word(grid: &Vec<Vec<char>>, word: &str, x: usize, y: usize, dir: &(i32, i32)) -> bool {
+pub fn is_word(grid: &[Vec<char>], word: &str, x: usize, y: usize, dir: &(i32, i32)) -> bool {
     let mut x = x as i32;
     let mut y = y as i32;
 
@@ -58,77 +62,6 @@ pub fn is_word(grid: &Vec<Vec<char>>, word: &str, x: usize, y: usize, dir: &(i32
     true
 }
 
-/*
-pub fn find_word(
-    word: &str,   // XMAS
-    index: usize, // 0
-    x: usize,     // 0
-    y: usize,     // 1
-    grid: &Vec<Vec<char>>,
-    visited: &mut Vec<Vec<bool>>,
-    mut current_count: usize,
-) -> usize {
-    assert!(!word.is_empty());
-    assert!(index < word.len());
-    assert!(y < grid.len() && x < grid[y].len());
-
-    let next_c = word.chars().nth(index).unwrap();
-
-    if next_c == grid[y][x] {
-        if index == word.len() - 1 {
-            return current_count + 1;
-        }
-    } else {
-        return current_count;
-    }
-
-    let directions = &[
-        (-1, -1),
-        (0, -1),
-        (1, -1),
-        (-1, 0),
-        (0, 0),
-        (1, 0),
-        (-1, 1),
-        (0, 1),
-        (1, 1),
-    ];
-
-    for dir_offset in directions {
-        let new_x = (x as i32) + dir_offset.0;
-        let new_y = (y as i32) + dir_offset.1;
-
-        // reject out of bounds
-        if new_x < 0
-            || new_y < 0
-            || new_y as usize >= grid.len()
-            || new_x as usize >= grid[new_y as usize].len()
-        {
-            continue;
-        }
-
-        // reject if visited
-        if visited[new_y as usize][new_x as usize] {
-            continue;
-        }
-
-        // visit
-        visited[new_y as usize][new_x as usize] = true;
-        current_count = find_word(
-            word,
-            index + 1,
-            new_x as usize,
-            new_y as usize,
-            grid,
-            visited,
-            current_count,
-        );
-    }
-
-    current_count
-}
-    */
-
 pub fn day_4_1(input: &str) -> Result<Answer> {
     // Build row major grid.
     let mut grid: Vec<Vec<char>> = Vec::new();
@@ -136,7 +69,7 @@ pub fn day_4_1(input: &str) -> Result<Answer> {
 
     for line in input.lines() {
         grid.push(line.chars().collect());
-        visited.push((0..line.len()).into_iter().map(|_| false).collect());
+        visited.push((0..line.len()).map(|_| false).collect());
     }
 
     // Search each tile to see if it is a valid XMAS.
@@ -144,15 +77,6 @@ pub fn day_4_1(input: &str) -> Result<Answer> {
 
     for y in 0..grid.len() {
         for x in 0..grid[y].len() {
-            /*
-            clear_visited(&mut visited);
-            let count = find_word("XMAS", 0, x, y, &grid, &mut visited, 0);
-
-            if (count > 0) {
-                println!("FOUND at {x}, {y}. New count is {}", count + xmas_count)
-            }
-            */
-
             let dirs = &[
                 (1, 0),
                 (-1, 0),
@@ -169,14 +93,58 @@ pub fn day_4_1(input: &str) -> Result<Answer> {
                     xmas_count += 1;
                 }
             }
-
-            //xmas_count += count;
         }
     }
 
-    Ok(xmas_count.try_into().unwrap())
+    Ok(xmas_count.into())
+}
+
+fn is_mas(x1: i32, y1: i32, x2: i32, y2: i32, grid: &[Vec<char>]) -> bool {
+    if x1 < 0
+        || x2 < 0
+        || y1 < 0
+        || y2 < 0
+        || y1 as usize >= grid.len()
+        || y2 as usize >= grid.len()
+        || x1 as usize >= grid[y1 as usize].len()
+        || x2 as usize >= grid[y2 as usize].len()
+    {
+        false
+    } else {
+        let y1 = y1 as usize;
+        let y2 = y2 as usize;
+        let x1 = x1 as usize;
+        let x2 = x2 as usize;
+
+        (grid[y1][x1] == 'M' && grid[y2][x2] == 'S') || (grid[y2][x2] == 'M' && grid[y1][x1] == 'S')
+    }
 }
 
 pub fn day_4_2(input: &str) -> Result<Answer> {
-    Err(SolverError::NotFinished)
+    // Build row major grid.
+    let mut grid: Vec<Vec<char>> = Vec::new();
+    let mut visited: Vec<Vec<bool>> = Vec::new();
+
+    for line in input.lines() {
+        grid.push(line.chars().collect());
+        visited.push((0..line.len()).map(|_| false).collect());
+    }
+
+    let mut xmas_count = 0;
+
+    for y in 0..grid.len() {
+        for x in 0..grid[y].len() {
+            let dx = x as i32;
+            let dy = y as i32;
+
+            if grid[y][x] == 'A'
+                && is_mas(dx - 1, dy - 1, dx + 1, dy + 1, &grid)
+                && is_mas(dx - 1, dy + 1, dx + 1, dy - 1, &grid)
+            {
+                xmas_count += 1
+            }
+        }
+    }
+
+    Ok(xmas_count.into())
 }
