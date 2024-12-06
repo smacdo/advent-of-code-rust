@@ -1,7 +1,6 @@
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
-use tracing::info;
 
 use crate::SOLVERS;
 
@@ -88,7 +87,7 @@ fn is_update_ordered(pages_to_update: &[usize], rules: &[PageOrderingRule]) -> b
     pages_to_update
         .iter()
         .enumerate()
-        .all(|(i, page)| is_page_ordered(pages_to_update, i, &rules))
+        .all(|(i, _page)| is_page_ordered(pages_to_update, i, rules))
 }
 
 fn is_page_ordered(
@@ -120,7 +119,7 @@ pub fn day_5_1(input: &str) -> Result<Answer> {
     let (page_ordering_rules, updates) = parse_input(input);
     let mut sum_of_middle_page_numers = 0;
 
-    for (i, update) in updates.iter().enumerate() {
+    for update in updates.iter() {
         let is_ordered = is_update_ordered(&update.pages, &page_ordering_rules);
         //tracing::debug!("#{}: {is_ordered} for {:?}", i + 1, update.pages);
 
@@ -141,12 +140,13 @@ pub fn day_5_2(input: &str) -> Result<Answer> {
     let (page_ordering_rules, mut updates) = parse_input(input);
     let mut sum_of_middle_page_numers = 0;
 
-    for (i, update) in updates.iter_mut().enumerate() {
+    for update in updates.iter_mut() {
         let is_ordered = is_update_ordered(&update.pages, &page_ordering_rules);
         let pages = &mut update.pages;
 
         if !is_ordered {
-            // Try to fix all the errors in the update.
+            // Try to fix all the ordering errors in the update.
+            // Yes I know this is bubble sort but worse. O(kn^2) FTW.
             let mut swapped = true;
             let mut max_count = 100;
 
