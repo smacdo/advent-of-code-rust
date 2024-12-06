@@ -1,9 +1,11 @@
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
+use thiserror::Error;
 
 use crate::SOLVERS;
 
@@ -29,10 +31,23 @@ static SOLVER: Solver = Solver {
     },
     part_two: SolverPart {
         func: day_6_2,
-        examples: &[],
+        examples: &[(
+            Answer::Int(6),
+            "....#.....
+.........#
+..........
+..#.......
+.......#..
+..........
+.#..^.....
+........#.
+#.........
+......#...",
+        )],
     },
 };
 
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 struct Guard {
     pub pos: Point2,
     pub dir: Direction4,
@@ -62,13 +77,13 @@ fn find_guard(map: &Grid<char>) -> Option<Guard> {
     None
 }
 
-fn visualize(map: &Grid<char>, walked: &Grid<bool>) {
+fn visualize(map: &Grid<char>, path: &[Point2]) {
     for y in 0..(map.y_count() as isize) {
         for x in 0..(map.x_count() as isize) {
             let pos = Point2::new(x, y);
 
             let c = match map[pos] {
-                '.' if walked[pos] => 'X',
+                '.' if path.contains(&pos) => 'X',
                 c => c,
             };
 
@@ -79,16 +94,26 @@ fn visualize(map: &Grid<char>, walked: &Grid<bool>) {
     }
 }
 
-pub fn day_6_1(input: &str) -> Result<Answer> {
-    let map = Grid::<char>::from_str(input).unwrap();
-    let mut walked: Grid<bool> = Grid::new(map.x_count(), map.y_count(), false);
-    let mut guard = find_guard(&map).unwrap();
+#[derive(Debug, Error)]
+#[error("There was an infinite loop detected in the guards path")]
+struct PathLoopError;
 
-    let mut break_glass_counter = 10000;
+fn find_guard_path(map: &Grid<char>) -> std::result::Result<Vec<Point2>, PathLoopError> {
+    let mut path: Vec<Point2> = Vec::with_capacity(10000);
+    let mut guard = find_guard(map).unwrap();
+
+    let mut tiles_visited: HashSet<Guard> = HashSet::new();
 
     while map.is_pos_in_bounds(guard.pos) {
-        // Mark the current space as "walked".
-        walked[guard.pos] = true;
+        // Look for an infinite loop.
+        if tiles_visited.contains(&guard) {
+            return Err(PathLoopError);
+        }
+
+        tiles_visited.insert(guard.clone());
+
+        // Add this tile to the path the guard is walking.
+        path.push(guard.pos);
 
         // Walk the guard one tile forward from their current heading. If the
         // tile is an obstruction then the guard should turn 90 degrees to the
@@ -100,21 +125,50 @@ pub fn day_6_1(input: &str) -> Result<Answer> {
         } else {
             guard.pos = next_pos;
         }
-
-        if break_glass_counter == 0 {
-            panic!("BREAK GLASS");
-        } else {
-            break_glass_counter -= 1;
-        }
     }
 
-    visualize(&map, &walked);
+    Ok(path)
+}
+
+pub fn day_6_1(input: &str) -> Result<Answer> {
+    let map = Grid::<char>::from_str(input).unwrap();
+    let mut path = find_guard_path(&map).unwrap();
+    visualize(&map, &path);
 
     // Count the number of tiles that the guard walked.
-    let tiles_walked = walked.into_iter().filter(|x| *x).count();
+    path.sort();
+    path.dedup();
+
+    let tiles_walked = path.len();
     Ok(tiles_walked.try_into().unwrap())
 }
 
-pub fn day_6_2(_input: &str) -> Result<Answer> {
-    Err(SolverError::NotFinished)
+pub fn day_6_2(input: &str) -> Result<Answer> {
+    let map = Grid::<char>::from_str(input).unwrap();
+    let guard = find_guard(&map).unwrap();
+
+    // Try every possible variation of adding one obstruction to the map, and
+    // check how many maps have a loop in them when walked.
+    let mut number_of_loop_paths = 0;
+
+    for y in 0..(map.y_count() as isize) {
+        for x in 0..(map.x_count() as isize) {
+            let pos = Point2::new(x, y);
+
+            if map[pos] == '#' || pos == guard.pos {
+                // obstruction already here, and part 1 proves this input doesn't
+                // have a loop.
+                continue;
+            }
+
+            let mut map = map.clone();
+            map[pos] = '#';
+
+            if find_guard_path(&map).is_err() {
+                number_of_loop_paths += 1;
+            }
+        }
+    }
+
+    Ok(number_of_loop_paths.into())
 }

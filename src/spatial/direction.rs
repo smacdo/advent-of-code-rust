@@ -1,6 +1,6 @@
 use super::Point2;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Direction4 {
     East,
     North,
