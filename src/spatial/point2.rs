@@ -1,5 +1,7 @@
 use std::ops;
 
+use super::Direction4;
+
 /// Represents an integer (x,y) cartesian point in two dimensions.
 ///
 /// Some useful features in this type include the ability to convert two and
@@ -126,6 +128,16 @@ impl ops::Add<&Point2> for Point2 {
             x: self.x + r.x,
             y: self.y + r.y,
         }
+    }
+}
+
+impl ops::Add<Direction4> for Point2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn add(self, d: Direction4) -> Self {
+        let r: Point2 = d.into();
+        self + r
     }
 }
 

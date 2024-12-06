@@ -13,3 +13,7 @@
 - Use per-function registration and de-dup in registry.
 - #[PuzzleSolver(day=,year=,part=)]
 - #[Example(answer=,input=)]
+
+# Bugs
+- No warning or error when running a day that doesn't exist
+- No warning for overwriting same day
