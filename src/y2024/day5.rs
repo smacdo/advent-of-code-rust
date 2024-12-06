@@ -122,13 +122,13 @@ pub fn day_5_1(input: &str) -> Result<Answer> {
 
     for (i, update) in updates.iter().enumerate() {
         let is_ordered = is_update_ordered(&update.pages, &page_ordering_rules);
-        //tracing::info!("#{}: {is_ordered} for {:?}", i + 1, update.pages);
+        //tracing::debug!("#{}: {is_ordered} for {:?}", i + 1, update.pages);
 
         if is_ordered {
             assert!(update.pages.len() % 2 == 1);
             let middle_index = update.pages.len() / 2;
             let middle_page = update.pages[middle_index];
-            //tracing::info!("middle page index {middle_index} is {middle_page}");
+            //tracing::debug!("middle page index {middle_index} is {middle_page}");
 
             sum_of_middle_page_numers += middle_page;
         }
@@ -137,6 +137,51 @@ pub fn day_5_1(input: &str) -> Result<Answer> {
     Ok(sum_of_middle_page_numers.try_into().unwrap())
 }
 
-pub fn day_5_2(_input: &str) -> Result<Answer> {
-    Err(SolverError::NotFinished)
+pub fn day_5_2(input: &str) -> Result<Answer> {
+    let (page_ordering_rules, mut updates) = parse_input(input);
+    let mut sum_of_middle_page_numers = 0;
+
+    for (i, update) in updates.iter_mut().enumerate() {
+        let is_ordered = is_update_ordered(&update.pages, &page_ordering_rules);
+        let pages = &mut update.pages;
+
+        if !is_ordered {
+            // Try to fix all the errors in the update.
+            let mut swapped = true;
+            let mut max_count = 100;
+
+            while swapped {
+                swapped = false;
+
+                assert!(max_count > 0);
+                max_count -= 1;
+
+                for i in 0..pages.len() {
+                    for j in i..pages.len() {
+                        for r in &page_ordering_rules {
+                            // page number X must be printed at some point before page number Y
+                            if pages[i] == r.after && pages[j] == r.before {
+                                //tracing::debug!("SWAP({i}, {j}): {} <=> {}", pages[i], pages[j]);
+                                pages.swap(i, j);
+                                swapped = true;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            assert!(is_update_ordered(&update.pages, &page_ordering_rules));
+
+            assert!(update.pages.len() % 2 == 1);
+            let middle_index = update.pages.len() / 2;
+            let middle_page = update.pages[middle_index];
+            //tracing::debug!("middle page index {middle_index} is {middle_page}");
+
+            sum_of_middle_page_numers += middle_page;
+        }
+    }
+
+    Ok(sum_of_middle_page_numers.try_into().unwrap())
 }
