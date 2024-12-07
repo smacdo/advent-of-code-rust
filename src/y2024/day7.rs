@@ -33,10 +33,11 @@ static SOLVER: Solver = Solver {
     },
 };
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 enum Operator {
     Add,
     Mul,
+    Concat,
 }
 
 impl Display for Operator {
@@ -45,8 +46,9 @@ impl Display for Operator {
             f,
             "{}",
             match self {
-                Operator::Add => '+',
-                Operator::Mul => '*',
+                Operator::Add => "+",
+                Operator::Mul => "*",
+                Operator::Concat => "||",
             }
         )
     }
@@ -91,11 +93,18 @@ fn parse_input(input: &str) -> Vec<CalibrationEquation> {
         .collect()
 }
 
-fn evaluate_all_combinations(equation: &mut CalibrationEquation) -> bool {
-    evaluate_all_combinations_itr(equation, 0)
+fn has_valid_combination(
+    equation: &mut CalibrationEquation,
+    allowed_operators: &[Operator],
+) -> bool {
+    has_valid_combination_itr(equation, allowed_operators, 0)
 }
 
-fn evaluate_all_combinations_itr(equation: &mut CalibrationEquation, pos: usize) -> bool {
+fn has_valid_combination_itr(
+    equation: &mut CalibrationEquation,
+    allowed_operators: &[Operator],
+    pos: usize,
+) -> bool {
     if pos == equation.operators.len() {
         let evaluation_value = evaluate(&equation.numbers, &equation.operators);
 
@@ -110,15 +119,18 @@ fn evaluate_all_combinations_itr(equation: &mut CalibrationEquation, pos: usize)
             false
         }
     } else {
-        if evaluate_all_combinations_itr(equation, pos + 1) {
-            return true;
+        let mut did_equal = false;
+
+        for new_operator in allowed_operators {
+            equation.operators[pos] = *new_operator;
+
+            if has_valid_combination_itr(equation, allowed_operators, pos + 1) {
+                did_equal = true;
+                break;
+            }
         }
 
-        equation.operators[pos] = Operator::Mul;
-        let did_equal = evaluate_all_combinations_itr(equation, pos + 1);
-
-        equation.operators[pos] = Operator::Add;
-
+        equation.operators[pos] = allowed_operators[0];
         did_equal
     }
 }
@@ -133,6 +145,10 @@ fn evaluate(numbers: &[i64], operators: &[Operator]) -> i64 {
         test_value = match operators[i] {
             Operator::Add => test_value + numbers[i + 1],
             Operator::Mul => test_value * numbers[i + 1],
+            Operator::Concat => {
+                let result_str = format!("{}{}", test_value, numbers[i + 1]);
+                result_str.parse::<i64>().unwrap()
+            }
         }
     }
 
@@ -144,7 +160,7 @@ pub fn day_7_1(input: &str) -> Result<Answer> {
     let mut total_calibration_result = 0;
 
     for mut equation in equations {
-        if evaluate_all_combinations(&mut equation) {
+        if has_valid_combination(&mut equation, &[Operator::Add, Operator::Mul]) {
             total_calibration_result += equation.test_value;
         }
     }
@@ -153,5 +169,17 @@ pub fn day_7_1(input: &str) -> Result<Answer> {
 }
 
 pub fn day_7_2(input: &str) -> Result<Answer> {
-    Err(SolverError::NotFinished)
+    let equations = parse_input(input);
+    let mut total_calibration_result = 0;
+
+    for mut equation in equations {
+        if has_valid_combination(
+            &mut equation,
+            &[Operator::Add, Operator::Mul, Operator::Concat],
+        ) {
+            total_calibration_result += equation.test_value;
+        }
+    }
+
+    Ok(total_calibration_result.into())
 }
