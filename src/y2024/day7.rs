@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::iter::repeat;
 
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
@@ -29,7 +29,18 @@ static SOLVER: Solver = Solver {
     },
     part_two: SolverPart {
         func: day_7_2,
-        examples: &[],
+        examples: &[(
+            Answer::Int(11387),
+            "190: 10 19
+3267: 81 40 27
+83: 17 5
+156: 15 6
+7290: 6 8 6 15
+161011: 16 10 13
+192: 17 8 14
+21037: 9 7 18 13
+292: 11 6 16 20",
+        )],
     },
 };
 
