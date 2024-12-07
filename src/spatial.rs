@@ -3,5 +3,5 @@ mod grid;
 mod point2;
 
 pub use direction::Direction4;
-pub use grid::Grid;
+pub use grid::{CellRef, Cells, Col, Cols, Grid, IteratorItemCountError, Points, Row, Rows};
 pub use point2::Point2;

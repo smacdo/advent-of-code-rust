@@ -1,5 +1,6 @@
 use std::{
     borrow::{Borrow, BorrowMut},
+    iter::FusedIterator,
     str::FromStr,
 };
 
@@ -126,12 +127,12 @@ impl<T: std::fmt::Display> Grid<T> {
         self.y_count
     }
 
-    // TODO:
+    // Returns the position of the top leftmost cell in the grid.
     pub fn top_left_pos(&self) -> Point2 {
         Point2::new(-self.x_origin_offset, -self.y_origin_offset)
     }
 
-    // TODO:
+    // Returns the position of the bottom rightmost cell in the grid.
     pub fn bottom_right_pos(&self) -> Point2 {
         Point2::new(
             self.x_count as isize - self.x_origin_offset - 1,
@@ -139,7 +140,7 @@ impl<T: std::fmt::Display> Grid<T> {
         )
     }
 
-    // TODO: Comment and unit test.
+    // Checks if `p` is a point contained in this grid.
     pub fn is_pos_in_bounds(&self, p: Point2) -> bool {
         p.x >= self.top_left_pos().x
             && p.x <= self.bottom_right_pos().x
@@ -190,17 +191,26 @@ impl<T: std::fmt::Display> Grid<T> {
         )] = value
     }
 
-    /// Get an iterator to the values stored in the grid.
+    /// Returns an iterator to the cells stored in the grid.
     ///
     /// This iterator will iterate row starting from at the first (top most)
     /// row, and iterate through every column left to right before proceeding to
     /// the next row.
-    pub fn iter(&self) -> RegionItr<T> {
+    pub fn iter(&self) -> Cells<T> {
+        Cells {
+            points: self.points(),
+            grid: self,
+        }
+    }
+
+    // Returns an iterator that iterates all of the points in this grid going
+    // one row at a time left to right, starting at the top left and ending at
+    // the bottom right.
+    pub fn points(&self) -> Points {
         let topleft_x = -self.x_origin_offset;
         let topleft_y = -self.y_origin_offset;
 
-        RegionItr {
-            grid: self,
+        Points {
             next_x: topleft_x,
             next_y: topleft_y,
             start_x: topleft_x,
@@ -208,6 +218,9 @@ impl<T: std::fmt::Display> Grid<T> {
             end_y: topleft_y + (self.y_count as isize),
         }
     }
+
+    // Returns an iterator over the rows in the grid.
+    //pub fn rows(&self) -> Rows {}
 }
 
 impl<T: std::fmt::Display> std::fmt::Display for Grid<T> {
@@ -233,12 +246,55 @@ impl<T: std::fmt::Display> std::iter::IntoIterator for Grid<T> {
     }
 }
 
+impl<T: Clone + std::fmt::Display> std::ops::Index<Point2> for Grid<T> {
+    type Output = T;
+
+    #[inline(always)]
+    fn index(&self, p: Point2) -> &Self::Output {
+        debug_assert!(p.x < self.x_count as isize - self.x_origin_offset);
+        debug_assert!(p.y < self.y_count as isize - self.y_origin_offset);
+
+        self.cells[array_offset(
+            p.x,
+            p.y,
+            self.x_origin_offset,
+            self.y_origin_offset,
+            self.x_count,
+        )]
+        .borrow()
+    }
+}
+
+impl<T: Clone + std::fmt::Display> std::ops::IndexMut<Point2> for Grid<T> {
+    #[inline(always)]
+    fn index_mut(&mut self, p: Point2) -> &mut Self::Output {
+        debug_assert!(p.x < self.x_count as isize - self.x_origin_offset);
+        debug_assert!(p.y < self.y_count as isize - self.y_origin_offset);
+
+        self.cells[array_offset(
+            p.x,
+            p.y,
+            self.x_origin_offset,
+            self.y_origin_offset,
+            self.x_count,
+        )]
+        .borrow_mut()
+    }
+}
+
+/// Represents scenarios where an iterator is used to construct a Grid and
+/// does not match the expected length, width or height.
+///
+/// Potential scenarios that will cause an IteratorItemCountError:
+///   - The column is inconsistent between rows
+///   - There are less than `row_count * col_count` items from the iterator.
+///   - There are more than `row_count * col_count` items from the iterator.
 #[derive(Debug, Error)]
 #[error("a grid of {} rows and {} cols requires {} values but the iterator produced {}", x_count, y_count, x_count * y_count, actual_len)]
 pub struct IteratorItemCountError {
-    x_count: usize,
-    y_count: usize,
-    actual_len: usize,
+    pub x_count: usize,
+    pub y_count: usize,
+    pub actual_len: usize,
 }
 
 /// Converts a slice of strings into a 2d grid.
@@ -286,25 +342,12 @@ impl FromStr for Grid<char> {
     }
 }
 
-/// A reference to a specific cell contained in a grid along with the (x, y)
-/// position of the cell.
-#[derive(Debug, PartialEq)]
-pub struct CellRef<'a, T> {
-    /// The position of the cell in the grid.
-    pub index: Point2,
-    /// A reference to the value stored in this grid cell.
-    pub value: &'a T,
-}
-
-/// An iterator capable of iterating a bounded subregion of a larger grid. This
-/// iterator is "heavier" than the typical iterator as it has to hold additional
-/// information about starting and ending positions.
+/// An iterator over the points of a rectangular region in a grid.
 ///
-/// Currently this iterator is also used for the typical "iterate all cells in
-/// the grid" functionality but if profiling shows this is a problem a new iter
-/// can be created that only needs the current and row size.
-pub struct RegionItr<'a, T: std::fmt::Display> {
-    grid: &'a Grid<T>,
+/// This iterator iterates in row major ordering, meaning the iterator will
+/// produce all the points a grid row before moving to the next row. Each row
+/// is iterated left to right, and the rows are iterated top to bottom.
+pub struct Points {
     next_x: isize,
     next_y: isize,
     start_x: isize,
@@ -312,8 +355,8 @@ pub struct RegionItr<'a, T: std::fmt::Display> {
     end_y: isize,
 }
 
-impl<'a, T: Clone + std::fmt::Display> Iterator for RegionItr<'a, T> {
-    type Item = CellRef<'a, T>;
+impl Iterator for Points {
+    type Item = Point2;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.next_y >= self.end_y {
@@ -329,270 +372,236 @@ impl<'a, T: Clone + std::fmt::Display> Iterator for RegionItr<'a, T> {
                 self.next_y += 1;
             }
 
-            Some(CellRef {
-                index: Point2::new(x, y),
-                value: self.grid.get(x, y),
-            })
+            Some(Point2::new(x, y))
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.next_y >= self.end_y {
+            (0, Some(0))
+        } else {
+            let len: usize = ((self.end_x - self.next_x)
+                + (self.end_x - self.start_x) * (self.end_y - self.next_y - 1))
+                .try_into()
+                .unwrap();
+            (len, Some(len))
         }
     }
 }
 
-impl<T: Clone + std::fmt::Display> std::ops::Index<Point2> for Grid<T> {
-    type Output = T;
+impl FusedIterator for Points {}
 
-    #[inline(always)]
-    fn index(&self, p: Point2) -> &Self::Output {
-        debug_assert!(p.x < self.x_count as isize - self.x_origin_offset);
-        debug_assert!(p.y < self.y_count as isize - self.y_origin_offset);
+/// A reference to a specific cell contained in a grid along with the (x, y)
+/// position of the cell.
+#[derive(Debug, PartialEq)]
+pub struct CellRef<'a, T> {
+    /// The position of the cell in the grid.
+    pub index: Point2,
+    /// A reference to the value stored in this grid cell.
+    pub value: &'a T,
+}
 
-        self.cells[array_offset(
-            p.x,
-            p.y,
-            self.x_origin_offset,
-            self.y_origin_offset,
-            self.x_count,
-        )]
-        .borrow()
+/// An iterator over the cells of a rectangular region in a grid.
+///
+/// See `PointsItr` for details on iteration order.
+pub struct Cells<'a, T: std::fmt::Display> {
+    points: Points,
+    grid: &'a Grid<T>,
+}
+
+impl<'a, T: Clone + std::fmt::Display> Iterator for Cells<'a, T> {
+    type Item = CellRef<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.points.next().map(|p| CellRef {
+            index: p,
+            value: &self.grid[p],
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.points.size_hint()
     }
 }
 
-impl<T: Clone + std::fmt::Display> std::ops::IndexMut<Point2> for Grid<T> {
-    #[inline(always)]
-    fn index_mut(&mut self, p: Point2) -> &mut Self::Output {
-        debug_assert!(p.x < self.x_count as isize - self.x_origin_offset);
-        debug_assert!(p.y < self.y_count as isize - self.y_origin_offset);
+impl<'a, T: Clone + std::fmt::Display> FusedIterator for Cells<'a, T> {}
 
-        self.cells[array_offset(
-            p.x,
-            p.y,
-            self.x_origin_offset,
-            self.y_origin_offset,
-            self.x_count,
-        )]
-        .borrow_mut()
+/// An iterator over the rows in a grid.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Rows {
+    start_x: isize,
+    end_x: isize,
+    next_y: isize,
+    end_y: isize,
+}
+
+impl Rows {
+    pub fn new(start: Point2, x_count: isize, y_count: isize) -> Self {
+        assert!(x_count >= 0);
+        assert!(y_count >= 0);
+
+        Self {
+            start_x: start.x,
+            end_x: start.x + x_count,
+            next_y: start.y,
+            end_y: start.y + y_count,
+        }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl Iterator for Rows {
+    type Item = Row;
 
-    #[test]
-    fn default_value_constructor() {
-        let g: Grid<i32> = Grid::new(3, 2, 17);
-        assert_eq!(2, g.y_count());
-        assert_eq!(3, g.x_count());
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_y >= self.end_y {
+            None
+        } else {
+            let y = self.next_y;
+            self.next_y += 1;
 
-        assert_eq!(17, g[Point2::new(0, 0)]);
-        assert_eq!(17, g[Point2::new(1, 0)]);
-        assert_eq!(17, g[Point2::new(2, 0)]);
-
-        assert_eq!(17, g[Point2::new(0, 1)]);
-        assert_eq!(17, g[Point2::new(1, 1)]);
-        assert_eq!(17, g[Point2::new(2, 1)]);
-    }
-
-    #[test]
-    fn zero_size_grid() {
-        let g: Grid<i32> = Grid::new(0, 0, 13);
-        assert_eq!(0, g.y_count());
-        assert_eq!(0, g.x_count());
-    }
-
-    #[test]
-    fn array_constructor() {
-        let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60].into_iter()).unwrap();
-
-        assert_eq!(10, g[Point2::new(0, 0)]);
-        assert_eq!(20, g[Point2::new(1, 0)]);
-        assert_eq!(30, g[Point2::new(2, 0)]);
-
-        assert_eq!(40, g[Point2::new(0, 1)]);
-        assert_eq!(50, g[Point2::new(1, 1)]);
-        assert_eq!(60, g[Point2::new(2, 1)]);
-    }
-
-    #[test]
-    fn array_constructor_with_zero_size() {
-        let g = Grid::<i32>::with_values(0, 0, [].into_iter());
-        assert!(g.is_ok());
-    }
-
-    #[test]
-    fn set_values() {
-        let mut g: Grid<i32> = Grid::new(3, 2, 0);
-
-        g.set(2, 0, 42);
-        assert_eq!(&42, g.get(2, 0));
-
-        assert_eq!(&0, g.get(0, 1));
-        g.set(0, 1, 22);
-
-        assert_eq!(&22, g.get(0, 1));
-    }
-
-    #[test]
-    fn get_mut_values() {
-        let mut g: Grid<i32> = Grid::new(3, 2, 0);
-
-        *g.get_mut(2, 0) = 42;
-        assert_eq!(&42, g.get(2, 0));
-
-        *g.get_mut(0, 1) = 2;
-        assert_eq!(&2, g.get(0, 1));
-    }
-
-    #[test]
-    fn index() {
-        let mut g: Grid<i32> = Grid::new(3, 2, 0);
-
-        g.set(2, 0, 42);
-        assert_eq!(42, g[Point2::new(2, 0)]);
-
-        assert_eq!(0, g[Point2::new(0, 1)]);
-
-        g.set(0, 1, 22);
-        assert_eq!(22, g[Point2::new(0, 1)]);
-    }
-
-    #[test]
-    fn index_mut() {
-        let mut g: Grid<i32> = Grid::new(3, 2, 0);
-
-        g[Point2::new(2, 0)] = 42;
-        assert_eq!(42, g[Point2::new(2, 0)]);
-
-        assert_eq!(0, g[Point2::new(0, 1)]);
-        g[Point2::new(0, 1)] = 22;
-
-        assert_eq!(22, g[Point2::new(0, 1)]);
-    }
-
-    #[test]
-    #[should_panic]
-    fn panic_if_grid_out_of_bounds() {
-        let g: Grid<i32> = Grid::new(4, 6, 0);
-        assert_eq!(0, g[Point2::new(5, 5)]);
-    }
-
-    #[test]
-    fn into_iter() {
-        let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60].into_iter()).unwrap();
-        let mut iter = g.into_iter();
-
-        assert_eq!(iter.next(), Some(10));
-        assert_eq!(iter.next(), Some(20));
-        assert_eq!(iter.next(), Some(30));
-        assert_eq!(iter.next(), Some(40));
-        assert_eq!(iter.next(), Some(50));
-        assert_eq!(iter.next(), Some(60));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn from_string_array() {
-        let s = ["ABC", "123"];
-        let g = Grid::try_from(s.as_slice()).unwrap();
-
-        assert_eq!('A', g[Point2::new(0, 0)]);
-        assert_eq!('B', g[Point2::new(1, 0)]);
-        assert_eq!('C', g[Point2::new(2, 0)]);
-
-        assert_eq!('1', g[Point2::new(0, 1)]);
-        assert_eq!('2', g[Point2::new(1, 1)]);
-        assert_eq!('3', g[Point2::new(2, 1)]);
-    }
-
-    #[test]
-    fn from_string_array_empty() {
-        let s = [];
-        let g = Grid::try_from(s.as_slice()).unwrap();
-
-        assert_eq!(g.y_count(), 0);
-        assert_eq!(g.x_count(), 0);
-    }
-
-    #[test]
-    fn from_string_array_too_small() {
-        let s = ["ABC", "12"];
-        assert!(matches!(
-            Grid::try_from(s.as_slice()),
-            Err(IteratorItemCountError {
-                x_count: 3,
-                y_count: 2,
-                actual_len: 5
+            Some(Row {
+                y,
+                next_x: self.start_x,
+                end_x: self.end_x,
             })
-        ));
+        }
     }
 
-    #[test]
-    fn from_string_array_too_big() {
-        let s = ["ABC1", "125", "125"];
-        assert!(matches!(
-            Grid::try_from(s.as_slice()),
-            Err(IteratorItemCountError {
-                x_count: 4,
-                y_count: 3,
-                actual_len: 10
-            })
-        ));
-    }
-
-    #[test]
-    fn from_string() {
-        let s = "xyz\nijk";
-        let g = Grid::<char>::from_str(s).unwrap();
-
-        assert_eq!(g.x_count(), 3);
-        assert_eq!(g.y_count(), 2);
-
-        assert_eq!('x', g[Point2::new(0, 0)]);
-        assert_eq!('y', g[Point2::new(1, 0)]);
-        assert_eq!('z', g[Point2::new(2, 0)]);
-
-        assert_eq!('i', g[Point2::new(0, 1)]);
-        assert_eq!('j', g[Point2::new(1, 1)]);
-        assert_eq!('k', g[Point2::new(2, 1)]);
-    }
-
-    #[test]
-    fn from_empty_string() {
-        let s = "";
-        let g = Grid::<char>::from_str(s).unwrap();
-
-        assert_eq!(g.y_count(), 0);
-        assert_eq!(g.x_count(), 0);
-    }
-
-    #[test]
-    fn from_string_too_small() {
-        let s = "ABC\n12";
-        assert!(matches!(
-            Grid::<char>::from_str(s),
-            Err(IteratorItemCountError {
-                x_count: 3,
-                y_count: 2,
-                actual_len: 5
-            })
-        ));
-    }
-
-    #[test]
-    fn from_string_too_big() {
-        let s = "ABC1\n125\n125";
-        assert!(matches!(
-            Grid::<char>::from_str(s),
-            Err(IteratorItemCountError {
-                x_count: 4,
-                y_count: 3,
-                actual_len: 10
-            })
-        ));
-    }
-
-    #[test]
-    fn print_grid() {
-        let g = Grid::with_values(4, 3, "ABCD1234abcd".chars()).unwrap();
-        assert_eq!(format!("{}", g), "ABCD\n1234\nabcd\n");
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len: usize = (self.end_y - self.next_y).max(0).try_into().unwrap();
+        (len, Some(len))
     }
 }
+
+impl FusedIterator for Rows {}
+
+/// An iterator over the points in a grid row.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Row {
+    y: isize,
+    next_x: isize,
+    end_x: isize,
+}
+
+impl Row {
+    pub fn new(y: isize, start_x: isize, end_x: isize) -> Self {
+        assert!(start_x <= end_x);
+        Self {
+            y,
+            next_x: start_x,
+            end_x,
+        }
+    }
+}
+
+impl Iterator for Row {
+    type Item = Point2;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_x >= self.end_x {
+            None
+        } else {
+            let x = self.next_x;
+            self.next_x += 1;
+
+            Some(Point2::new(x, self.y))
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len: usize = (self.end_x - self.next_x).max(0).try_into().unwrap();
+        (len, Some(len))
+    }
+}
+
+impl FusedIterator for Row {}
+
+/// An iterator over the cols in a grid.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Cols {
+    next_x: isize,
+    end_x: isize,
+    start_y: isize,
+    end_y: isize,
+}
+
+impl Cols {
+    pub fn new(start: Point2, x_count: isize, y_count: isize) -> Self {
+        assert!(x_count >= 0);
+        assert!(y_count >= 0);
+
+        Self {
+            next_x: start.x,
+            end_x: start.x + x_count,
+            start_y: start.y,
+            end_y: start.y + y_count,
+        }
+    }
+}
+
+impl Iterator for Cols {
+    type Item = Col;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_x >= self.end_x {
+            None
+        } else {
+            let x = self.next_x;
+            self.next_x += 1;
+
+            Some(Col {
+                x,
+                next_y: self.start_y,
+                end_y: self.end_y,
+            })
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len: usize = (self.end_x - self.next_x).max(0).try_into().unwrap();
+        (len, Some(len))
+    }
+}
+
+impl FusedIterator for Cols {}
+
+/// An iterator over the points in a grid column.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Col {
+    x: isize,
+    next_y: isize,
+    end_y: isize,
+}
+
+impl Col {
+    pub fn new(x: isize, start_y: isize, end_y: isize) -> Self {
+        assert!(start_y <= end_y);
+        Self {
+            x,
+            next_y: start_y,
+            end_y,
+        }
+    }
+}
+
+impl Iterator for Col {
+    type Item = Point2;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_y >= self.end_y {
+            None
+        } else {
+            let y = self.next_y;
+            self.next_y += 1;
+
+            Some(Point2::new(self.x, y))
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len: usize = (self.end_y - self.next_y).max(0).try_into().unwrap();
+        (len, Some(len))
+    }
+}
+
+impl FusedIterator for Col {}

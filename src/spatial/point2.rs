@@ -307,6 +307,17 @@ impl std::fmt::Display for Point2 {
     }
 }
 
+/// Iterates all points in the region formed by `a` and `b` corners. Typically
+/// `a` would be the upper left corner, and `b` would be the bottom right corner.
+pub fn iter_rows_inclusive(a: Point2, b: Point2) -> impl Iterator<Item = Point2> {
+    let start_x = a.x.min(b.x);
+    let start_y = a.y.min(b.y);
+    let end_x = a.x.max(b.x) + 1;
+    let end_y = a.y.max(b.y) + 1;
+
+    (start_y..end_y).flat_map(move |y| (start_x..end_x).map(move |x| Point2::new(x, y)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -571,6 +582,37 @@ mod tests {
         assert_eq!(
             Point2::new(0, -100),
             Point2::min(Point2::new(1, -10), Point2::new(0, -100))
+        );
+    }
+
+    #[test]
+    fn iter_rows_inclusive_region() {
+        assert_eq!(
+            iter_rows_inclusive(Point2::new(3, 5), Point2::new(5, 6)).collect::<Vec<Point2>>(),
+            vec![
+                Point2::new(3, 5),
+                Point2::new(4, 5),
+                Point2::new(5, 5),
+                Point2::new(3, 6),
+                Point2::new(4, 6),
+                Point2::new(5, 6)
+            ]
+        );
+    }
+
+    #[test]
+    fn iter_rows_inclusive_param_order_doesnt_matter() {
+        assert_eq!(
+            iter_rows_inclusive(Point2::new(3, 5), Point2::new(5, 6)).collect::<Vec<Point2>>(),
+            iter_rows_inclusive(Point2::new(5, 6), Point2::new(3, 5)).collect::<Vec<Point2>>(),
+        );
+        assert_eq!(
+            iter_rows_inclusive(Point2::new(3, 5), Point2::new(5, 6)).collect::<Vec<Point2>>(),
+            iter_rows_inclusive(Point2::new(5, 5), Point2::new(3, 6)).collect::<Vec<Point2>>(),
+        );
+        assert_eq!(
+            iter_rows_inclusive(Point2::new(3, 5), Point2::new(5, 6)).collect::<Vec<Point2>>(),
+            iter_rows_inclusive(Point2::new(5, 6), Point2::new(3, 5)).collect::<Vec<Point2>>(),
         );
     }
 }
