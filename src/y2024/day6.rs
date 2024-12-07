@@ -74,10 +74,8 @@ fn find_guard(map: &Grid<char>) -> Option<Guard> {
 }
 
 fn visualize(map: &Grid<char>, path: &[Point2]) {
-    for y in 0..(map.y_count() as isize) {
-        for x in 0..(map.x_count() as isize) {
-            let pos = Point2::new(x, y);
-
+    for row in map.rows() {
+        for pos in row {
             let c = match map[pos] {
                 '.' if path.contains(&pos) => 'X',
                 c => c,
@@ -162,10 +160,8 @@ pub fn day_6_2(input: &str) -> Result<Answer> {
     // check how many maps have a loop in them when walked.
     let mut number_of_loop_paths = 0;
 
-    for y in 0..(map.y_count() as isize) {
-        for x in 0..(map.x_count() as isize) {
-            let pos = Point2::new(x, y);
-
+    for row in map.rows() {
+        for pos in row {
             if map[pos] == '#' || pos == guard.pos {
                 // obstruction already here, and part 1 proves this input doesn't
                 // have a loop.

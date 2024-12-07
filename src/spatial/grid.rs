@@ -128,12 +128,12 @@ impl<T: std::fmt::Display> Grid<T> {
     }
 
     // Returns the position of the top leftmost cell in the grid.
-    pub fn top_left_pos(&self) -> Point2 {
+    pub fn top_left(&self) -> Point2 {
         Point2::new(-self.x_origin_offset, -self.y_origin_offset)
     }
 
     // Returns the position of the bottom rightmost cell in the grid.
-    pub fn bottom_right_pos(&self) -> Point2 {
+    pub fn bottom_right(&self) -> Point2 {
         Point2::new(
             self.x_count as isize - self.x_origin_offset - 1,
             self.y_count as isize - self.y_origin_offset - 1,
@@ -142,10 +142,10 @@ impl<T: std::fmt::Display> Grid<T> {
 
     // Checks if `p` is a point contained in this grid.
     pub fn is_pos_in_bounds(&self, p: Point2) -> bool {
-        p.x >= self.top_left_pos().x
-            && p.x <= self.bottom_right_pos().x
-            && p.y >= self.top_left_pos().y
-            && p.y <= self.bottom_right_pos().y
+        p.x >= self.top_left().x
+            && p.x <= self.bottom_right().x
+            && p.y >= self.top_left().y
+            && p.y <= self.bottom_right().y
     }
 
     /// Get a reference to the value stored at the given `x` column and `y` row.
@@ -219,8 +219,14 @@ impl<T: std::fmt::Display> Grid<T> {
         }
     }
 
-    // Returns an iterator over the rows in the grid.
-    //pub fn rows(&self) -> Rows {}
+    /// Returns an iterator over all the rows in the grid.
+    pub fn rows(&self) -> Rows {
+        let top_left = self.top_left();
+        let bottom_right = self.bottom_right();
+        let dims = bottom_right - top_left + Point2::one();
+
+        Rows::new(top_left, dims.x, dims.y)
+    }
 }
 
 impl<T: std::fmt::Display> std::fmt::Display for Grid<T> {

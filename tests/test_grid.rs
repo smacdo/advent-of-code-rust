@@ -137,6 +137,24 @@ fn points_iter() {
 }
 
 #[test]
+fn grid_rows_iter() {
+    let g: Grid<i32> = Grid::new(3, 2, 0);
+    let points: Vec<Point2> = g.rows().flatten().collect();
+
+    assert_eq!(
+        points,
+        vec![
+            Point2::new(0, 0),
+            Point2::new(1, 0),
+            Point2::new(2, 0),
+            Point2::new(0, 1),
+            Point2::new(1, 1),
+            Point2::new(2, 1)
+        ]
+    );
+}
+
+#[test]
 fn into_iter() {
     let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60].into_iter()).unwrap();
     let mut iter = g.into_iter();

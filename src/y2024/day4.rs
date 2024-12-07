@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
-use advent_of_code_rust::spatial::{Grid, Point2};
+use advent_of_code_rust::spatial::{Direction8, Grid, Point2};
 use linkme::distributed_slice;
 
 use crate::SOLVERS;
@@ -45,9 +45,8 @@ M.M.M.M.M.
     },
 };
 
-// TODO: use directions.
-pub fn is_word(grid: &Grid<char>, word: &str, x: isize, y: isize, dir: &(isize, isize)) -> bool {
-    let mut pos = Point2::new(x, y);
+pub fn is_word(grid: &Grid<char>, word: &str, pos: Point2, offset: Point2) -> bool {
+    let mut pos = pos;
 
     for i in 0..word.len() {
         if !grid.is_pos_in_bounds(pos) {
@@ -58,7 +57,7 @@ pub fn is_word(grid: &Grid<char>, word: &str, x: isize, y: isize, dir: &(isize, 
             return false;
         }
 
-        pos += Point2::new(dir.0, dir.1);
+        pos += offset;
     }
 
     true
@@ -66,25 +65,13 @@ pub fn is_word(grid: &Grid<char>, word: &str, x: isize, y: isize, dir: &(isize, 
 
 pub fn day_4_1(input: &str) -> Result<Answer> {
     let grid = Grid::from_str(input).unwrap();
+    let dirs = Direction8::itr().collect::<Vec<_>>();
     let mut xmas_count = 0;
 
-    for y in 0..(grid.x_count() as isize) {
-        for x in 0..(grid.y_count() as isize) {
-            let dirs = &[
-                (1, 0),
-                (-1, 0),
-                (0, 1),
-                (0, -1),
-                (-1, -1),
-                (-1, 1),
-                (1, -1),
-                (1, 1),
-            ];
-
-            for d in dirs {
-                if is_word(&grid, "XMAS", x, y, d) {
-                    xmas_count += 1;
-                }
+    for pos in grid.points() {
+        for d in &dirs {
+            if is_word(&grid, "XMAS", pos, (*d).into()) {
+                xmas_count += 1;
             }
         }
     }
@@ -102,14 +89,12 @@ pub fn day_4_2(input: &str) -> Result<Answer> {
     let grid = Grid::from_str(input).unwrap();
     let mut xmas_count = 0;
 
-    for y in 0..(grid.y_count() as isize) {
-        for x in 0..(grid.x_count() as isize) {
-            if grid[Point2::new(x, y)] == 'A'
-                && is_mas(&grid, Point2::new(x - 1, y - 1), Point2::new(x + 1, y + 1))
-                && is_mas(&grid, Point2::new(x - 1, y + 1), Point2::new(x + 1, y - 1))
-            {
-                xmas_count += 1
-            }
+    for p in grid.points() {
+        if grid[p] == 'A'
+            && is_mas(&grid, p - Point2::one(), p + Point2::one())
+            && is_mas(&grid, p + Point2::new(-1, 1), p + Point2::new(1, -1))
+        {
+            xmas_count += 1
         }
     }
 
