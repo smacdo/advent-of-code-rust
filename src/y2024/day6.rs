@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::str::FromStr;
 
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
@@ -60,18 +60,14 @@ impl Guard {
 }
 
 fn find_guard(map: &Grid<char>) -> Option<Guard> {
-    for y in 0..map.y_count() {
-        for x in 0..map.x_count() {
-            let pos = Point2::new(x as isize, y as isize);
-
-            match map[pos] {
-                '>' => return Some(Guard::new(pos, Direction4::East)),
-                '^' => return Some(Guard::new(pos, Direction4::North)),
-                '<' => return Some(Guard::new(pos, Direction4::West)),
-                'v' => return Some(Guard::new(pos, Direction4::South)),
-                _ => {}
-            };
-        }
+    for pos in map.points() {
+        match map[pos] {
+            '>' => return Some(Guard::new(pos, Direction4::East)),
+            '^' => return Some(Guard::new(pos, Direction4::North)),
+            '<' => return Some(Guard::new(pos, Direction4::West)),
+            'v' => return Some(Guard::new(pos, Direction4::South)),
+            _ => {}
+        };
     }
 
     None
@@ -98,22 +94,31 @@ fn visualize(map: &Grid<char>, path: &[Point2]) {
 #[error("There was an infinite loop detected in the guards path")]
 struct PathLoopError;
 
+// NOTE: Path is not temporally ordered, eg the first entry is not always the
+//       guard's starting position.
 fn find_guard_path(map: &Grid<char>) -> std::result::Result<Vec<Point2>, PathLoopError> {
-    let mut path: Vec<Point2> = Vec::with_capacity(10000);
-    let mut guard = find_guard(map).unwrap();
+    Ok(simulate_guard_walk(map, true)?.unwrap())
+}
 
-    let mut tiles_visited: HashSet<Guard> = HashSet::new();
+fn does_guard_walk_loop(map: &Grid<char>) -> bool {
+    simulate_guard_walk(map, false).is_err()
+}
+
+fn simulate_guard_walk(
+    map: &Grid<char>,
+    needs_path: bool,
+) -> std::result::Result<Option<Vec<Point2>>, PathLoopError> {
+    let mut guard = find_guard(map).unwrap();
+    let mut tiles_visited: HashSet<Guard> = HashSet::with_capacity(10000);
 
     while map.is_pos_in_bounds(guard.pos) {
-        // Look for an infinite loop.
+        // Mark each tile that was visited (along with direction) to find any
+        // infinite loops.
         if tiles_visited.contains(&guard) {
             return Err(PathLoopError);
         }
 
         tiles_visited.insert(guard.clone());
-
-        // Add this tile to the path the guard is walking.
-        path.push(guard.pos);
 
         // Walk the guard one tile forward from their current heading. If the
         // tile is an obstruction then the guard should turn 90 degrees to the
@@ -127,20 +132,26 @@ fn find_guard_path(map: &Grid<char>) -> std::result::Result<Vec<Point2>, PathLoo
         }
     }
 
-    Ok(path)
+    // Return with the number of uniquely visited tiles (if requested).
+    if needs_path {
+        let mut tiles_visited: Vec<Point2> = tiles_visited.iter().map(|t| t.pos).collect();
+
+        tiles_visited.sort();
+        tiles_visited.dedup();
+
+        Ok(tiles_visited.into())
+    } else {
+        Ok(None)
+    }
 }
 
 pub fn day_6_1(input: &str) -> Result<Answer> {
     let map = Grid::<char>::from_str(input).unwrap();
-    let mut path = find_guard_path(&map).unwrap();
+    let path = find_guard_path(&map).unwrap();
+
     visualize(&map, &path);
 
-    // Count the number of tiles that the guard walked.
-    path.sort();
-    path.dedup();
-
-    let tiles_walked = path.len();
-    Ok(tiles_walked.try_into().unwrap())
+    Ok(path.len().try_into().unwrap())
 }
 
 pub fn day_6_2(input: &str) -> Result<Answer> {
@@ -164,7 +175,7 @@ pub fn day_6_2(input: &str) -> Result<Answer> {
             let mut map = map.clone();
             map[pos] = '#';
 
-            if find_guard_path(&map).is_err() {
+            if does_guard_walk_loop(&map) {
                 number_of_loop_paths += 1;
             }
         }
