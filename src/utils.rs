@@ -12,6 +12,57 @@ pub fn find_ints(text: &str) -> Vec<i64> {
         .collect()
 }
 
+/// Return an iterator over the combination of `item`s taken two at a time with-
+/// out repetition.
+///
+/// ```
+/// use advent_of_code_rust::utils::pairwise_combinations;
+///
+/// assert_eq!(
+///   pairwise_combinations(&['a', 'b', 'c']).collect::<Vec<_>>(),
+///   vec![(&'a', &'b'), (&'a', &'c'), (&'b', &'c')]
+/// );
+/// ```
+pub fn pairwise_combinations<T>(items: &[T]) -> PairwiseCombinations<'_, T> {
+    PairwiseCombinations::new(items)
+}
+
+/// Iterates over the combination of `item`s taken two at a time without
+/// repetition.
+pub struct PairwiseCombinations<'a, T> {
+    items: &'a [T],
+    i: usize,
+    j: usize,
+}
+
+impl<'a, T> PairwiseCombinations<'a, T> {
+    pub fn new(items: &'a [T]) -> Self {
+        Self { items, i: 0, j: 1 }
+    }
+}
+
+impl<'a, T> Iterator for PairwiseCombinations<'a, T> {
+    type Item = (&'a T, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.i < self.items.len() && self.j < self.items.len() {
+            let i = self.i;
+            let j = self.j;
+
+            self.j += 1;
+
+            if self.j >= self.items.len() {
+                self.i += 1;
+                self.j = self.i + 1;
+            }
+
+            Some((&self.items[i], &self.items[j]))
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -24,6 +75,46 @@ mod tests {
         assert_eq!(
             find_ints("-51 19  513123 -9123 +35 zc 5x23"),
             vec![-51, 19, 513123, -9123, 35, 5, 23]
+        );
+    }
+
+    #[test]
+    fn test_combinations() {
+        assert_eq!(
+            pairwise_combinations(&[10, 20, 30, 40])
+                .map(|(a, b)| (*a, *b))
+                .collect::<Vec<_>>(),
+            vec![(10, 20), (10, 30), (10, 40), (20, 30), (20, 40), (30, 40)]
+        );
+    }
+
+    #[test]
+    fn test_combinations_empty() {
+        assert_eq!(
+            pairwise_combinations(&[])
+                .map(|(a, b)| (*a, *b))
+                .collect::<Vec<(i32, i32)>>(),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn test_combinations_single() {
+        assert_eq!(
+            pairwise_combinations(&[36])
+                .map(|(a, b)| (*a, *b))
+                .collect::<Vec<_>>(),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn test_combinations_double() {
+        assert_eq!(
+            pairwise_combinations(&[36, -18])
+                .map(|(a, b)| (*a, *b))
+                .collect::<Vec<_>>(),
+            vec![(36, -18)]
         );
     }
 }
