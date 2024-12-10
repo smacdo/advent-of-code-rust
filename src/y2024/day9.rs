@@ -1,4 +1,4 @@
-use advent_of_code_data::registry::{Result, Solver, SolverError, SolverPart};
+use advent_of_code_data::registry::{Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 
@@ -18,6 +18,7 @@ static SOLVER: Solver = Solver {
     },
 };
 
+#[allow(dead_code)]
 fn visualize(disk: &[Option<usize>]) {
     disk.iter().for_each(|block| match block {
         Some(file_id) => print!("{}", *file_id),
@@ -27,6 +28,7 @@ fn visualize(disk: &[Option<usize>]) {
     println!();
 }
 
+#[allow(dead_code)]
 fn visualize2(disk: &[Chunk]) {
     let mut block_index: usize = 0;
 

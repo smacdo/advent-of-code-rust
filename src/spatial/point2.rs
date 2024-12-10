@@ -309,6 +309,7 @@ impl std::fmt::Display for Point2 {
 
 /// Iterates all points in the region formed by `a` and `b` corners. Typically
 /// `a` would be the upper left corner, and `b` would be the bottom right corner.
+#[allow(dead_code)]
 pub fn iter_rows_inclusive(a: Point2, b: Point2) -> impl Iterator<Item = Point2> {
     let start_x = a.x.min(b.x);
     let start_y = a.y.min(b.y);

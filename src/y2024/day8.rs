@@ -95,7 +95,7 @@ pub fn day_8_1(input: &str) -> Result<Answer> {
 
     for positions in antennas.values() {
         for (pos_a, pos_b) in pairwise_combinations(positions) {
-            // Calculate the manhattan distance between the two points.
+            // Calculate the manhattan distance between the two points. 
             let distance = *pos_b - *pos_a;
 
             // The antinodes are located in line at twice the distance, so apply
