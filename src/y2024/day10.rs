@@ -44,7 +44,7 @@ static SOLVER: Solver = Solver {
 fn count_trailheads(trailhead_pos: Point2, map: &Grid<usize>, allow_multiple: bool) -> usize {
     let mut frontier: BinaryHeap<Point2> = BinaryHeap::new();
 
-    if map[trailhead_pos] > 0 {
+    if map[trailhead_pos] == 0 {
         frontier.push(trailhead_pos);
     }
 
@@ -76,7 +76,7 @@ pub fn day_10_1(input: &str) -> Result<Answer> {
         .map(|pos| count_trailheads(pos, &map, false))
         .sum();
 
-    Ok(trailhead_score_sum.try_into().unwrap())
+    Ok(trailhead_score_sum.into())
 }
 
 pub fn day_10_2(input: &str) -> Result<Answer> {
@@ -86,5 +86,5 @@ pub fn day_10_2(input: &str) -> Result<Answer> {
         .map(|pos| count_trailheads(pos, &map, true))
         .sum();
 
-    Ok(trailhead_score_sum.try_into().unwrap())
+    Ok(trailhead_score_sum.into())
 }
