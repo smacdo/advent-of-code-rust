@@ -86,11 +86,11 @@ pub enum AnswerParseError {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Answer {
     String(String),
-    Int(i64),
+    Int(i128),
 }
 
 impl Answer {
-    pub fn to_i64(&self) -> Option<i64> {
+    pub fn to_i128(&self) -> Option<i128> {
         match self {
             Answer::String(_) => None,
             Answer::Int(v) => Some(*v),
@@ -110,7 +110,7 @@ impl FromStr for Answer {
             return Err(AnswerParseError::NewlinesNotAllowed);
         }
 
-        Ok(s.parse::<i64>()
+        Ok(s.parse::<i128>()
             .map_or_else(|_| Answer::String(s.to_string()), Answer::Int))
     }
 }
@@ -132,34 +132,25 @@ impl From<String> for Answer {
 
 impl From<i32> for Answer {
     fn from(value: i32) -> Self {
-        Self::Int(value as i64)
+        Self::Int(value as i128)
     }
 }
 
 impl From<i64> for Answer {
     fn from(value: i64) -> Self {
-        Self::Int(value)
+        Self::Int(value as i128)
     }
 }
 
 impl From<isize> for Answer {
     fn from(value: isize) -> Self {
-        Self::Int(value as i64)
+        Self::Int(value as i128)
     }
 }
 
-#[derive(Debug)]
-pub struct TooLargeForInt64;
-
-impl TryFrom<usize> for Answer {
-    type Error = TooLargeForInt64;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value as u64 <= i64::MAX as u64 {
-            Ok(Self::Int(value as i64))
-        } else {
-            Err(TooLargeForInt64)
-        }
+impl From<usize> for Answer {
+    fn from(value: usize) -> Self {
+        Self::Int(value as i128)
     }
 }
 

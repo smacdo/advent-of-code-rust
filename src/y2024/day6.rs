@@ -149,7 +149,7 @@ pub fn day_6_1(input: &str) -> Result<Answer> {
 
     visualize(&map, &path);
 
-    Ok(path.len().try_into().unwrap())
+    Ok(path.len().into())
 }
 
 pub fn day_6_2(input: &str) -> Result<Answer> {

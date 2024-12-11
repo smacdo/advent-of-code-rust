@@ -58,8 +58,8 @@ pub enum CheckResult {
 pub struct Answers {
     correct_answer: Option<Answer>,
     wrong_answers: Vec<Answer>,
-    low_bounds: Option<i64>,
-    high_bounds: Option<i64>,
+    low_bounds: Option<i128>,
+    high_bounds: Option<i128>,
 }
 
 impl Answers {
@@ -81,11 +81,11 @@ impl Answers {
         &self.wrong_answers
     }
 
-    pub fn low_bounds_ref(&self) -> &Option<i64> {
+    pub fn low_bounds_ref(&self) -> &Option<i128> {
         &self.low_bounds
     }
 
-    pub fn high_bounds_ref(&self) -> &Option<i64> {
+    pub fn high_bounds_ref(&self) -> &Option<i128> {
         &self.high_bounds
     }
 
@@ -100,7 +100,7 @@ impl Answers {
     /// client say it was correct or incorrect.
     pub fn check(&self, answer: &Answer) -> Option<CheckResult> {
         // Check the answer against the optional low and high value boundaries.
-        match (answer.to_i64(), &self.low_bounds, &self.high_bounds) {
+        match (answer.to_i128(), &self.low_bounds, &self.high_bounds) {
             (Some(answer), Some(low), _) if answer <= *low => {
                 return Some(CheckResult::TooLow);
             }
@@ -152,11 +152,11 @@ impl Answers {
     ///
     /// Any numeric answer passed to `Answers::check` will be returned as
     /// `CheckResult::TooLow` if it equals or is smaller than the low boundary.
-    pub fn set_low_bounds(&mut self, answer: Answer) -> i64 {
+    pub fn set_low_bounds(&mut self, answer: Answer) -> i128 {
         // TODO: Verify that low bounds is not a correct answer.
         // TODO: Verify that low bounds is not larger or equal to high bounds.
         // TODO: Remove panic and return Error if the answer is not an integer.
-        let answer = answer.to_i64().expect("low bounds answer must be numeric");
+        let answer = answer.to_i128().expect("low bounds answer must be numeric");
 
         match &self.low_bounds {
             Some(low) if answer > *low => {
@@ -178,11 +178,13 @@ impl Answers {
     ///
     /// Any numeric answer passed to `Answers::check` will be returned as
     /// `CheckResult::TooHigh` if it equals or is larger than the high boundary.
-    pub fn set_high_bounds(&mut self, answer: Answer) -> i64 {
+    pub fn set_high_bounds(&mut self, answer: Answer) -> i128 {
         // TODO: Verify that high bounds is not a correct answer.
         // TODO: Verify that high bounds is not smaller or equal to low bounds.
         // TODO: Remove panic and return Error if the answer is not an integer.
-        let answer = answer.to_i64().expect("high bounds answer must be numeric");
+        let answer = answer
+            .to_i128()
+            .expect("high bounds answer must be numeric");
 
         match &self.high_bounds {
             Some(high) if answer < *high => {
@@ -263,11 +265,13 @@ impl Answers {
                     answers.add_wrong_answer(Answer::from_str(value).unwrap());
                 }
                 LOW_ANSWER_CHAR => {
-                    let low = value.parse::<i64>().expect("low bounds value must be int");
+                    let low = value.parse::<i128>().expect("low bounds value must be int");
                     answers.set_low_bounds(Answer::Int(low));
                 }
                 HIGH_ANSWER_CHAR => {
-                    let high = value.parse::<i64>().expect("high bounds value must be int");
+                    let high = value
+                        .parse::<i128>()
+                        .expect("high bounds value must be int");
                     answers.set_high_bounds(Answer::Int(high));
                 }
                 _ => {

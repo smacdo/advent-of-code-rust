@@ -112,8 +112,7 @@ pub fn day_8_1(input: &str) -> Result<Answer> {
         .into_iter()
         .filter(|n| map.is_pos_in_bounds(*n))
         .count()
-        .try_into()
-        .unwrap())
+        .into())
 }
 
 pub fn day_8_2(input: &str) -> Result<Answer> {
@@ -161,6 +160,5 @@ pub fn day_8_2(input: &str) -> Result<Answer> {
         .into_iter()
         .filter(|n| map.is_pos_in_bounds(*n))
         .count()
-        .try_into()
-        .unwrap())
+        .into())
 }

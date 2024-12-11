@@ -133,7 +133,7 @@ pub fn day_5_1(input: &str) -> Result<Answer> {
         }
     }
 
-    Ok(sum_of_middle_page_numers.try_into().unwrap())
+    Ok(sum_of_middle_page_numers.into())
 }
 
 pub fn day_5_2(input: &str) -> Result<Answer> {
@@ -183,5 +183,5 @@ pub fn day_5_2(input: &str) -> Result<Answer> {
         }
     }
 
-    Ok(sum_of_middle_page_numers.try_into().unwrap())
+    Ok(sum_of_middle_page_numers.into())
 }

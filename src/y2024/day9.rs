@@ -103,7 +103,7 @@ pub fn day_9_1(input: &str) -> Result<Answer> {
         .filter_map(|(index, id)| id.map(|id| id * index))
         .sum();
 
-    Ok(checksum.try_into().unwrap())
+    Ok(checksum.into())
 }
 
 struct Chunk {
@@ -189,5 +189,5 @@ pub fn day_9_2(input: &str) -> Result<Answer> {
         block_index += chunk.length;
     }
 
-    Ok(checksum.try_into().unwrap())
+    Ok(checksum.into())
 }
