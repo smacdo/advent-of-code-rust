@@ -65,24 +65,58 @@ pub fn array_offset(
     (ay as usize) * x_count + (ax as usize)
 }
 
-impl<T: Clone + Sized + std::fmt::Display> Grid<T> {
+impl<T> Grid<T>
+where
+    T: Clone + Sized + Default + std::fmt::Display,
+{
     /// Return a new grid with `x_count` cols and `y_count` rows and with each
     /// cell initialized to `default`.
-    pub fn new(x_count: usize, y_count: usize, default: T) -> Self {
+    pub fn new(x_count: usize, y_count: usize) -> Self {
         assert!(x_count <= isize::MAX as usize);
         assert!(y_count <= isize::MAX as usize);
 
         Grid {
-            cells: vec![default; x_count * y_count],
+            cells: vec![Default::default(); x_count * y_count],
             x_count,
             y_count,
             x_origin_offset: 0,
             y_origin_offset: 0,
         }
     }
+
+    /// Parses an input string as a grid by storing the result of `map_func` on
+    /// each character in the input string.
+    ///
+    /// Rows are terminated with a newline character and are not passed to the
+    /// map function. Rows are expected to be the same length.
+    pub fn parse_str<F>(s: &str, map_func: F) -> Result<Self, IteratorItemCountError>
+    where
+        F: FnMut(char) -> T,
+    {
+        if s.is_empty() {
+            Ok(Grid::new(0, 0))
+        } else {
+            let mut x_count: Option<usize> = None;
+            let mut y_count = 0;
+
+            for line in s.lines() {
+                x_count = x_count.or(Some(line.len()));
+                y_count += 1;
+            }
+
+            Self::with_values(
+                x_count.unwrap_or(0),
+                y_count,
+                s.lines().flat_map(|line| line.chars()).map(map_func),
+            )
+        }
+    }
 }
 
-impl<T: std::fmt::Display> Grid<T> {
+impl<T> Grid<T>
+where
+    T: std::fmt::Display,
+{
     /// Return a new grid of `y_count` rows and `x_count` cols where each cell
     /// value is taken from the iterator `vals` in row major order.
     pub fn with_values<I>(
@@ -312,7 +346,7 @@ impl TryFrom<&[&str]> for Grid<char> {
 
     fn try_from(value: &[&str]) -> Result<Self, Self::Error> {
         if value.is_empty() {
-            Ok(Grid::new(0, 0, Default::default()))
+            Ok(Grid::new(0, 0))
         } else {
             let itr = value.iter().flat_map(|s| s.chars());
             Self::with_values(value[0].len(), value.len(), itr)
@@ -328,23 +362,7 @@ impl FromStr for Grid<char> {
     type Err = IteratorItemCountError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() {
-            Ok(Grid::new(0, 0, Default::default()))
-        } else {
-            let mut x_count: Option<usize> = None;
-            let mut y_count = 0;
-
-            for line in s.lines() {
-                x_count = x_count.or(Some(line.len()));
-                y_count += 1;
-            }
-
-            Self::with_values(
-                x_count.unwrap_or(0),
-                y_count,
-                s.lines().flat_map(|line| line.chars()),
-            )
-        }
+        Self::parse_str(s, |c| c)
     }
 }
 

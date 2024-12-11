@@ -4,22 +4,22 @@ use advent_of_code_rust::spatial::{Col, Cols, Grid, IteratorItemCountError, Poin
 
 #[test]
 fn default_value_constructor() {
-    let g: Grid<i32> = Grid::new(3, 2, 17);
+    let g: Grid<i32> = Grid::new(3, 2);
     assert_eq!(2, g.y_count());
     assert_eq!(3, g.x_count());
 
-    assert_eq!(17, g[Point2::new(0, 0)]);
-    assert_eq!(17, g[Point2::new(1, 0)]);
-    assert_eq!(17, g[Point2::new(2, 0)]);
+    assert_eq!(0, g[Point2::new(0, 0)]);
+    assert_eq!(0, g[Point2::new(1, 0)]);
+    assert_eq!(0, g[Point2::new(2, 0)]);
 
-    assert_eq!(17, g[Point2::new(0, 1)]);
-    assert_eq!(17, g[Point2::new(1, 1)]);
-    assert_eq!(17, g[Point2::new(2, 1)]);
+    assert_eq!(0, g[Point2::new(0, 1)]);
+    assert_eq!(0, g[Point2::new(1, 1)]);
+    assert_eq!(0, g[Point2::new(2, 1)]);
 }
 
 #[test]
 fn zero_size_grid() {
-    let g: Grid<i32> = Grid::new(0, 0, 13);
+    let g: Grid<i32> = Grid::new(0, 0);
     assert_eq!(0, g.y_count());
     assert_eq!(0, g.x_count());
 }
@@ -45,7 +45,7 @@ fn array_constructor_with_zero_size() {
 
 #[test]
 fn set_values() {
-    let mut g: Grid<i32> = Grid::new(3, 2, 0);
+    let mut g: Grid<i32> = Grid::new(3, 2);
 
     g.set(2, 0, 42);
     assert_eq!(&42, g.get(2, 0));
@@ -58,7 +58,7 @@ fn set_values() {
 
 #[test]
 fn get_mut_values() {
-    let mut g: Grid<i32> = Grid::new(3, 2, 0);
+    let mut g: Grid<i32> = Grid::new(3, 2);
 
     *g.get_mut(2, 0) = 42;
     assert_eq!(&42, g.get(2, 0));
@@ -69,7 +69,7 @@ fn get_mut_values() {
 
 #[test]
 fn index() {
-    let mut g: Grid<i32> = Grid::new(3, 2, 0);
+    let mut g: Grid<i32> = Grid::new(3, 2);
 
     g.set(2, 0, 42);
     assert_eq!(42, g[Point2::new(2, 0)]);
@@ -82,7 +82,7 @@ fn index() {
 
 #[test]
 fn index_mut() {
-    let mut g: Grid<i32> = Grid::new(3, 2, 0);
+    let mut g: Grid<i32> = Grid::new(3, 2);
 
     g[Point2::new(2, 0)] = 42;
     assert_eq!(42, g[Point2::new(2, 0)]);
@@ -96,7 +96,7 @@ fn index_mut() {
 #[test]
 #[should_panic]
 fn panic_if_grid_out_of_bounds() {
-    let g: Grid<i32> = Grid::new(4, 6, 0);
+    let g: Grid<i32> = Grid::new(4, 6);
     assert_eq!(0, g[Point2::new(5, 5)]);
 }
 
@@ -120,7 +120,7 @@ fn iter() {
 
 #[test]
 fn points_iter() {
-    let g: Grid<i32> = Grid::new(3, 2, 0);
+    let g: Grid<i32> = Grid::new(3, 2);
     let points: Vec<Point2> = g.points().collect();
 
     assert_eq!(
@@ -138,7 +138,7 @@ fn points_iter() {
 
 #[test]
 fn grid_rows_iter() {
-    let g: Grid<i32> = Grid::new(3, 2, 0);
+    let g: Grid<i32> = Grid::new(3, 2);
     let points: Vec<Point2> = g.rows().flatten().collect();
 
     assert_eq!(
@@ -277,6 +277,23 @@ fn from_string_array_too_big() {
             actual_len: 10
         })
     ));
+}
+
+#[test]
+fn parse_str() {
+    let s = "379\n281";
+    let g = Grid::<isize>::parse_str(s, |c| c.to_digit(10).unwrap() as isize).unwrap();
+
+    assert_eq!(g.x_count(), 3);
+    assert_eq!(g.y_count(), 2);
+
+    assert_eq!(3, g[Point2::new(0, 0)]);
+    assert_eq!(7, g[Point2::new(1, 0)]);
+    assert_eq!(9, g[Point2::new(2, 0)]);
+
+    assert_eq!(2, g[Point2::new(0, 1)]);
+    assert_eq!(8, g[Point2::new(1, 1)]);
+    assert_eq!(1, g[Point2::new(2, 1)]);
 }
 
 #[test]
