@@ -57,7 +57,7 @@ fn count_trailheads(trailhead_pos: Point2, map: &Grid<usize>, allow_multiple: bo
             trailhead_count += 1;
         }
 
-        for neighbor_dir in Direction4::itr() {
+        for neighbor_dir in Direction4::all() {
             let neighbor_pos = next_pos + neighbor_dir;
 
             if map.is_pos_in_bounds(neighbor_pos) && map[neighbor_pos] == map[next_pos] + 1 {

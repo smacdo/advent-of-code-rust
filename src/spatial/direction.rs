@@ -22,7 +22,7 @@ impl Direction4 {
     }
 
     /// Return an iterator over the directions in `Direction4`.
-    pub fn itr() -> Direction4Itr {
+    pub fn all() -> Direction4Itr {
         Direction4Itr {
             next: Some(Direction4::East),
         }
@@ -78,7 +78,7 @@ pub enum Direction8 {
 
 impl Direction8 {
     /// Return an iterator over the directions in `Direction8`.
-    pub fn itr() -> Direction8Itr {
+    pub fn all() -> Direction8Itr {
         Direction8Itr {
             next: Some(Direction8::East),
         }
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn iterate_direction4() {
         assert_eq!(
-            Direction4::itr().collect::<Vec<Direction4>>(),
+            Direction4::all().collect::<Vec<Direction4>>(),
             [
                 Direction4::East,
                 Direction4::North,
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn iterate_direction8() {
         assert_eq!(
-            Direction8::itr().collect::<Vec<Direction8>>(),
+            Direction8::all().collect::<Vec<Direction8>>(),
             [
                 Direction8::East,
                 Direction8::Northeast,
