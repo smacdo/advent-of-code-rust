@@ -31,7 +31,7 @@ use crate::spatial::Point2;
 /// | 3 | 4 | 5 |
 /// +---+---+---+
 #[derive(Clone, Debug, PartialEq)]
-pub struct Grid<T: std::fmt::Display> {
+pub struct Grid<T> {
     /// Array of values stored in the grid.
     cells: Vec<T>,
     /// The number of cells in the horizontal (column direction).
@@ -67,7 +67,7 @@ pub fn array_offset(
 
 impl<T> Grid<T>
 where
-    T: Clone + Sized + Default + std::fmt::Display,
+    T: Clone + Sized + Default,
 {
     /// Return a new grid with `x_count` cols and `y_count` rows and with each
     /// cell initialized to `default`.
@@ -83,7 +83,9 @@ where
             y_origin_offset: 0,
         }
     }
+}
 
+impl<T> Grid<T> {
     /// Parses an input string as a grid by storing the result of `map_func` on
     /// each character in the input string.
     ///
@@ -94,7 +96,7 @@ where
         F: FnMut(char) -> T,
     {
         if s.is_empty() {
-            Ok(Grid::new(0, 0))
+            Ok(Default::default())
         } else {
             let mut x_count: Option<usize> = None;
             let mut y_count = 0;
@@ -113,10 +115,7 @@ where
     }
 }
 
-impl<T> Grid<T>
-where
-    T: std::fmt::Display,
-{
+impl<T> Grid<T> {
     /// Return a new grid of `y_count` rows and `x_count` cols where each cell
     /// value is taken from the iterator `vals` in row major order.
     pub fn with_values<I>(
@@ -263,6 +262,18 @@ where
     }
 }
 
+impl<T> Default for Grid<T> {
+    fn default() -> Self {
+        Self {
+            cells: Vec::new(),
+            x_count: 0,
+            y_count: 0,
+            x_origin_offset: 0,
+            y_origin_offset: 0,
+        }
+    }
+}
+
 impl<T: std::fmt::Display> std::fmt::Display for Grid<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in 0..(self.y_count as isize) {
@@ -277,7 +288,7 @@ impl<T: std::fmt::Display> std::fmt::Display for Grid<T> {
     }
 }
 
-impl<T: std::fmt::Display> std::iter::IntoIterator for Grid<T> {
+impl<T> std::iter::IntoIterator for Grid<T> {
     type Item = T;
     type IntoIter = std::vec::IntoIter<T>;
 
@@ -286,7 +297,7 @@ impl<T: std::fmt::Display> std::iter::IntoIterator for Grid<T> {
     }
 }
 
-impl<T: Clone + std::fmt::Display> std::ops::Index<Point2> for Grid<T> {
+impl<T: Clone> std::ops::Index<Point2> for Grid<T> {
     type Output = T;
 
     #[inline(always)]
@@ -305,7 +316,7 @@ impl<T: Clone + std::fmt::Display> std::ops::Index<Point2> for Grid<T> {
     }
 }
 
-impl<T: Clone + std::fmt::Display> std::ops::IndexMut<Point2> for Grid<T> {
+impl<T: Clone> std::ops::IndexMut<Point2> for Grid<T> {
     #[inline(always)]
     fn index_mut(&mut self, p: Point2) -> &mut Self::Output {
         debug_assert!(p.x < self.x_count as isize - self.x_origin_offset);
@@ -428,12 +439,12 @@ pub struct CellRef<'a, T> {
 /// An iterator over the cells of a rectangular region in a grid.
 ///
 /// See `PointsItr` for details on iteration order.
-pub struct Cells<'a, T: std::fmt::Display> {
+pub struct Cells<'a, T> {
     points: Points,
     grid: &'a Grid<T>,
 }
 
-impl<'a, T: Clone + std::fmt::Display> Iterator for Cells<'a, T> {
+impl<'a, T: Clone> Iterator for Cells<'a, T> {
     type Item = CellRef<'a, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -448,7 +459,7 @@ impl<'a, T: Clone + std::fmt::Display> Iterator for Cells<'a, T> {
     }
 }
 
-impl<'a, T: Clone + std::fmt::Display> FusedIterator for Cells<'a, T> {}
+impl<'a, T: Clone> FusedIterator for Cells<'a, T> {}
 
 /// An iterator over the rows in a grid.
 #[derive(Clone, Debug, PartialEq, Eq)]
