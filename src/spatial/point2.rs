@@ -1,6 +1,6 @@
 use std::ops;
 
-use super::Direction4;
+use super::{Direction4, Direction8};
 
 /// Represents an integer (x,y) cartesian point in two dimensions.
 ///
@@ -131,11 +131,23 @@ impl ops::Add<&Point2> for Point2 {
     }
 }
 
+// TODO: Not sure if adding a direction is best, or this could should be removed
+//       in favor of direction * Point2::one.
 impl ops::Add<Direction4> for Point2 {
     type Output = Self;
 
     #[inline(always)]
     fn add(self, d: Direction4) -> Self {
+        let r: Point2 = d.into();
+        self + r
+    }
+}
+
+impl ops::Add<Direction8> for Point2 {
+    type Output = Self;
+
+    #[inline(always)]
+    fn add(self, d: Direction8) -> Self {
         let r: Point2 = d.into();
         self + r
     }
