@@ -125,7 +125,19 @@ fn parse_input(input: &str) -> Vec<Machine> {
 }
 
 fn cheapest_win(machine: &Machine) -> Option<isize> {
-    cheapest_win_itr(Point2::zero(), machine, 0, 0, 0, &mut HashMap::new())
+    cheapest_win_itr(Point2::zero(), machine, 0, 0, 0, 1, &mut HashMap::new())
+}
+
+fn cheapest_win2(machine: &Machine) -> Option<isize> {
+    cheapest_win_itr(
+        Point2::zero(),
+        machine,
+        0,
+        0,
+        0,
+        10000000000000,
+        &mut HashMap::new(),
+    )
 }
 
 fn cheapest_win_itr(
@@ -134,18 +146,18 @@ fn cheapest_win_itr(
     tokens: isize,
     step_a: usize,
     step_b: usize,
+    step_modifier: usize,
     cache: &mut HashMap<Point2, Option<isize>>,
 ) -> Option<isize> {
     if cache.contains_key(&pos) {
         return cache[&pos];
     }
 
-    if pos.x > machine.prize.x || pos.y > machine.prize.y || step_a > 100 || step_b > 100 {
-        /*println!(
-            "exceeded {pos} (prize at{}) with {step} steps at cost {tokens}",
-            machine.prize
-        );*/
-
+    if pos.x > machine.prize.x
+        || pos.y > machine.prize.y
+        || step_a > 100 * step_modifier
+        || step_b > 100 * step_modifier
+    {
         None
     } else if pos == machine.prize {
         println!("found prize at {pos}");
@@ -157,6 +169,7 @@ fn cheapest_win_itr(
             tokens + COST_A,
             step_a + 1,
             step_b,
+            step_modifier,
             cache,
         );
 
@@ -166,6 +179,7 @@ fn cheapest_win_itr(
             tokens + COST_B,
             step_a,
             step_b + 1,
+            step_modifier,
             cache,
         );
 
@@ -184,18 +198,61 @@ fn cheapest_win_itr(
     }
 }
 
+fn solve_linear_equation(machine: &Machine) -> Option<isize> {
+    // There are two equations that need to be solved:
+    // p.x = a.x * a + b.x * b
+    // p.y = a.y * a + b.y * b
+    //
+    // TODO: Use Z3 to solve the equations.
+    // ```
+    // from z3 import Int, Optimize, sat
+    // X = Int('X')
+    // Y = Int('Y')
+    // opt = Optimize()
+    // opt.add(a_x * X + b_x * Y == p_x)
+    // opt.add(a_y * X + b_y * Y == p_y)
+    // opt.minimize(3 * X + Y)
+    // if opt.check() == sat:
+    //   model = opt.model()
+    //   solution_x = model[X].as_long
+    //   solution_y = model[Y].as_long
+    // ```
+    let a = machine.button_a;
+    let b = machine.button_b;
+    let p = machine.prize;
+
+    let b_moves = (p.y * a.x - p.x * a.y) / (b.y * a.x - b.x * a.y);
+    let a_moves = (p.x - b_moves * b.x) / a.x;
+
+    if (a.x * a_moves + b.x * b_moves, a.y * a_moves + b.y * b_moves) != (p.x, p.y) {
+        return None;
+    }
+
+    Some(a_moves * COST_A + b_moves * COST_B)
+}
+
 pub fn day_13_1(input: &str) -> Result<Answer> {
     let machines = parse_input(input);
     let fewest_tokens: isize = machines
         .into_iter()
-        .filter_map(|machine| cheapest_win(&machine))
+        .filter_map(|machine| solve_linear_equation(&machine))
         .sum();
 
     Ok(fewest_tokens.into())
 }
 
-pub fn day_13_2(_input: &str) -> Result<Answer> {
-    Err(advent_of_code_data::registry::SolverError::NotFinished)
+pub fn day_13_2(input: &str) -> Result<Answer> {
+    let machines = parse_input(input);
+    let fewest_tokens: isize = machines
+        .into_iter()
+        .map(|mut machine| {
+            machine.prize += Point2::new(10000000000000, 10000000000000);
+            machine
+        })
+        .filter_map(|machine| solve_linear_equation(&machine))
+        .sum();
+
+    Ok(fewest_tokens.into())
 }
 
 #[cfg(test)]
