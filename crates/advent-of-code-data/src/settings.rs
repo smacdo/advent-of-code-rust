@@ -7,6 +7,7 @@ use std::{
 pub struct ClientOptions {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
+    pub user_cache_dir: Option<PathBuf>,
     pub encryption_token: Option<String>,
     pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -16,6 +17,7 @@ impl ClientOptions {
         Self {
             session_id: None,
             puzzle_dir: None,
+            user_cache_dir: None,
             encryption_token: None,
             fake_time: None,
         }
@@ -47,6 +49,16 @@ impl ClientOptions {
     pub fn with_user_config(self) -> Self {
         // TODO: implement loading config from path relative to home directory.
         // TODO: check if env variable has changed the user config path.
+        // TODO: log if file is found/not found
+        // TODO: add tests
+        self
+    }
+
+    /// Use the local user's cache directory as the storage location for user
+    /// data caching.
+    pub fn with_user_cache(self) -> Self {
+        // TODO: implement XDG lookup.
+        // TODO: check if env variable has changed the user cache dir.
         // TODO: log if file is found/not found
         // TODO: add tests
         self
@@ -145,6 +157,7 @@ impl Default for ClientOptions {
     fn default() -> Self {
         Self::new()
             .with_user_config()
+            .with_user_cache()
             .with_local_dir_config()
             .with_env_vars()
     }

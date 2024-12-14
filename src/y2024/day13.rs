@@ -52,94 +52,41 @@ struct Machine {
 }
 
 fn parse_input(input: &str) -> Vec<Machine> {
-    let mut button_a = Some(Point2::zero());
-    let mut button_b = Some(Point2::zero());
-    let mut prize = Some(Point2::zero());
-    let mut machines: Vec<Machine> = Vec::new();
+    let machine_re = Regex::new(
+        r"Button A: X\+(?<ax>\d+), Y\+(?<ay>\d+)\nButton B: X\+(?<bx>\d+), Y\+(?<by>\d+)\nPrize: X=(?<px>\d+), Y=(?<py>\d+)",
+    )
+    .unwrap();
 
-    enum ExpectedLine {
-        ButtonA,
-        ButtonB,
-        Prize,
-        Newline,
-    }
-
-    let mut expected_line = ExpectedLine::ButtonA;
-    let button_regex = Regex::new(r"[A-ZA-z ]+: X\+(?<X>\d+), Y\+(?<Y>\d+)").unwrap();
-    let prize_regex = Regex::new(r"[A-ZA-z ]+: X=(?<X>\d+), Y=(?<Y>\d+)").unwrap();
-
-    for line in input.lines() {
-        match expected_line {
-            ExpectedLine::ButtonA => {
-                let cap = button_regex.captures(line).unwrap();
-                button_a = Some(Point2::new(
-                    cap["X"].parse::<isize>().unwrap(),
-                    cap["Y"].parse::<isize>().unwrap(),
-                ));
-                expected_line = ExpectedLine::ButtonB;
-            }
-            ExpectedLine::ButtonB => {
-                let cap = button_regex.captures(line).unwrap();
-                button_b = Some(Point2::new(
-                    cap["X"].parse::<isize>().unwrap(),
-                    cap["Y"].parse::<isize>().unwrap(),
-                ));
-                expected_line = ExpectedLine::Prize;
-            }
-            ExpectedLine::Prize => {
-                let cap = prize_regex.captures(line).unwrap();
-                prize = Some(Point2::new(
-                    cap["X"].parse::<isize>().unwrap(),
-                    cap["Y"].parse::<isize>().unwrap(),
-                ));
-                expected_line = ExpectedLine::Newline;
-            }
-            ExpectedLine::Newline => {
-                assert!(line.is_empty());
-
-                machines.push(Machine {
-                    button_a: button_a.unwrap(),
-                    button_b: button_b.unwrap(),
-                    prize: prize.unwrap(),
-                });
-
-                button_a = None;
-                button_b = None;
-                prize = None;
-
-                expected_line = ExpectedLine::ButtonA;
-            }
-        }
-    }
-
-    // handle last entry which does not terminate with a newline
-    if let Some(button_a) = button_a {
-        machines.push(Machine {
-            button_a,
-            button_b: button_b.unwrap(),
-            prize: prize.unwrap(),
-        });
-    }
-
-    machines
+    machine_re
+        .captures_iter(input)
+        .map(|caps| Machine {
+            button_a: Point2::new(
+                caps["ax"].parse::<isize>().unwrap(),
+                caps["ay"].parse::<isize>().unwrap(),
+            ),
+            button_b: Point2::new(
+                caps["bx"].parse::<isize>().unwrap(),
+                caps["by"].parse::<isize>().unwrap(),
+            ),
+            prize: Point2::new(
+                caps["px"].parse::<isize>().unwrap(),
+                caps["py"].parse::<isize>().unwrap(),
+            ),
+        })
+        .collect()
 }
 
+/// Backtracking solution for this puzzle - only works on part 1 where the
+/// solution can be found with around 100x100 steps.
+///
+/// This approach is very similiar to the classic "coin change" interview
+/// question.
+#[allow(dead_code)]
 fn cheapest_win(machine: &Machine) -> Option<isize> {
     cheapest_win_itr(Point2::zero(), machine, 0, 0, 0, 1, &mut HashMap::new())
 }
 
-fn cheapest_win2(machine: &Machine) -> Option<isize> {
-    cheapest_win_itr(
-        Point2::zero(),
-        machine,
-        0,
-        0,
-        0,
-        10000000000000,
-        &mut HashMap::new(),
-    )
-}
-
+#[allow(dead_code)]
 fn cheapest_win_itr(
     pos: Point2,
     machine: &Machine,
@@ -198,25 +145,12 @@ fn cheapest_win_itr(
     }
 }
 
+/// Solve the puzzle by constructing the two linear equations specified in the
+/// puzzle, and then solves for A and B.
 fn solve_linear_equation(machine: &Machine) -> Option<isize> {
     // There are two equations that need to be solved:
     // p.x = a.x * a + b.x * b
     // p.y = a.y * a + b.y * b
-    //
-    // TODO: Use Z3 to solve the equations.
-    // ```
-    // from z3 import Int, Optimize, sat
-    // X = Int('X')
-    // Y = Int('Y')
-    // opt = Optimize()
-    // opt.add(a_x * X + b_x * Y == p_x)
-    // opt.add(a_y * X + b_y * Y == p_y)
-    // opt.minimize(3 * X + Y)
-    // if opt.check() == sat:
-    //   model = opt.model()
-    //   solution_x = model[X].as_long
-    //   solution_y = model[Y].as_long
-    // ```
     let a = machine.button_a;
     let b = machine.button_b;
     let p = machine.prize;
@@ -306,49 +240,49 @@ Prize: X=18641, Y=10279",
 
     #[test]
     fn part_1_example_1() {
-        assert_eq!(
-            cheapest_win(&Machine {
-                button_a: Point2::new(94, 34),
-                button_b: Point2::new(22, 67),
-                prize: Point2::new(8400, 5400)
-            },),
-            Some(280)
-        );
+        let machine = Machine {
+            button_a: Point2::new(94, 34),
+            button_b: Point2::new(22, 67),
+            prize: Point2::new(8400, 5400),
+        };
+
+        assert_eq!(cheapest_win(&machine), Some(280));
+        assert_eq!(solve_linear_equation(&machine), Some(280));
     }
 
     #[test]
     fn part_1_example_2() {
-        assert_eq!(
-            cheapest_win(&Machine {
-                button_a: Point2::new(26, 66),
-                button_b: Point2::new(67, 21),
-                prize: Point2::new(12748, 12176)
-            },),
-            None
-        );
+        let machine = Machine {
+            button_a: Point2::new(26, 66),
+            button_b: Point2::new(67, 21),
+            prize: Point2::new(12748, 12176),
+        };
+
+        assert_eq!(cheapest_win(&machine), None);
+        assert_eq!(solve_linear_equation(&machine), None);
     }
 
     #[test]
     fn part_1_example_3() {
-        assert_eq!(
-            cheapest_win(&Machine {
-                button_a: Point2::new(17, 86),
-                button_b: Point2::new(84, 37),
-                prize: Point2::new(7870, 6450)
-            },),
-            Some(200)
-        );
+        let machine = Machine {
+            button_a: Point2::new(17, 86),
+            button_b: Point2::new(84, 37),
+            prize: Point2::new(7870, 6450),
+        };
+
+        assert_eq!(cheapest_win(&machine), Some(200));
+        assert_eq!(solve_linear_equation(&machine), Some(200));
     }
 
     #[test]
     fn part_1_example_4() {
-        assert_eq!(
-            cheapest_win(&Machine {
-                button_a: Point2::new(69, 23),
-                button_b: Point2::new(27, 71),
-                prize: Point2::new(18641, 10279)
-            },),
-            None
-        );
+        let machine = Machine {
+            button_a: Point2::new(69, 23),
+            button_b: Point2::new(27, 71),
+            prize: Point2::new(18641, 10279),
+        };
+
+        assert_eq!(cheapest_win(&machine), None);
+        assert_eq!(solve_linear_equation(&machine), None);
     }
 }

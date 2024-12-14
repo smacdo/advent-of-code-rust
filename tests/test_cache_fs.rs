@@ -1,5 +1,5 @@
 use advent_of_code_data::{
-    cache::{CacheError, PuzzleCache},
+    cache::{CacheError, PuzzleCache, PuzzleFsCache},
     Day, Year,
 };
 use tempfile::tempdir;
@@ -11,7 +11,7 @@ fn persist_puzzle_input() {
 
     // Write input data with a temporary client.
     {
-        let puzzle_cache = PuzzleCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache
             .save_input("testing\n-123+=", Day(1), Year(1987))
             .unwrap();
@@ -27,7 +27,7 @@ fn persist_puzzle_input() {
 
     // Read input data back with another temporary client.
     let read_cached_input = |day: Day, year: Year| {
-        let puzzle_cache = PuzzleCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache.load_input(day, year).unwrap()
     };
 
@@ -43,7 +43,7 @@ fn try_load_input_exists() {
 
     // Write input data with a temporary client.
     {
-        let puzzle_cache = PuzzleCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache
             .save_input("foobar", Day(19), Year(2000))
             .unwrap();
@@ -51,7 +51,7 @@ fn try_load_input_exists() {
 
     // Read input data back with another temporary client.
     let read_cached_input = |day: Day, year: Year| {
-        let puzzle_cache = PuzzleCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache.try_load_input(day, year).unwrap()
     };
 
@@ -66,7 +66,7 @@ fn load_missing_puzzle_input() {
     let cache_dir = tempdir().unwrap();
     let encryption_token = Some("TEST".to_string());
 
-    let puzzle_cache = PuzzleCache::new(cache_dir.path(), encryption_token.clone());
+    let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
     let result = puzzle_cache.load_input(Day(1), Year(2023));
 
     assert!(result.is_err());
@@ -78,7 +78,7 @@ fn try_load_missing_puzzle_input() {
     let cache_dir = tempdir().unwrap();
     let encryption_token = Some("TEST".to_string());
 
-    let puzzle_cache = PuzzleCache::new(cache_dir.path(), encryption_token.clone());
+    let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
     let result = puzzle_cache.try_load_input(Day(1), Year(2023)).unwrap();
 
     assert!(result.is_none())

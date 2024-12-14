@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Debug,
+    path::{Path, PathBuf},
+};
 
 use base64::{prelude::BASE64_STANDARD, Engine};
 use core::str;
@@ -15,22 +18,59 @@ pub enum CacheError {
     #[error("base 64 decoding failed: {}", .0)]
     DecodeBase64(#[from] base64::DecodeError),
     #[error("decryption failed: {}", .0)]
-    Decryption(#[from] anyhow::Error),
+    Decryption(#[source] anyhow::Error),
+    #[error("encryption failed: {}", .0)]
+    Encryption(#[source] anyhow::Error),
     #[error("decoding utf8 failed: {}", .0)]
     DecodeUtf8(#[from] std::string::FromUtf8Error),
+    #[error("serializing or deserializing failed: {}", .0)]
+    JsonSerde(#[from] serde_json::Error),
     #[error("a file i/o error occured while reading/writing the cache: {}", .0)]
     Io(#[from] std::io::Error),
 }
 
+pub trait PuzzleCache: Debug {
+    fn try_load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError>;
+
+    fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError>;
+
+    fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError>;
+
+    fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError>;
+
+    fn save(&self, puzzle: Puzzle) -> Result<(), CacheError> {
+        self.save_input(&puzzle.input, puzzle.day, puzzle.year)?;
+        self.save_answers(&puzzle.part_one_answers, Part::One, puzzle.day, puzzle.year)?;
+        self.save_answers(&puzzle.part_two_answers, Part::Two, puzzle.day, puzzle.year)?;
+
+        Ok(())
+    }
+
+    fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError>;
+
+    fn save_answers(
+        &self,
+        answers: &Answers,
+        part: Part,
+        day: Day,
+        year: Year,
+    ) -> Result<(), CacheError>;
+}
+
+pub trait UserDataCache: Debug {
+    fn load(&self, session_id: &str) -> Result<User, CacheError>;
+    fn save(&self, user: &User) -> Result<(), CacheError>;
+}
+
 #[derive(Debug)]
-pub struct PuzzleCache {
+pub struct PuzzleFsCache {
     cache_dir: PathBuf,
     encryption_token: Option<String>,
 }
 
 // TODO: Use '*.encrypted.txt' vs '*.txt' for encrypted data.
 
-impl PuzzleCache {
+impl PuzzleFsCache {
     const INPUT_FILE_NAME: &'static str = "input.txt";
     const PART_ONE_ANSWERS_FILE_NAME: &'static str = "part-1-answers.txt";
     const PART_TWO_ANSWERS_FILE_NAME: &'static str = "part-2-answers.txt";
@@ -46,7 +86,24 @@ impl PuzzleCache {
         }
     }
 
-    pub fn try_load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
+    pub fn dir_for_puzzle(cache_dir: &Path, day: Day, year: Year) -> PathBuf {
+        cache_dir.join(format!("y{}", year)).join(day.to_string())
+    }
+
+    pub fn input_file_path(cache_dir: &Path, day: Day, year: Year) -> PathBuf {
+        Self::dir_for_puzzle(cache_dir, day, year).join(Self::INPUT_FILE_NAME)
+    }
+
+    pub fn answers_file_path(cache_dir: &Path, part: Part, day: Day, year: Year) -> PathBuf {
+        Self::dir_for_puzzle(cache_dir, day, year).join(match part {
+            Part::One => Self::PART_ONE_ANSWERS_FILE_NAME,
+            Part::Two => Self::PART_TWO_ANSWERS_FILE_NAME,
+        })
+    }
+}
+
+impl PuzzleCache for PuzzleFsCache {
+    fn try_load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
         match self.load_input(day, year) {
             Ok(input) => Ok(Some(input)),
             Err(CacheError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -54,7 +111,7 @@ impl PuzzleCache {
         }
     }
 
-    pub fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError> {
+    fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError> {
         // Load the cached input file from disk.
         let input_path = Self::input_file_path(&self.cache_dir, day, year);
         tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
@@ -78,13 +135,13 @@ impl PuzzleCache {
         Ok(input_text)
     }
 
-    pub fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError> {
+    fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError> {
         Ok(Answers::deserialize_from_str(&std::fs::read_to_string(
             Self::answers_file_path(&self.cache_dir, part, day, year),
         )?))
     }
 
-    pub fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError> {
+    fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError> {
         // TODO: Create default input or answers if the files don't exist.
         Ok(Puzzle {
             day,
@@ -95,24 +152,19 @@ impl PuzzleCache {
         })
     }
 
-    pub fn save(&self, puzzle: Puzzle) {
-        // TODO: Convert unwraps into Errors.
+    fn save(&self, puzzle: Puzzle) -> Result<(), CacheError> {
         // Create the puzzle directory in the cache if it doesn't already exist.
         let puzzle_dir = Self::dir_for_puzzle(&self.cache_dir, puzzle.day, puzzle.year);
-        std::fs::create_dir_all(puzzle_dir).unwrap();
+        std::fs::create_dir_all(puzzle_dir)?;
 
-        self.save_input(&puzzle.input, puzzle.day, puzzle.year)
-            .unwrap();
+        self.save_input(&puzzle.input, puzzle.day, puzzle.year)?;
+        self.save_answers(&puzzle.part_one_answers, Part::One, puzzle.day, puzzle.year)?;
+        self.save_answers(&puzzle.part_two_answers, Part::Two, puzzle.day, puzzle.year)?;
 
-        self.save_answers(&puzzle.part_one_answers, Part::One, puzzle.day, puzzle.year)
-            .unwrap();
-
-        self.save_answers(&puzzle.part_two_answers, Part::Two, puzzle.day, puzzle.year)
-            .unwrap();
+        Ok(())
     }
 
-    pub fn save_input(&self, input: &str, day: Day, year: Year) -> std::io::Result<()> {
-        // TODO: Convert unwraps into Errors.
+    fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError> {
         // Calculate the path to the puzzle's input file.
         let input_path = Self::input_file_path(&self.cache_dir, day, year);
 
@@ -120,104 +172,94 @@ impl PuzzleCache {
         let mut puzzle_dir = input_path.clone();
         puzzle_dir.pop();
 
-        std::fs::create_dir_all(puzzle_dir).unwrap();
+        std::fs::create_dir_all(puzzle_dir)?;
 
         // Write the input to disk, and optionally encrypt the input file when
         // stored on disk.
         if let Some(encryption_token) = &self.encryption_token {
             // Encrypt then base64 encode for better version control handling.
-            let encrypted_data =
-                encrypt(input.as_bytes(), encryption_token.as_bytes()).expect("failed to encrypt");
+            let encrypted_data = encrypt(input.as_bytes(), encryption_token.as_bytes())
+                .map_err(CacheError::Encryption)?;
             let b64_encrypted_text = BASE64_STANDARD.encode(encrypted_data);
 
             tracing::debug!("saving encrypted input for day {day} year {year} to {input_path:?}");
-            std::fs::write(input_path, b64_encrypted_text)
+            Ok(std::fs::write(input_path, b64_encrypted_text)?)
         } else {
             // No encryption.
             tracing::debug!("saving unencrypted input for day {day} year {year} to {input_path:?}");
-            std::fs::write(input_path, input)
+            Ok(std::fs::write(input_path, input)?)
         }
     }
 
-    pub fn save_answers(
+    fn save_answers(
         &self,
         answers: &Answers,
         part: Part,
         day: Day,
         year: Year,
-    ) -> std::io::Result<()> {
+    ) -> Result<(), CacheError> {
         let answers_path = Self::answers_file_path(&self.cache_dir, part, day, year);
+
+        // Create the puzzle directory if it doesn't already exist.
         let mut puzzle_dir = answers_path.clone();
         puzzle_dir.pop();
 
-        std::fs::create_dir_all(puzzle_dir).unwrap();
+        std::fs::create_dir_all(puzzle_dir)?;
 
         tracing::debug!("saving answer for part {part} day {day} year {year} to {answers_path:?}");
-        std::fs::write(answers_path, answers.serialize_to_string())
-    }
-
-    pub fn dir_for_puzzle(cache_dir: &Path, day: Day, year: Year) -> PathBuf {
-        cache_dir.join(format!("y{}", year)).join(day.to_string())
-    }
-
-    pub fn input_file_path(cache_dir: &Path, day: Day, year: Year) -> PathBuf {
-        Self::dir_for_puzzle(cache_dir, day, year).join(Self::INPUT_FILE_NAME)
-    }
-
-    pub fn answers_file_path(cache_dir: &Path, part: Part, day: Day, year: Year) -> PathBuf {
-        Self::dir_for_puzzle(cache_dir, day, year).join(match part {
-            Part::One => Self::PART_ONE_ANSWERS_FILE_NAME,
-            Part::Two => Self::PART_TWO_ANSWERS_FILE_NAME,
-        })
+        Ok(std::fs::write(answers_path, answers.serialize_to_string())?)
     }
 }
 
 #[derive(Debug)]
-pub struct UserDataCache {
+pub struct UserDataFsCache {
     cache_dir: PathBuf,
 }
 
-impl UserDataCache {
+impl UserDataFsCache {
     pub fn new<P: Into<PathBuf>>(cache_dir: P) -> Self {
-        // TODO: Validate cache_dir is a directory, and is writable.
-        // TODO: Create dir if not exists.
-
         Self {
             cache_dir: cache_dir.into(),
         }
     }
 
-    pub fn load(&self, session_id: &str) -> User {
+    pub fn path_for_user_data(&self, session_id: &str) -> PathBuf {
         // TODO: Validate session_id is safe for filename.
-        // TODO: Figure out a better cache dir layout.
-        // TODO: Replace unwraps with Errors.
-        let user_file_path = self.cache_dir.join(format!("{session_id}.json"));
+        self.cache_dir.join(format!("{}.json", session_id))
+    }
+}
+
+impl UserDataCache for UserDataFsCache {
+    fn load(&self, session_id: &str) -> Result<User, CacheError> {
+        let user_file_path = self.path_for_user_data(session_id);
 
         if user_file_path.is_file() {
-            tracing::debug!("found cached user data for {session_id} at `{user_file_path:?}`");
+            tracing::debug!("cached user data for {session_id} at `{user_file_path:?}`");
 
-            let json_text = std::fs::read_to_string(user_file_path).unwrap();
-            let user: User = serde_json::from_str(&json_text).unwrap();
+            let json_text = std::fs::read_to_string(user_file_path)?;
+            let user: User = serde_json::from_str(&json_text)?;
 
-            user
+            Ok(user)
         } else {
             tracing::debug!("no cached user data for {session_id} at `{user_file_path:?}`, returning new User object");
-            User::new(session_id)
+            Ok(User::new(session_id))
         }
     }
 
-    pub fn save(&self, user: &User) {
-        // TODO: Validate session_id is safe for filename.
-        // TODO: Figure out a better cache dir layout.
-        // TODO: Replace unwraps with Errors.
+    fn save(&self, user: &User) -> Result<(), CacheError> {
+        let user_file_path = self.path_for_user_data(&user.session_id);
 
-        let user_file_path = self.cache_dir.join(format!("{}.json", user.session_id));
-        let json_text = serde_json::to_string(&user).unwrap();
+        // Create puzzle directory if it does not already exist.
+        let mut user_file_dir = user_file_path.clone();
+        user_file_dir.pop();
 
-        tracing::debug!(
-            "saving user data for {} at `{user_file_path:?}`",
-            user.session_id
-        );
-        std::fs::write(user_file_path, json_text).unwrap();
+        std::fs::create_dir_all(user_file_dir)?;
+
+        // Write the serialized user data to disk.
+        let json_text = serde_json::to_string(&user)?;
+        tracing::debug!("saving user data `{user_file_path:?}`");
+
+        std::fs::write(user_file_path, json_text)?;
+        Ok(())
     }
 }

@@ -7,7 +7,7 @@ use protocol::{AdventOfCodeHttpProtocol, AdventOfCodeProtocol};
 use thiserror::Error;
 
 use crate::{
-    cache::{PuzzleCache, UserDataCache},
+    cache::{PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
     data::{CheckResult, Puzzle},
     settings::ClientOptions,
     utils::get_puzzle_unlock_time,
@@ -48,8 +48,8 @@ pub trait Client {
 pub struct WebClient {
     config: ClientConfig,
     protocol: Box<dyn AdventOfCodeProtocol>,
-    puzzle_cache: PuzzleCache,
-    user_cache: UserDataCache,
+    puzzle_cache: Box<dyn PuzzleCache>,
+    user_cache: Box<dyn UserDataCache>,
 }
 
 impl WebClient {
@@ -70,15 +70,21 @@ impl WebClient {
         // Convert client options into a actual configuration values.
         // TODO: validate config settings are sane.
         let puzzle_dir = config.puzzle_dir.clone();
+        let user_data_dir = config.user_cache_dir.clone();
         let encryption_token = config.encryption_token.clone();
+
+        // Print configuration settings to debug log.
+        tracing::debug!("client puzzle dir: {puzzle_dir:?}");
+        tracing::debug!("client user data dir: {user_data_dir:?}");
+        tracing::debug!("client puzzles using encryption: {}", true);
 
         // TODO: lets callers specify the user data cache.
         // TODO: create a default user data cache.
         Self {
             config,
             protocol: advent_protocol,
-            puzzle_cache: PuzzleCache::new(puzzle_dir, Some(encryption_token)),
-            user_cache: UserDataCache::new(""),
+            puzzle_cache: Box::new(PuzzleFsCache::new(puzzle_dir, Some(encryption_token))),
+            user_cache: Box::new(UserDataFsCache::new(user_data_dir)),
         }
     }
 }
@@ -167,7 +173,7 @@ impl Client for WebClient {
 
         // Check if there is an active time out on new submissions prior to
         // submitting to the advent of code service.
-        let mut user = self.user_cache.load(&self.config.session_id);
+        let mut user = self.user_cache.load(&self.config.session_id).unwrap();
 
         if let Some(submit_wait_until) = user.submit_wait_until {
             if self.config.start_time <= submit_wait_until {
@@ -191,7 +197,7 @@ impl Client for WebClient {
             tracing::debug!("setting time to wait ({time_to_wait}) to be {wait_until}");
 
             user.submit_wait_until = Some(wait_until);
-            self.user_cache.save(&user);
+            self.user_cache.save(&user).unwrap();
         }
 
         // Write the response to the answers database and then save it back to
@@ -243,6 +249,7 @@ impl Default for WebClient {
 pub struct ClientConfig {
     pub session_id: String,
     pub puzzle_dir: PathBuf,
+    pub user_cache_dir: PathBuf,
     pub encryption_token: String,
     pub start_time: chrono::DateTime<chrono::Utc>,
 }
@@ -256,6 +263,9 @@ impl ClientConfig {
             puzzle_dir: options
                 .puzzle_dir
                 .unwrap_or(PathBuf::from_str(".puzzles").unwrap()),
+            user_cache_dir: options
+                .user_cache_dir
+                .unwrap_or(PathBuf::from_str(".advent-of-code-data-cache").unwrap()),
             encryption_token: options
                 .encryption_token
                 .expect("encryption token must be set"),
