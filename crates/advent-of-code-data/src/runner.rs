@@ -44,6 +44,12 @@ impl SolverRunner {
     }
 
     pub fn push(&mut self, solver: Solver) {
+        tracing::debug!(
+            "add solver year {} day {} to runner",
+            solver.day,
+            solver.year
+        );
+
         self.solvers_to_run.push(solver);
     }
 
@@ -54,7 +60,13 @@ impl SolverRunner {
     }
 
     fn run(solver: &Solver, client: &mut dyn Client, events: &mut dyn RunnerEventHandler) {
-        let parts = [Part::One, Part::Two];
+        tracing::debug!(
+            "start running solver day {} year {}",
+            solver.day,
+            solver.year
+        );
+
+        let parts: [Part; 2] = [Part::One, Part::Two];
         let input = client.get_input(solver.day, solver.year).unwrap();
 
         events.on_start_solver(solver);

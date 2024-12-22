@@ -28,17 +28,24 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Runs puzzle solvers.
+    /// Runs one or more solvers and checks if the result is correct/incorrect.
     Run {
-        /// Only run solvers on puzzles that do not have a correct answer yet.
-        #[arg(short, long, action)]
-        unsolved: bool,
-
-        /// Restrict solvers to the given days only.
+        /// Puzzle day (defaults to the most recent day with a solver).
         #[arg(short, long)]
-        day: Option<Vec<usize>>,
+        days: Option<Vec<usize>>,
 
-        /// Restrict solvers to the given year only.
+        /// Puzzle year (defaults to the most recent year with a solver).
+        #[arg(short, long)]
+        year: Option<usize>,
+    },
+    /// Runs all puzzle solvers that have a solution, and reports which solvers
+    /// are broken because they don't match the known answer.
+    Check {
+        /// Puzzle day (defaults to all if not specified).
+        #[arg(short, long)]
+        days: Option<Vec<usize>>,
+
+        /// Puzzle year (defaults to all if not specified).
         #[arg(short, long)]
         year: Option<usize>,
     },
@@ -73,8 +80,6 @@ fn main() {
         _ => tracing::Level::INFO,
     };
 
-    println!("LOG LEVEL: {:?}", log_level);
-
     // Logging setup.
     let subscriber = tracing_subscriber::fmt().with_max_level(log_level).finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
@@ -84,26 +89,39 @@ fn main() {
     // Create the Advent of Code client.
     let client: WebClient = Default::default();
 
-    // Run solvers?
     match &cli.command {
-        Some(Commands::Run {
-            unsolved: _unsolved,
-            day: days,
-            year,
-        }) => {
-            // TODO: Find the latest year for a default value if year unspecified.
-            // TODO: Use latest year with _unsolved_ puzzles or all puzzles.
-            let year = Year(year.expect("TODO: implement default fallback"));
+        Some(Commands::Run { days, year }) => {
+            // Use the puzzle year given on the command line, or if not specified find the most
+            // recent year in the solver registry.
+            let year = year.map_or_else(
+                || {
+                    solver_registry
+                        .years()
+                        .into_iter()
+                        .max()
+                        .expect("TODO: handle when there are no solvers")
+                },
+                Year,
+            );
 
-            // TODO: All the days if not specified.
-            let requested_days = days.as_ref().expect("TODO: implement default fallback");
-            let available_days = solver_registry.days(year);
+            // Use the puzzle day given on the command line, or if not specified find the most
+            // recent day in the registry for the selected year.
+            let requested_days = days.as_ref().map_or_else(
+                || {
+                    vec![solver_registry
+                        .days(year)
+                        .into_iter()
+                        .max()
+                        .expect("TODO: handle when there are no solvers for the year")]
+                },
+                |days| days.iter().map(|d| Day(*d)).collect(),
+            );
+
             let mut runner =
                 SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
+            let available_days = solver_registry.days(year);
 
             for requested_day in requested_days {
-                let requested_day = Day(*requested_day);
-
                 if available_days.contains(&requested_day) {
                     runner.push(solver_registry.solver(requested_day, year).clone());
                 }

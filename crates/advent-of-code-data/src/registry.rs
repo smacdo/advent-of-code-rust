@@ -72,6 +72,7 @@ impl SolverRegistry {
     }
 
     pub fn years(&self) -> Vec<Year> {
+        // TODO: return iterator to avoid Vec allocation.
         self.solvers.keys().cloned().collect()
     }
 
@@ -88,3 +89,5 @@ impl SolverRegistry {
         &self.solvers[&year][&day]
     }
 }
+
+// TODO: Unit tests.
