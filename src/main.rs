@@ -129,11 +129,33 @@ fn main() {
 
             runner.run_all();
         }
+        Some(Commands::Check { days, year }) => {
+            let mut runner =
+                SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
+            // TODO: Tell runner to not check answers against WWW, or to write new answers.
+
+            for year in year
+                .map(|y| vec![Year(y)])
+                .unwrap_or_else(|| solver_registry.years())
+            {
+                for day in days
+                    .as_ref()
+                    .map(|days| days.iter().map(|d| Day(*d)).collect())
+                    .unwrap_or_else(|| solver_registry.days(year))
+                {
+                    // TODO: Check if answer cache is available.
+                    // TODO: Check if part 1 or part part 2 has a correct answer.
+                    runner.push(solver_registry.solver(day, year).clone());
+                }
+            }
+
+            runner.run_all();
+        }
         Some(Commands::Input { day, year }) => {
             println!("{}", client.get_input(Day(*day), Year(*year)).unwrap());
         }
         _ => {
-            panic!("command not implemented yet")
+            panic!("command not implemented")
         }
     }
 }
