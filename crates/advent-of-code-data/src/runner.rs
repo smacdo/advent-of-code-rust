@@ -30,8 +30,8 @@ pub trait RunnerEventHandler {
 
 pub struct SolverRunner {
     solvers_to_run: Vec<Solver>,
-    client: Box<dyn Client>,
-    event_handler: Box<dyn RunnerEventHandler>,
+    pub client: Box<dyn Client>,
+    pub event_handler: Box<dyn RunnerEventHandler>,
 }
 
 impl SolverRunner {
@@ -43,6 +43,8 @@ impl SolverRunner {
         }
     }
 
+    /// Add solver to the list of solvers to be run.
+    /// Solvers are run in the order that they are pushed to the runner.
     pub fn push(&mut self, solver: Solver) {
         tracing::debug!(
             "add solver year {} day {} to runner",

@@ -46,10 +46,10 @@ pub trait Client {
 
 #[derive(Debug)]
 pub struct WebClient {
-    config: ClientConfig,
+    pub config: ClientConfig,
     protocol: Box<dyn AdventOfCodeProtocol>,
-    puzzle_cache: Box<dyn PuzzleCache>,
-    user_cache: Box<dyn UserDataCache>,
+    pub puzzle_cache: Box<dyn PuzzleCache>,
+    pub user_cache: Box<dyn UserDataCache>,
 }
 
 impl WebClient {

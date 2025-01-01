@@ -4,7 +4,7 @@ use advent_of_code_data::{
     client::{Client, WebClient},
     registry::{Solver, SolverRegistry},
     runner::SolverRunner,
-    Day, Year,
+    Day, Part, Year,
 };
 use advent_of_code_rust::terminal_output::ConsoleRunnerEventHandler;
 use clap::{Parser, Subcommand};
@@ -130,26 +130,7 @@ fn main() {
             runner.run_all();
         }
         Some(Commands::Check { days, year }) => {
-            let mut runner =
-                SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
-            // TODO: Tell runner to not check answers against WWW, or to write new answers.
-
-            for year in year
-                .map(|y| vec![Year(y)])
-                .unwrap_or_else(|| solver_registry.years())
-            {
-                for day in days
-                    .as_ref()
-                    .map(|days| days.iter().map(|d| Day(*d)).collect())
-                    .unwrap_or_else(|| solver_registry.days(year))
-                {
-                    // TODO: Check if answer cache is available.
-                    // TODO: Check if part 1 or part part 2 has a correct answer.
-                    runner.push(solver_registry.solver(day, year).clone());
-                }
-            }
-
-            runner.run_all();
+            run_check_command(&solver_registry, client, days, year)
         }
         Some(Commands::Input { day, year }) => {
             println!("{}", client.get_input(Day(*day), Year(*year)).unwrap());
@@ -158,4 +139,48 @@ fn main() {
             panic!("command not implemented")
         }
     }
+}
+
+fn run_check_command(
+    solver_registry: &SolverRegistry,
+    client: WebClient,
+    days: &Option<Vec<usize>>,
+    year: &Option<usize>,
+) {
+    // Iterate all the year(r) and day(s) from the arguments, and save a list
+    // of puzzles that have at least one part with a correct answer in the puzzle
+    // cache.
+    let mut puzzles: Vec<(Year, Day)> = Vec::new();
+
+    for year in year
+        .map(|y| vec![Year(y)])
+        .unwrap_or_else(|| solver_registry.years())
+    {
+        for day in days
+            .as_ref()
+            .map(|days| days.iter().map(|d| Day(*d)).collect())
+            .unwrap_or_else(|| solver_registry.days(year))
+        {
+            for part in [Part::One, Part::Two] {
+                if let Ok(answers) = client.puzzle_cache.load_answers(part, day, year) {
+                    if answers.correct_answer_ref().is_some() {
+                        puzzles.push((year, day));
+                    }
+                }
+            }
+        }
+    }
+
+    // Start puzzles in ascending calendar order.
+    puzzles.sort();
+
+    // Run selected puzzle days.
+    let mut runner =
+        SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
+
+    for (year, day) in puzzles {
+        runner.push(solver_registry.solver(day, year).clone());
+    }
+
+    runner.run_all();
 }
