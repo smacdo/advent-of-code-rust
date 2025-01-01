@@ -6,6 +6,8 @@ use advent_of_code_rust::spatial::Point2;
 use linkme::distributed_slice;
 use regex::Regex;
 
+// TODO: Consider using Grid rather than Hashmap
+
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
@@ -32,9 +34,7 @@ p=9,5 v=-3,-3",
     },
     part_two: SolverPart {
         func: day_14_2,
-        examples: &[
-            //(Answer::Int(0), "Example input",)
-        ],
+        examples: &[],
     },
 };
 
@@ -155,11 +155,38 @@ pub fn day_14_1(input: &str) -> Result<Answer> {
     }
 
     let safety_factor: usize = quad.into_iter().product();
-    tracing::debug!("safety_factory is {safety_factor}");
-
     Ok(safety_factor.into())
 }
 
-pub fn day_14_2(_input: &str) -> Result<Answer> {
-    Err(advent_of_code_data::registry::SolverError::NotFinished)
+pub fn day_14_2(input: &str) -> Result<Answer> {
+    // Search for the first timestep where all the robots have unique positions.
+    let mut robots = parse_input(input);
+    let mut timestep = 0;
+    let mut positions: HashMap<Point2, usize> = HashMap::new();
+
+    loop {
+        assert!(timestep < 10000);
+
+        simulate(&mut robots, 1, X_COUNT, Y_COUNT);
+        timestep += 1;
+
+        positions.clear();
+        let mut all_unique = true;
+
+        for r in &robots {
+            if let std::collections::hash_map::Entry::Vacant(e) = positions.entry(r.pos) {
+                e.insert(1);
+            } else {
+                all_unique = false;
+                break;
+            }
+        }
+
+        if all_unique {
+            break;
+        }
+    }
+
+    visualize(&positions, X_COUNT, Y_COUNT);
+    Ok(timestep.into())
 }
