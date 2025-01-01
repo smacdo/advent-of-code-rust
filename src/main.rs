@@ -175,6 +175,7 @@ fn run_check_command(
     puzzles.sort();
 
     // Run selected puzzle days.
+    // TODO: Specify runner should not submit any answers.
     let mut runner =
         SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
 
