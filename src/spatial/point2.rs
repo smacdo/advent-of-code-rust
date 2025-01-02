@@ -1,4 +1,6 @@
-use std::ops;
+use std::{ops, str::FromStr};
+
+use thiserror::Error;
 
 use super::{Direction4, Direction8};
 
@@ -293,8 +295,8 @@ impl ops::Neg for Point2 {
     }
 }
 
-/// Custom comparison ordering that clusters points by their y component rather
-/// the x component.
+// Custom comparison ordering that clusters points by their y component rather
+// the x component.
 impl Ord for Point2 {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // This is a custom cmp implementation so points can be clustered by
@@ -312,10 +314,37 @@ impl PartialOrd for Point2 {
     }
 }
 
-/// Display implementation that formats points as `(x, y)`.
+// Display implementation that formats points as `(x, y)`.
 impl std::fmt::Display for Point2 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+#[error("the value `{}` is not a valid Point2", .0)]
+pub struct ParsePointError(String);
+
+impl FromStr for Point2 {
+    type Err = ParsePointError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (x, y) = s
+            .strip_prefix('(')
+            .and_then(|s| s.strip_suffix(')'))
+            .and_then(|s| s.split_once(','))
+            .ok_or(ParsePointError(s.to_string()))?;
+
+        let x = x
+            .trim()
+            .parse::<isize>()
+            .map_err(|_| ParsePointError(s.to_string()))?;
+        let y = y
+            .trim()
+            .parse::<isize>()
+            .map_err(|_| ParsePointError(s.to_string()))?;
+
+        Ok(Point2 { x, y })
     }
 }
 
@@ -527,6 +556,17 @@ mod tests {
     #[test]
     fn can_format_points() {
         assert_eq!("(2, -49)", format!("{}", Point2::new(2, -49)));
+    }
+
+    #[test]
+    fn parse_points() {
+        assert_eq!(Ok(Point2::new(2, -49)), "(2,-49)".parse());
+        assert_eq!(Ok(Point2::new(2, -49)), "(2, -49)".parse());
+
+        assert_eq!(
+            Err(ParsePointError("2, -49".to_string())),
+            "2, -49".parse::<Point2>()
+        );
     }
 
     #[test]

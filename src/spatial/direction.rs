@@ -78,7 +78,7 @@ impl std::fmt::Display for Direction4 {
     }
 }
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 #[error("the direction name `{}` was not recogonized", .0)]
 pub struct NoSuchDirectionNameError(String);
 
