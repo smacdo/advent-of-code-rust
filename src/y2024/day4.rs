@@ -65,12 +65,11 @@ pub fn is_word(grid: &Grid<char>, word: &str, pos: Point2, offset: Point2) -> bo
 
 pub fn day_4_1(input: &str) -> Result<Answer> {
     let grid = Grid::from_str(input).unwrap();
-    let dirs = Direction8::all().collect::<Vec<_>>();
     let mut xmas_count = 0;
 
     for pos in grid.points() {
-        for d in &dirs {
-            if is_word(&grid, "XMAS", pos, (*d).into()) {
+        for d in Direction8::all() {
+            if is_word(&grid, "XMAS", pos, d.into()) {
                 xmas_count += 1;
             }
         }
