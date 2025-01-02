@@ -18,15 +18,8 @@ fn default_value_constructor() {
 }
 
 #[test]
-fn zero_size_grid() {
-    let g: Grid<i32> = Grid::new(0, 0);
-    assert_eq!(0, g.y_count());
-    assert_eq!(0, g.x_count());
-}
-
-#[test]
 fn array_constructor() {
-    let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60].into_iter()).unwrap();
+    let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
 
     assert_eq!(10, g[Point2::new(0, 0)]);
     assert_eq!(20, g[Point2::new(1, 0)]);
@@ -39,7 +32,7 @@ fn array_constructor() {
 
 #[test]
 fn array_constructor_with_zero_size() {
-    let g = Grid::<i32>::with_values(0, 0, [].into_iter());
+    let g = Grid::<i32>::with_values(0, 0, []);
     assert!(g.is_ok());
 }
 
@@ -102,7 +95,7 @@ fn panic_if_grid_out_of_bounds() {
 
 #[test]
 fn iter() {
-    let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60].into_iter()).unwrap();
+    let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
     let cells: Vec<(Point2, i32)> = g.iter().map(|c| (c.index, *c.value)).collect();
 
     assert_eq!(
@@ -156,7 +149,7 @@ fn grid_rows_iter() {
 
 #[test]
 fn into_iter() {
-    let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60].into_iter()).unwrap();
+    let g: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
     let mut iter = g.into_iter();
 
     assert_eq!(iter.next(), Some(10));
@@ -197,6 +190,30 @@ fn row_iter() {
         Row::new(3, -8, -5).collect::<Vec<Point2>>(),
         vec![Point2::new(-8, 3), Point2::new(-7, 3), Point2::new(-6, 3),]
     );
+}
+
+#[test]
+fn iterate_points_in_grid_rows() {
+    let g: Grid<char> = Grid::new(2, 3);
+    assert_eq!(
+        g.row(0).unwrap().collect::<Vec<_>>(),
+        vec![Point2::new(0, 0), Point2::new(1, 0)]
+    );
+    assert_eq!(
+        g.row(1).unwrap().collect::<Vec<_>>(),
+        vec![Point2::new(0, 1), Point2::new(1, 1)]
+    );
+    assert_eq!(
+        g.row(2).unwrap().collect::<Vec<_>>(),
+        vec![Point2::new(0, 2), Point2::new(1, 2)]
+    );
+}
+
+#[test]
+fn iterate_points_in_grid_row_out_of_bounds() {
+    let g: Grid<char> = Grid::new(2, 3);
+    assert!(g.row(-1).is_none());
+    assert!(g.row(3).is_none());
 }
 
 #[test]
@@ -352,4 +369,23 @@ fn from_string_too_big() {
 fn print_grid() {
     let g = Grid::with_values(4, 3, "ABCD1234abcd".chars()).unwrap();
     assert_eq!(format!("{}", g), "ABCD\n1234\nabcd\n");
+}
+
+#[test]
+fn find_value_in_grid() {
+    let g = Grid::with_values(4, 3, "ABCD1234abcd".chars()).unwrap();
+    assert_eq!(g.find(&'B'), Some(Point2::new(1, 0)));
+    assert_eq!(g.find(&'4'), Some(Point2::new(3, 1)));
+}
+
+#[test]
+fn find_value_not_in_grid() {
+    let g = Grid::with_values(4, 3, "ABCD1234abcd".chars()).unwrap();
+    assert!(g.find(&'e').is_none());
+}
+
+#[test]
+fn find_first_from_top_left() {
+    let g = Grid::with_values(4, 3, "ABCD1234ABCD".chars()).unwrap();
+    assert_eq!(g.find(&'C'), Some(Point2::new(2, 0)));
 }

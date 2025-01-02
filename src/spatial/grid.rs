@@ -69,8 +69,8 @@ impl<T> Grid<T>
 where
     T: Clone + Sized + Default,
 {
-    /// Return a new grid with `x_count` cols and `y_count` rows and with each
-    /// cell initialized to `default`.
+    /// Return a new grid with `x_count` cols and `y_count` rows and each cell
+    /// is initialized to its default value.
     pub fn new(x_count: usize, y_count: usize) -> Self {
         assert!(x_count <= isize::MAX as usize);
         assert!(y_count <= isize::MAX as usize);
@@ -91,6 +91,15 @@ impl<T> Grid<T> {
     ///
     /// Rows are terminated with a newline character and are not passed to the
     /// map function. Rows are expected to be the same length.
+    ///
+    /// ```
+    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    ///
+    /// let input = "379\n281";
+    /// let grid: Grid<u32> = Grid::parse_str(input, |c| c.to_digit(10).unwrap()).unwrap();
+    ///
+    /// assert_eq!(grid[Point2::new(0, 0)], 3);
+    /// ```
     pub fn parse_str<F>(s: &str, map_func: F) -> Result<Self, IteratorItemCountError>
     where
         F: FnMut(char) -> T,
@@ -113,23 +122,30 @@ impl<T> Grid<T> {
             )
         }
     }
-}
 
-impl<T> Grid<T> {
     /// Return a new grid of `y_count` rows and `x_count` cols where each cell
     /// value is taken from the iterator `vals` in row major order.
+    ///
+    /// ```
+    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    /// let grid: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
+    ///
+    /// assert_eq!(grid[Point2::new(0, 0)], 10);
+    /// assert_eq!(grid[Point2::new(0, 1)], 40);
+    /// assert_eq!(grid[Point2::new(1, 1)], 50);
+    /// ```
     pub fn with_values<I>(
         x_count: usize,
         y_count: usize,
         vals: I,
     ) -> Result<Self, IteratorItemCountError>
     where
-        I: Iterator<Item = T>,
+        I: IntoIterator<Item = T>,
     {
         assert!(x_count <= isize::MAX as usize);
         assert!(y_count <= isize::MAX as usize);
 
-        let cells: Vec<T> = vals.collect();
+        let cells: Vec<T> = vals.into_iter().collect();
 
         if x_count * y_count == cells.len() {
             Ok(Grid {
@@ -150,12 +166,26 @@ impl<T> Grid<T> {
 
     /// Return the number of cells in the horizontal direction (columns)
     /// present in the grid.
+    ///
+    /// ```
+    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    ///
+    /// let grid: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
+    /// assert_eq!(grid.x_count(), 3);
+    /// ```
     pub fn x_count(&self) -> usize {
         self.x_count
     }
 
     /// Return the number of cells in the vertical direction (rows) present in
     /// the grid.
+    ///
+    /// ```
+    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    ///
+    /// let grid: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
+    /// assert_eq!(grid.y_count(), 2);
+    /// ```
     pub fn y_count(&self) -> usize {
         self.y_count
     }
@@ -236,9 +266,9 @@ impl<T> Grid<T> {
         }
     }
 
-    // Returns an iterator that iterates all of the points in this grid going
-    // one row at a time left to right, starting at the top left and ending at
-    // the bottom right.
+    /// Returns an iterator that iterates all of the points in this grid going
+    /// one row at a time left to right, starting at the top left and ending at
+    /// the bottom right.
     pub fn points(&self) -> Points {
         let topleft_x = -self.x_origin_offset;
         let topleft_y = -self.y_origin_offset;
@@ -252,6 +282,25 @@ impl<T> Grid<T> {
         }
     }
 
+    /// Returns an iterator over the points for the cells in the requested row.
+    pub fn row(&self, row_index: isize) -> Option<Points> {
+        if row_index >= 0 && (row_index as usize) < self.y_count() {
+            let topleft_x = -self.x_origin_offset;
+            let topleft_y = -self.y_origin_offset;
+            let y = topleft_y + row_index;
+
+            Some(Points {
+                next_x: topleft_x,
+                next_y: y,
+                start_x: topleft_x,
+                end_x: topleft_x + (self.x_count as isize),
+                end_y: y + 1,
+            })
+        } else {
+            None
+        }
+    }
+
     /// Returns an iterator over all the rows in the grid.
     pub fn rows(&self) -> Rows {
         let top_left = self.top_left();
@@ -259,6 +308,21 @@ impl<T> Grid<T> {
         let dims = bottom_right - top_left + Point2::one();
 
         Rows::new(top_left, dims.x, dims.y)
+    }
+}
+
+impl<T: PartialEq> Grid<T> {
+    /// Return the location of `val` if it exists in the grid.
+    ///
+    /// ```
+    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    ///
+    /// let grid = Grid::with_values(4, 3, "ABCDABCD1234".chars()).unwrap();
+    /// assert_eq!(grid.find(&'B'), Some(Point2::new(1, 0)));
+    /// assert_eq!(grid.find(&'X'), None);
+    /// ```
+    pub fn find(&self, val: &T) -> Option<Point2> {
+        self.points().find(|&p| self[p] == *val)
     }
 }
 
@@ -297,7 +361,7 @@ impl<T> std::iter::IntoIterator for Grid<T> {
     }
 }
 
-impl<T: Clone> std::ops::Index<Point2> for Grid<T> {
+impl<T> std::ops::Index<Point2> for Grid<T> {
     type Output = T;
 
     #[inline(always)]
@@ -316,7 +380,7 @@ impl<T: Clone> std::ops::Index<Point2> for Grid<T> {
     }
 }
 
-impl<T: Clone> std::ops::IndexMut<Point2> for Grid<T> {
+impl<T> std::ops::IndexMut<Point2> for Grid<T> {
     #[inline(always)]
     fn index_mut(&mut self, p: Point2) -> &mut Self::Output {
         debug_assert!(p.x < self.x_count as isize - self.x_origin_offset);
