@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverError, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::Point2;
 use linkme::distributed_slice;
@@ -14,9 +14,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_13_1,
-        examples: &[(
-            Answer::Int(480),
-            "Button A: X+94, Y+34
+        examples: &[Example {
+            input: "Button A: X+94, Y+34
 Button B: X+22, Y+67
 Prize: X=8400, Y=5400
 
@@ -31,7 +30,8 @@ Prize: X=7870, Y=6450
 Button A: X+69, Y+23
 Button B: X+27, Y+71
 Prize: X=18641, Y=10279",
-        )],
+            expected: Answer::Int(480),
+        }],
     },
     part_two: SolverPart {
         func: day_13_2,

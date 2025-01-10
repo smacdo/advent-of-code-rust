@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction8, Grid, Point2};
 use linkme::distributed_slice;
@@ -13,9 +13,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_4_1,
-        examples: &[(
-            Answer::Int(18),
-            "MMMSXXMASM
+        examples: &[Example {
+            input: "MMMSXXMASM
 MSAMXMSMSA
 AMXSXMAAMM
 MSAMASMSMX
@@ -25,13 +24,13 @@ SMSMSASXSS
 SAXAMASAAA
 MAMMMXMMMM
 MXMXAXMASX",
-        )],
+            expected: Answer::Int(18),
+        }],
     },
     part_two: SolverPart {
         func: day_4_2,
-        examples: &[(
-            Answer::Int(9),
-            ".M.S......
+        examples: &[Example {
+            input: ".M.S......
 ..A..MSMS.
 .M.S.MAA..
 ..A.ASMSM.
@@ -41,7 +40,8 @@ S.S.S.S.S.
 .A.A.A.A..
 M.M.M.M.M.
 ..........",
-        )],
+            expected: Answer::Int(9),
+        }],
     },
 };
 

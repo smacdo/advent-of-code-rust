@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
@@ -15,9 +15,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_6_1,
-        examples: &[(
-            Answer::Int(41),
-            "....#.....
+        examples: &[Example {
+            input: "....#.....
 .........#
 ..........
 ..#.......
@@ -27,13 +26,13 @@ static SOLVER: Solver = Solver {
 ........#.
 #.........
 ......#...",
-        )],
+            expected: Answer::Int(41),
+        }],
     },
     part_two: SolverPart {
         func: day_6_2,
-        examples: &[(
-            Answer::Int(6),
-            "....#.....
+        examples: &[Example {
+            input: "....#.....
 .........#
 ..........
 ..#.......
@@ -43,7 +42,8 @@ static SOLVER: Solver = Solver {
 ........#.
 #.........
 ......#...",
-        )],
+            expected: Answer::Int(6),
+        }],
     },
 };
 

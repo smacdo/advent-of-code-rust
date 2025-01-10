@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Grid, Point2};
 use advent_of_code_rust::utils::pairwise_combinations;
@@ -15,9 +15,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_8_1,
-        examples: &[(
-            Answer::Int(14),
-            "............
+        examples: &[Example {
+            input: "............
 ........0...
 .....0......
 .......0....
@@ -29,14 +28,14 @@ static SOLVER: Solver = Solver {
 .........A..
 ............
 ............",
-        )],
+            expected: Answer::Int(14),
+        }],
     },
     part_two: SolverPart {
         func: day_8_2,
         examples: &[
-            (
-                Answer::Int(9),
-                "T.........
+            Example {
+                input: "T.........
 ...T......
 .T........
 ..........
@@ -46,10 +45,10 @@ static SOLVER: Solver = Solver {
 ..........
 ..........
 ..........",
-            ),
-            (
-                Answer::Int(34),
-                "............
+                expected: Answer::Int(9),
+            },
+            Example {
+                input: "............
 ........0...
 .....0......
 .......0....
@@ -61,7 +60,8 @@ static SOLVER: Solver = Solver {
 .........A..
 ............
 ............",
-            ),
+                expected: Answer::Int(34),
+            },
         ],
     },
 };

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::Point2;
 use linkme::distributed_slice;
@@ -16,9 +16,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_14_1,
-        examples: &[(
-            Answer::Int(12),
-            "p=0,4 v=3,-3
+        examples: &[Example {
+            input: "p=0,4 v=3,-3
 p=6,3 v=-1,-3
 p=10,3 v=-1,2
 p=2,0 v=2,-1
@@ -30,11 +29,14 @@ p=9,3 v=2,3
 p=7,3 v=-1,2
 p=2,4 v=2,-3
 p=9,5 v=-3,-3",
-        )],
+            expected: Answer::Int(12),
+        }],
     },
     part_two: SolverPart {
         func: day_14_2,
-        examples: &[],
+        examples: &[
+            // TODO: missing example?
+        ],
     },
 };
 
@@ -120,7 +122,7 @@ fn visualize(tiles: &HashMap<Point2, usize>, x_count: usize, y_count: usize) {
 pub fn day_14_1(input: &str) -> Result<Answer> {
     let mut robots = parse_input(input);
 
-    let is_example_input = input == SOLVER.part_one.examples[0].1;
+    let is_example_input = input == SOLVER.part_one.examples[0].input;
     let x_count = if is_example_input { 11 } else { X_COUNT };
     let y_count = if is_example_input { 7 } else { Y_COUNT };
 

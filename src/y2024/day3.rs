@@ -1,4 +1,4 @@
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 use regex::Regex;
@@ -11,17 +11,17 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_3_1,
-        examples: &[(
-            Answer::Int(161),
-            "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))",
-        )],
+        examples: &[(Example {
+            input: "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))",
+            expected: Answer::Int(161),
+        })],
     },
     part_two: SolverPart {
         func: day_3_2,
-        examples: &[(
-            Answer::Int(48),
-            "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))",
-        )],
+        examples: &[(Example {
+            input: "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))",
+            expected: Answer::Int(48),
+        })],
     },
 };
 

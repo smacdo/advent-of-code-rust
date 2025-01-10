@@ -1,6 +1,6 @@
 use std::collections::{BinaryHeap, HashSet};
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
@@ -13,9 +13,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_10_1,
-        examples: &[(
-            Answer::Int(36),
-            "89010123
+        examples: &[Example {
+            input: "89010123
 78121874
 87430965
 96549874
@@ -23,13 +22,13 @@ static SOLVER: Solver = Solver {
 32019012
 01329801
 10456732",
-        )],
+            expected: Answer::Int(36),
+        }],
     },
     part_two: SolverPart {
         func: day_10_2,
-        examples: &[(
-            Answer::Int(81),
-            "89010123
+        examples: &[Example {
+            input: "89010123
 78121874
 87430965
 96549874
@@ -37,7 +36,8 @@ static SOLVER: Solver = Solver {
 32019012
 01329801
 10456732",
-        )],
+            expected: Answer::Int(81),
+        }],
     },
 };
 

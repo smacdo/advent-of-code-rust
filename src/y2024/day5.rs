@@ -1,4 +1,4 @@
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use linkme::distributed_slice;
 
@@ -10,9 +10,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_5_1,
-        examples: &[(
-            Answer::Int(143),
-            "47|53
+        examples: &[Example {
+            input: "47|53
 97|13
 97|61
 97|47
@@ -40,7 +39,8 @@ static SOLVER: Solver = Solver {
 75,97,47,61,53
 61,13,29
 97,13,75,29,47",
-        )],
+            expected: Answer::Int(143),
+        }],
     },
     part_two: SolverPart {
         func: day_5_2,

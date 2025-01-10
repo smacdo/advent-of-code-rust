@@ -20,24 +20,43 @@ use crate::{
 //      - on_finish_solver_part(solver, part, duration, result)
 //   - on_finish_part(solver, part, duration, result)
 // - on_finish_solver(solver, duration, result)
-
 pub trait RunnerEventHandler {
-    fn on_start_solver(&mut self, solver: &Solver);
-    fn on_part_examples_pass(
+    fn on_start_solver(&mut self, _solver: &Solver) {}
+    fn on_start_part(&mut self, _solver: &Solver, _part: Part) {}
+    fn on_start_part_example(&mut self, _solver: &Solver, _part: Part, _example_index: usize) {}
+    fn on_example_pass(
+        &mut self,
+        _solver: &Solver,
+        _part: Part,
+        _duration: Duration,
+        _example_index: usize,
+    ) {
+    }
+    fn on_example_fail(
+        &mut self,
+        _solver: &Solver,
+        _part: Part,
+        _duration: Duration,
+        _example_index: usize,
+        _result: Result<Answer, RunnerError>,
+    ) {
+    }
+    fn on_finish_part_examples(
         &mut self,
         solver: &Solver,
         part: Part,
         duration: Duration,
-        count: usize,
+        pass_count: usize,
+        fail_count: usize,
     );
-    fn on_start_part(&mut self, solver: &Solver, part: Part);
     fn on_finish_part(
         &mut self,
         solver: &Solver,
         part: Part,
         duration: Duration,
-        result: &Result<RunPartDetails, RunnerError>,
+        result: &Result<(Answer, CheckResult), RunnerError>,
     );
+
     fn on_finish_solver(&mut self, solver: &Solver, duration: Duration, details: RunDetails);
 }
 
@@ -95,48 +114,57 @@ impl SolverRunner {
             // solver unless the caller has requested a specific example be run.
             let all_examples_start_time = Instant::now();
 
-            let mut examples_pass = true;
+            let mut pass_count = 0;
+            let mut fail_count = 0;
+
             let examples = solver_part.examples;
 
-            for example in examples {
+            for (index, example) in examples.iter().enumerate() {
                 let example_start_time = Instant::now();
-                let result = (solver_part.func)(example.1);
+                let result = (solver_part.func)(example.input);
                 let example_duration = Instant::now() - example_start_time;
 
                 match result {
                     Ok(answer) => {
-                        if answer != example.0 {
-                            // Example failed - set the result for this part as
-                            // "example failed". Stop testing examples for this part.
-                            events.on_finish_part(
+                        if answer == example.expected {
+                            pass_count += 1;
+                            events.on_example_pass(solver, part, example_duration, index);
+                        } else {
+                            fail_count += 1;
+                            events.on_example_fail(
                                 solver,
                                 part,
                                 example_duration,
-                                &Err(SolverError::ExampleFailed {
-                                    part,
-                                    input: example.1.to_string(),
-                                    expected: example.0.clone(),
-                                    actual: answer,
-                                }
-                                .into()),
+                                index,
+                                Ok(answer),
                             );
-
-                            examples_pass = false;
-                            break;
                         }
                     }
                     Err(err) => {
-                        panic!("TODO: handle errors during examples: {err:?}")
+                        fail_count += 1;
+                        events.on_example_fail(
+                            solver,
+                            part,
+                            example_duration,
+                            index,
+                            Err(err.into()),
+                        );
                     }
                 }
             }
 
             // Notify the event manager that examples have passed, otherwise if
             // any have failed then skip running the part with real input.
-            if examples_pass {
-                let all_examples_duration = Instant::now() - all_examples_start_time;
-                events.on_part_examples_pass(solver, part, all_examples_duration, examples.len())
-            } else {
+            let all_examples_duration = Instant::now() - all_examples_start_time;
+            events.on_finish_part_examples(
+                solver,
+                part,
+                all_examples_duration,
+                pass_count,
+                fail_count,
+            );
+
+            if fail_count > 0 {
                 continue;
             }
 
@@ -146,25 +174,20 @@ impl SolverRunner {
 
             // Run the solver against real puzzle input.
             let solve_start_time = Instant::now();
-            let solver_result = (solver_part.func)(&input);
+            let run_solver_result = (solver_part.func)(&input);
             let solve_duration = Instant::now() - solve_start_time;
 
-            let final_result: Result<RunPartDetails, RunnerError> = match solver_result {
-                Ok(answer) => {
-                    match client.submit_answer(answer.clone(), part, solver.day, solver.year) {
-                        Ok(check_result) => Ok(RunPartDetails {
-                            answer,
-                            check_result,
-                            duration: solve_duration,
-                        }),
-                        Err(err) => Err(err.into()),
-                    }
-                }
-                Err(err) => Err(err.into()),
-            };
+            let part_result = run_solver_result
+                .map_err::<RunnerError, _>(|e| e.into())
+                .and_then(|answer| {
+                    let check_result = client
+                        .submit_answer(answer.clone(), part, solver.day, solver.year)
+                        .map_err::<RunnerError, _>(|e| e.into())?;
+                    Ok((answer, check_result))
+                });
 
-            events.on_finish_part(solver, part, solve_duration, &final_result);
-            event_details.set_part_result(part, final_result);
+            events.on_finish_part(solver, part, solve_duration, &part_result);
+            event_details.record_part(part, solve_duration, part_result);
         }
 
         let run_details: RunDetails = event_details.into();
@@ -189,8 +212,8 @@ pub struct RunPartDetails {
 
 #[derive(Debug)]
 pub struct RunDetails {
-    pub part_one_result: Result<RunPartDetails, RunnerError>,
-    pub part_two_result: Result<RunPartDetails, RunnerError>,
+    pub part_one_result: Option<Result<RunPartDetails, RunnerError>>,
+    pub part_two_result: Option<Result<RunPartDetails, RunnerError>>,
     pub duration: Duration,
 }
 
@@ -213,11 +236,22 @@ impl SolverEventDetails {
         }
     }
 
-    fn set_part_result(&mut self, part: Part, result: Result<RunPartDetails, RunnerError>) {
-        match part {
-            Part::One => self.part_one_result = Some(result),
-            Part::Two => self.part_two_result = Some(result),
-        }
+    fn record_part(
+        &mut self,
+        part: Part,
+        duration: Duration,
+        result: Result<(Answer, CheckResult), RunnerError>,
+    ) {
+        let field = match part {
+            Part::One => &mut self.part_one_result,
+            Part::Two => &mut self.part_two_result,
+        };
+
+        *field = Some(result.map(|(answer, check_result)| RunPartDetails {
+            answer,
+            check_result,
+            duration,
+        }));
     }
 }
 
@@ -230,8 +264,8 @@ impl Default for SolverEventDetails {
 impl From<SolverEventDetails> for RunDetails {
     fn from(value: SolverEventDetails) -> Self {
         RunDetails {
-            part_one_result: value.part_one_result.unwrap(),
-            part_two_result: value.part_two_result.unwrap(),
+            part_one_result: value.part_one_result,
+            part_two_result: value.part_two_result,
             duration: value.finish_time.unwrap_or(Instant::now()) - value.start_time,
         }
     }

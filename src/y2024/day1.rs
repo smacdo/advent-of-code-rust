@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
@@ -13,17 +13,17 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_1_1,
-        examples: &[(
-            Answer::Int(11),
-            "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n",
-        )],
+        examples: &[Example {
+            input: "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n",
+            expected: Answer::Int(11),
+        }],
     },
     part_two: SolverPart {
         func: day_1_2,
-        examples: &[(
-            Answer::Int(31),
-            "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n",
-        )],
+        examples: &[Example {
+            input: "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n",
+            expected: Answer::Int(31),
+        }],
     },
 };
 

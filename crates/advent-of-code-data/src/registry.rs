@@ -8,15 +8,10 @@ use crate::{Answer, Day, Part, Year};
 pub enum SolverError {
     #[error("there is not answer because the solver is not finished")]
     NotFinished,
-    #[error("an example input did not match the expected output")]
-    ExampleFailed {
-        part: Part,
-        input: String,
-        expected: Answer,
-        actual: Answer,
-    },
     #[error("the answer was submitted too soon, please wait before trying again")]
     TooSoon,
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -44,7 +39,19 @@ impl Solver {
 #[derive(Clone, Debug)]
 pub struct SolverPart {
     pub func: SolverFn,
-    pub examples: &'static [(Answer, &'static str)],
+    pub examples: &'static [Example],
+}
+
+impl SolverPart {
+    pub fn example(&self, index: usize) -> &Example {
+        &self.examples[index]
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Example {
+    pub input: &'static str,
+    pub expected: Answer,
 }
 
 pub struct SolverRegistry {

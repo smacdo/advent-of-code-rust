@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use advent_of_code_data::registry::{Result, Solver, SolverPart};
+use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction4, Direction8, Grid, Point2};
 use linkme::distributed_slice;
@@ -13,9 +13,8 @@ static SOLVER: Solver = Solver {
     year: Year(2024),
     part_one: SolverPart {
         func: day_12_1,
-        examples: &[(
-            Answer::Int(1930),
-            "RRRRIICCFF
+        examples: &[Example {
+            input: "RRRRIICCFF
 RRRRIICCCF
 VVRRRCCFFF
 VVRCCCJFFF
@@ -25,13 +24,13 @@ VVIIICJJEE
 MIIIIIJJEE
 MIIISIJEEE
 MMMISSJEEE",
-        )],
+            expected: Answer::Int(1930),
+        }],
     },
     part_two: SolverPart {
         func: day_12_2,
-        examples: &[(
-            Answer::Int(1206),
-            "RRRRIICCFF
+        examples: &[Example {
+            input: "RRRRIICCFF
 RRRRIICCCF
 VVRRRCCFFF
 VVRCCCJFFF
@@ -41,7 +40,8 @@ VVIIICJJEE
 MIIIIIJJEE
 MIIISIJEEE
 MMMISSJEEE",
-        )],
+            expected: Answer::Int(1206),
+        }],
     },
 };
 
