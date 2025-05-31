@@ -84,7 +84,7 @@ fn main() {
     let subscriber = tracing_subscriber::fmt().with_max_level(log_level).finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let solver_registry = SolverRegistry::new(&SOLVERS);
+    let solver_registry = SolverRegistry::compiled_from(&SOLVERS);
 
     // Create the Advent of Code client.
     let client: WebClient = Default::default();
@@ -110,6 +110,7 @@ fn main() {
                 || {
                     vec![solver_registry
                         .days(year)
+                        .expect("TODO: handle when there are no solvers for the year")
                         .into_iter()
                         .max()
                         .expect("TODO: handle when there are no solvers for the year")]
@@ -119,11 +120,18 @@ fn main() {
 
             let mut runner =
                 SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
-            let available_days = solver_registry.days(year);
+            let available_days = solver_registry
+                .days(year)
+                .expect("TODO: handle when there are no solvers for the year");
 
             for requested_day in requested_days {
                 if available_days.contains(&requested_day) {
-                    runner.push(solver_registry.solver(requested_day, year).clone());
+                    runner.push(
+                        solver_registry
+                            .solver(year, requested_day)
+                            .expect("TODO: handle when there are no solvers for this day + year")
+                            .clone(),
+                    );
                 }
             }
 
@@ -159,7 +167,11 @@ fn run_check_command(
         for day in days
             .as_ref()
             .map(|days| days.iter().map(|d| Day(*d)).collect())
-            .unwrap_or_else(|| solver_registry.days(year))
+            .unwrap_or_else(|| {
+                solver_registry
+                    .days(year)
+                    .expect("TODO: handle when there are no solvers for the year")
+            })
         {
             for part in [Part::One, Part::Two] {
                 if let Ok(answers) = client.puzzle_cache.load_answers(part, day, year) {
@@ -180,7 +192,12 @@ fn run_check_command(
         SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
 
     for (year, day) in puzzles {
-        runner.push(solver_registry.solver(day, year).clone());
+        runner.push(
+            solver_registry
+                .solver(year, day)
+                .expect("TODO: handle when there are no solvers for this day + year")
+                .clone(),
+        );
     }
 
     runner.run_all();
