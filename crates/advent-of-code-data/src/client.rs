@@ -108,14 +108,17 @@ impl Client for WebClient {
         let eastern_start_time = start_time.with_timezone(&chrono_tz::US::Eastern);
         let requested_year = year.0 as i32;
 
-        match eastern_start_time.year().cmp(&requested_year) {
-            std::cmp::Ordering::Less => None,
-            std::cmp::Ordering::Equal => Some(
+        match (
+            eastern_start_time.year().cmp(&requested_year),
+            eastern_start_time.month() == 12,
+        ) {
+            (std::cmp::Ordering::Equal, true) => Some(
                 (1..(eastern_start_time.day() + 1))
                     .map(|d| d.into())
                     .collect(),
             ),
-            std::cmp::Ordering::Greater => Some((0..25).map(|d| d.into()).collect()),
+            (std::cmp::Ordering::Greater, _) => Some((0..25).map(|d| d.into()).collect()),
+            _ => None,
         }
     }
 
