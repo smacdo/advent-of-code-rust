@@ -208,7 +208,7 @@ impl Answers {
     }
 
     pub fn serialize<W: Write>(&self, writer: &mut BufWriter<W>) {
-        // TODO: Verify that both correct and wrong answers do not have newlines.
+        // TODO: Support newlines in answers.
         // TODO: Convert unwraps to Errors.
 
         // Sort wrong answers alphabetically to ensure stability with diffs

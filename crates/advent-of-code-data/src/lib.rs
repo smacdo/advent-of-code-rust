@@ -124,17 +124,9 @@ impl Answer {
 }
 
 impl FromStr for Answer {
-    type Err = AnswerParseError;
+    type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() || s.chars().all(|c| c.is_whitespace()) {
-            return Err(AnswerParseError::EmptyNotAllowed);
-        }
-
-        if s.chars().any(|c| c == '\n') {
-            return Err(AnswerParseError::NewlinesNotAllowed);
-        }
-
         Ok(s.parse::<i128>()
             .map_or_else(|_| Answer::String(s.to_string()), Answer::Int))
     }
