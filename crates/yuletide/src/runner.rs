@@ -2,12 +2,13 @@ use std::time::{Duration, Instant};
 
 use thiserror::Error;
 
-use crate::{
+use advent_of_code_data::{
     client::{Client, ClientError},
     data::CheckResult,
-    registry::{Solver, SolverError},
     Answer, Part,
 };
+
+use crate::registry::{Solver, SolverError};
 
 // TODO:
 //  - on_start_solver(solver)

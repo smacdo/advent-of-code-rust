@@ -1,7 +1,7 @@
-use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Direction4, Grid};
 use linkme::distributed_slice;
+use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
@@ -116,5 +116,5 @@ pub fn day_15_1(input: &str) -> Result<Answer> {
 }
 
 pub fn day_15_2(_input: &str) -> Result<Answer> {
-    Err(advent_of_code_data::registry::SolverError::NotFinished)
+    Err(yuletide::SolverError::NotFinished)
 }

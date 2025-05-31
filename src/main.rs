@@ -2,13 +2,12 @@ mod y2024;
 
 use advent_of_code_data::{
     client::{Client, WebClient},
-    registry::{Solver, SolverRegistry},
-    runner::SolverRunner,
     Day, Part, Year,
 };
 use advent_of_code_rust::terminal_output::ConsoleRunnerEventHandler;
 use clap::{Parser, Subcommand};
 use linkme::distributed_slice;
+use yuletide::{runner::SolverRunner, Solver, SolverRegistry};
 
 #[distributed_slice]
 pub static SOLVERS: [Solver];

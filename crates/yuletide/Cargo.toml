@@ -1,0 +1,15 @@
+[package]
+name = "yuletide"
+version = "0.0.0"
+authors = ["Scott MacDonald"]
+description = "A framework for creating and running Advent of Code puzzle solvers"
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+advent-of-code-data = { path = "../advent-of-code-data" }
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

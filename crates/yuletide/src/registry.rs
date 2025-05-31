@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use crate::{Answer, Day, Part, Year};
+use advent_of_code_data::{Answer, Day, Part, Year};
 
 /// Represents an error that can happen when running an Advent of Code solver.
 #[derive(Error, Debug)]

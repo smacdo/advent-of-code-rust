@@ -1,10 +1,10 @@
 use std::fmt::Display;
 use std::iter::repeat;
 
-use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
+use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 

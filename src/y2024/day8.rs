@@ -1,11 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::{Grid, Point2};
 use advent_of_code_rust::utils::pairwise_combinations;
 use linkme::distributed_slice;
+use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 

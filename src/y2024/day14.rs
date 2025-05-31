@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::registry::{Example, Result, Solver, SolverPart};
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::spatial::Point2;
 use linkme::distributed_slice;
 use regex::Regex;
+use yuletide::{Example, Result, Solver, SolverPart};
 
 // TODO: Consider using Grid rather than Hashmap
 
