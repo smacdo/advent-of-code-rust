@@ -10,6 +10,11 @@ pub mod data;
 pub mod settings;
 mod utils;
 
+// TODO: Remove string parse errors (no more errors when converting). This check
+//       should happen in the cache storage, maybe w/ a TODO to support it.
+
+/// Represents a day in an Advent of Code year. Days are typically in the range
+/// [1, 25].
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Day(pub usize);
 
@@ -32,6 +37,8 @@ impl From<u32> for Day {
     }
 }
 
+/// Represents an Advent of Code year, which is a year in which there was at
+/// least one Advent of Code puzzle.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Year(pub usize);
 
@@ -54,6 +61,8 @@ impl From<Year> for i32 {
     }
 }
 
+/// Advent of Code puzzles are split into two parts - `One` and `Two`. Both
+/// parts will take the same input but typically produce different answers.
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub enum Part {
     One,
@@ -73,6 +82,7 @@ impl std::fmt::Display for Part {
     }
 }
 
+/// Represents possible errors when parsing puzzle answers.
 #[derive(Clone, Debug, PartialEq, Error)]
 pub enum AnswerParseError {
     #[error("answers with empty strings or only whitespace chars are not allowed")]
@@ -81,6 +91,23 @@ pub enum AnswerParseError {
     NewlinesNotAllowed,
 }
 
+/// Holds a string or integer answer to an Advent of Code puzzle.
+///
+/// It is important to note that `Answer` does not denote a _correct_ answer to
+/// a puzzle. To determine if a given `Answer` is correct you must submit it and
+/// inspect the result.
+///
+/// ```
+/// use advent_of_code_data::Answer;
+///
+/// // Answers can be created via their enum constructors.
+/// let string_answer = Answer::String("hello world".to_string());
+/// let int_answer = Answer::Int(42);
+///
+/// // Answers also support explicit conversion.
+/// let string_answer: Answer = "hello world".into().unwrap();
+/// let int_answer: Answer = 42.into();
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub enum Answer {
     String(String),
@@ -167,4 +194,37 @@ pub fn submit_answer(
 ) -> Result<CheckResult, ClientError> {
     let mut client: WebClient = Default::default();
     client.submit_answer(answer, part, day, year)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn print_year() {
+        let year = Year(2022);
+        assert_eq!(&format!("{year}"), "2022");
+    }
+
+    #[test]
+    fn print_day() {
+        let day = Day(22);
+        assert_eq!(&format!("{day}"), "22");
+    }
+
+    #[test]
+    fn print_part() {
+        assert_eq!(&format!("{}", Part::One), "One");
+        assert_eq!(&format!("{}", Part::Two), "Two");
+    }
+
+    #[test]
+    fn print_answer() {
+        assert_eq!(
+            &format!("{}", Answer::String("hello world".to_string())),
+            "hello world"
+        );
+
+        assert_eq!(&format!("{}", Answer::Int(42)), "42");
+    }
 }
