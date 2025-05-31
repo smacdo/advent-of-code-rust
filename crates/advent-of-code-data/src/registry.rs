@@ -7,9 +7,9 @@ use crate::{Answer, Day, Part, Year};
 /// Represents an error that can happen when running an Advent of Code solver.
 #[derive(Error, Debug)]
 pub enum SolverError {
-    #[error("there is not answer because the solver is not finished")]
+    #[error("this solver is not finished")]
     NotFinished,
-    #[error("the answer was submitted too soon, please wait before trying again")]
+    #[error("the answer was submitted too soon after an incorrect answer, please wait before trying again")]
     TooSoon,
     #[error(transparent)]
     Io(#[from] std::io::Error),
