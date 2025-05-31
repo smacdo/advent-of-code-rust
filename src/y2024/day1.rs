@@ -1,33 +1,34 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(1),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(1),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_1_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n",
-            expected: Answer::Int(11),
+            expected: aoc::Answer::Int(11),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_1_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "3   4\n4   3\n2   5\n1   3\n3   9\n3   3\n",
-            expected: Answer::Int(31),
+            expected: aoc::Answer::Int(31),
         }],
     },
 };
 
-pub fn day_1_1(input: &str) -> Result<Answer> {
+pub fn day_1_1(input: &str) -> yt::Result<aoc::Answer> {
     // Read input into two lists - left side numbers and right side numbers.
     let mut left = Vec::<i64>::new();
     let mut right = Vec::<i64>::new();
@@ -54,7 +55,7 @@ pub fn day_1_1(input: &str) -> Result<Answer> {
     Ok(total_distance.into())
 }
 
-pub fn day_1_2(input: &str) -> Result<Answer> {
+pub fn day_1_2(input: &str) -> yt::Result<aoc::Answer> {
     // Read input into two lists - left side numbers and right side numbers.
     let mut left = Vec::<i64>::new();
     let mut right = Vec::<i64>::new();
