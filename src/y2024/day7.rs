@@ -9,7 +9,7 @@ use linkme::distributed_slice;
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: yt::SolverRegistration = yt::SolverRegistration {
+static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     modpath: std::module_path!(),
     part_one: yt::SolverPart {
         func: day_7_1,

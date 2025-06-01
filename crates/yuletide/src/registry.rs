@@ -26,17 +26,20 @@ pub type Result<T> = core::result::Result<T, SolverError>;
 /// A function that solves an Advent of Code puzzle part.
 pub type SolverPartFn = fn(&SolverArgs) -> Result<Answer>;
 
-///
+/// Contains registration information for a puzzle solver, and is used at start
+/// up to create a directory of puzzle solvers.
 #[derive(Clone, Debug)]
-pub struct SolverRegistration {
+pub struct SolverAutoRegister {
     /// Module path containing the solver.
     ///
     /// The module path must end in the form `yYYYY::dayD` where `YYYY` is the
     /// puzzle year, and `D` is the day.
-    pub modpath: &'static str, //std::borrow::Cow<'static, str>,
-    /// A function that solves part one.
+    ///
+    /// Example: `my_aoc_solutions::y2024::day15`
+    pub modpath: &'static str,
+    /// A function that solves part one of the puzzle.
     pub part_one: SolverPart,
-    /// A function that solves part two.
+    /// A function that solves part two of the puzzle.
     pub part_two: SolverPart,
 }
 
@@ -95,8 +98,9 @@ pub struct SolverRegistry {
 }
 
 impl SolverRegistry {
-    /// Create a new `SolverRegistry` from a collection of existing solvers.
-    pub fn compiled_from(all_solvers: &[SolverRegistration]) -> Self {
+    /// Create a `SolverRegistry` from a set of partial solver registration
+    /// entries.
+    pub fn compiled_from(all_solvers: &[SolverAutoRegister]) -> Self {
         // TODO: Support multiple solvers for the same year + day (e.g., alternative solutions).
         let mut solvers: HashMap<Year, HashMap<Day, Solver>> = Default::default();
         let re = Regex::new(r"::y(?<year>\d{4,4})::day(?<day>(\d+))$").unwrap();
@@ -175,8 +179,8 @@ mod tests {
         Err(SolverError::NotFinished)
     }
 
-    fn create_solver(modpath: &'static str) -> SolverRegistration {
-        SolverRegistration {
+    fn create_solver(modpath: &'static str) -> SolverAutoRegister {
+        SolverAutoRegister {
             modpath,
             part_one: SolverPart {
                 func: test_part,
