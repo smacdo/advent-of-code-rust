@@ -68,7 +68,7 @@ pub fn day_9_1(input: &str) -> Result<Answer> {
         };
 
         // insert block
-        disk.extend(std::iter::repeat(file_id).take(length));
+        disk.extend(std::iter::repeat_n(file_id, length));
     }
 
     //visualize(&disk);

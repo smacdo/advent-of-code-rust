@@ -523,7 +523,7 @@ impl<'a, T: Clone> Iterator for Cells<'a, T> {
     }
 }
 
-impl<'a, T: Clone> FusedIterator for Cells<'a, T> {}
+impl<T: Clone> FusedIterator for Cells<'_, T> {}
 
 /// An iterator over the rows in a grid.
 #[derive(Clone, Debug, PartialEq, Eq)]

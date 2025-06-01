@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::iter::repeat;
 
 use advent_of_code_data::{Answer, Day, Year};
 use advent_of_code_rust::utils::find_ints;
@@ -90,7 +89,8 @@ fn parse_input(input: &str) -> Vec<CalibrationEquation> {
         .map(|line| {
             let (test_value_str, numbers_str) = line.split_once(':').unwrap();
             let numbers = find_ints(numbers_str);
-            let operators: Vec<Operator> = repeat(Operator::Add).take(numbers.len() - 1).collect();
+            let operators: Vec<Operator> =
+                std::iter::repeat_n(Operator::Add, numbers.len() - 1).collect();
 
             assert!(numbers.len() > 1);
             assert!(operators.len() == numbers.len() - 1);

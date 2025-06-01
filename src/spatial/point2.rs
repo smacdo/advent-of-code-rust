@@ -9,7 +9,6 @@ use super::{Direction4, Direction8};
 /// Some useful features in this type include the ability to convert two and
 /// from `(isize, isize)` tuples.
 #[derive(Clone, Copy, Debug, Default, Hash, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Point2 {
     /// The x coordinate of this point.
     pub x: isize,
