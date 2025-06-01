@@ -4,9 +4,9 @@ use std::str::FromStr;
 use advent_of_code_data as aoc;
 use yuletide as yt;
 
-use advent_of_code_rust::spatial::{Grid, Point2};
-use advent_of_code_rust::utils::pairwise_combinations;
 use linkme::distributed_slice;
+use workshop::spatial::{Grid, Point2};
+use workshop::utils::pairwise_combinations;
 
 use crate::SOLVERS;
 

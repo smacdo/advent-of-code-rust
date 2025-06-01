@@ -1,8 +1,8 @@
 use advent_of_code_data as aoc;
 use yuletide as yt;
 
-use advent_of_code_rust::spatial::{Direction4, Grid};
 use linkme::distributed_slice;
+use workshop::spatial::{Direction4, Grid};
 
 use crate::SOLVERS;
 

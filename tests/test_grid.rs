@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use advent_of_code_rust::spatial::{Col, Cols, Grid, IteratorItemCountError, Point2, Row, Rows};
+use workshop::spatial::{Col, Cols, Grid, IteratorItemCountError, Point2, Row, Rows};
 
 #[test]
 fn default_value_constructor() {

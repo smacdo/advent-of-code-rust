@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
 use advent_of_code_data as aoc;
-use advent_of_code_rust::spatial::{Direction8, Grid, Point2};
 use yuletide as yt;
 
 use linkme::distributed_slice;
+use workshop::spatial::{Direction8, Grid, Point2};
 
 use crate::SOLVERS;
 

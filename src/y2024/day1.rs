@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use advent_of_code_data as aoc;
 use yuletide as yt;
 
-use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
+use workshop::utils::find_ints;
 
 use crate::SOLVERS;
 

@@ -4,9 +4,9 @@ use std::str::FromStr;
 use advent_of_code_data as aoc;
 use yuletide as yt;
 
-use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
 use thiserror::Error;
+use workshop::spatial::{Direction4, Grid, Point2};
 
 use crate::SOLVERS;
 
