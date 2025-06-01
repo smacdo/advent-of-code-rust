@@ -1,25 +1,26 @@
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(9),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(9),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_9_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "2333133121414131402",
-            expected: Answer::Int(1928),
+            expected: aoc::Answer::Int(1928),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_9_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "2333133121414131402",
-            expected: Answer::Int(2858),
+            expected: aoc::Answer::Int(2858),
         }],
     },
 };
@@ -51,7 +52,7 @@ fn visualize2(disk: &[Chunk]) {
 
     println!();
 }
-pub fn day_9_1(input: &str) -> Result<Answer> {
+pub fn day_9_1(input: &str) -> yt::Result<aoc::Answer> {
     // Build the initial disk using the disk map input.
     let mut disk: Vec<Option<usize>> = Vec::new();
     let mut next_id = 0;
@@ -117,7 +118,7 @@ struct Chunk {
     length: usize,
 }
 
-pub fn day_9_2(input: &str) -> Result<Answer> {
+pub fn day_9_2(input: &str) -> yt::Result<aoc::Answer> {
     // Build the initial disk using the disk map input.
     let mut disk: Vec<Chunk> = Vec::new();
     //let mut disk: Vec<Option<usize>> = Vec::new();

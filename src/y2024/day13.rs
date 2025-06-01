@@ -1,20 +1,21 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::Point2;
 use linkme::distributed_slice;
 use regex::Regex;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(13),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(13),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_13_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "Button A: X+94, Y+34
 Button B: X+22, Y+67
 Prize: X=8400, Y=5400
@@ -30,10 +31,10 @@ Prize: X=7870, Y=6450
 Button A: X+69, Y+23
 Button B: X+27, Y+71
 Prize: X=18641, Y=10279",
-            expected: Answer::Int(480),
+            expected: aoc::Answer::Int(480),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_13_2,
         examples: &[
             //(Answer::Int(0), "Example input",)
@@ -166,7 +167,7 @@ fn solve_linear_equation(machine: &Machine) -> Option<isize> {
     Some(a_moves * COST_A + b_moves * COST_B)
 }
 
-pub fn day_13_1(input: &str) -> Result<Answer> {
+pub fn day_13_1(input: &str) -> yt::Result<aoc::Answer> {
     let machines = parse_input(input);
     let fewest_tokens: isize = machines
         .into_iter()
@@ -176,7 +177,7 @@ pub fn day_13_1(input: &str) -> Result<Answer> {
     Ok(fewest_tokens.into())
 }
 
-pub fn day_13_2(input: &str) -> Result<Answer> {
+pub fn day_13_2(input: &str) -> yt::Result<aoc::Answer> {
     let machines = parse_input(input);
     let fewest_tokens: isize = machines
         .into_iter()

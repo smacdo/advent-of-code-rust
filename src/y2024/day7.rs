@@ -1,19 +1,20 @@
 use std::fmt::Display;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::utils::find_ints;
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(7),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(7),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_7_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "190: 10 19
 3267: 81 40 27
 83: 17 5
@@ -23,12 +24,12 @@ static SOLVER: Solver = Solver {
 192: 17 8 14
 21037: 9 7 18 13
 292: 11 6 16 20",
-            expected: Answer::Int(3749),
+            expected: aoc::Answer::Int(3749),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_7_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "190: 10 19
 3267: 81 40 27
 83: 17 5
@@ -38,7 +39,7 @@ static SOLVER: Solver = Solver {
 192: 17 8 14
 21037: 9 7 18 13
 292: 11 6 16 20",
-            expected: Answer::Int(11387),
+            expected: aoc::Answer::Int(11387),
         }],
     },
 };
@@ -166,7 +167,7 @@ fn evaluate(numbers: &[i64], operators: &[Operator]) -> i64 {
     test_value
 }
 
-pub fn day_7_1(input: &str) -> Result<Answer> {
+pub fn day_7_1(input: &str) -> yt::Result<aoc::Answer> {
     let equations = parse_input(input);
     let mut total_calibration_result = 0;
 
@@ -179,7 +180,7 @@ pub fn day_7_1(input: &str) -> Result<Answer> {
     Ok(total_calibration_result.into())
 }
 
-pub fn day_7_2(input: &str) -> Result<Answer> {
+pub fn day_7_2(input: &str) -> yt::Result<aoc::Answer> {
     let equations = parse_input(input);
     let mut total_calibration_result = 0;
 

@@ -1,19 +1,20 @@
 use std::collections::{BinaryHeap, HashSet};
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(10),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(10),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_10_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "89010123
 78121874
 87430965
@@ -22,12 +23,12 @@ static SOLVER: Solver = Solver {
 32019012
 01329801
 10456732",
-            expected: Answer::Int(36),
+            expected: aoc::Answer::Int(36),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_10_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "89010123
 78121874
 87430965
@@ -36,7 +37,7 @@ static SOLVER: Solver = Solver {
 32019012
 01329801
 10456732",
-            expected: Answer::Int(81),
+            expected: aoc::Answer::Int(81),
         }],
     },
 };
@@ -69,7 +70,7 @@ fn count_trailheads(trailhead_pos: Point2, map: &Grid<usize>, allow_multiple: bo
     trailhead_count
 }
 
-pub fn day_10_1(input: &str) -> Result<Answer> {
+pub fn day_10_1(input: &str) -> yt::Result<aoc::Answer> {
     let map = Grid::parse_str(input, |c| c.to_digit(10).unwrap() as usize).unwrap();
     let trailhead_score_sum: usize = map
         .points()
@@ -79,7 +80,7 @@ pub fn day_10_1(input: &str) -> Result<Answer> {
     Ok(trailhead_score_sum.into())
 }
 
-pub fn day_10_2(input: &str) -> Result<Answer> {
+pub fn day_10_2(input: &str) -> yt::Result<aoc::Answer> {
     let map = Grid::parse_str(input, |c| c.to_digit(10).unwrap() as usize).unwrap();
     let trailhead_score_sum: usize = map
         .points()

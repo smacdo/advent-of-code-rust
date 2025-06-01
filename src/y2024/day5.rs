@@ -1,16 +1,17 @@
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(5),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(5),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_5_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "47|53
 97|13
 97|61
@@ -39,12 +40,14 @@ static SOLVER: Solver = Solver {
 75,97,47,61,53
 61,13,29
 97,13,75,29,47",
-            expected: Answer::Int(143),
+            expected: aoc::Answer::Int(143),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_5_2,
-        examples: &[],
+        examples: &[
+            // TODO: Add missing examples.
+        ],
     },
 };
 
@@ -115,7 +118,7 @@ fn is_page_following_rule(
         .any(|prev_page| *prev_page == rule.after)
 }
 
-pub fn day_5_1(input: &str) -> Result<Answer> {
+pub fn day_5_1(input: &str) -> yt::Result<aoc::Answer> {
     let (page_ordering_rules, updates) = parse_input(input);
     let mut sum_of_middle_page_numers = 0;
 
@@ -136,7 +139,7 @@ pub fn day_5_1(input: &str) -> Result<Answer> {
     Ok(sum_of_middle_page_numers.into())
 }
 
-pub fn day_5_2(input: &str) -> Result<Answer> {
+pub fn day_5_2(input: &str) -> yt::Result<aoc::Answer> {
     let (page_ordering_rules, mut updates) = parse_input(input);
     let mut sum_of_middle_page_numers = 0;
 

@@ -1,31 +1,32 @@
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use linkme::distributed_slice;
 use regex::Regex;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(3),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(3),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_3_1,
-        examples: &[(Example {
+        examples: &[(yt::Example {
             input: "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))",
-            expected: Answer::Int(161),
+            expected: aoc::Answer::Int(161),
         })],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_3_2,
-        examples: &[(Example {
+        examples: &[(yt::Example {
             input: "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))",
-            expected: Answer::Int(48),
+            expected: aoc::Answer::Int(48),
         })],
     },
 };
 
-pub fn day_3_1(input: &str) -> Result<Answer> {
+pub fn day_3_1(input: &str) -> yt::Result<aoc::Answer> {
     let re = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
     let mut mul_sum: i64 = 0;
 
@@ -36,7 +37,7 @@ pub fn day_3_1(input: &str) -> Result<Answer> {
     Ok(mul_sum.into())
 }
 
-pub fn day_3_2(input: &str) -> Result<Answer> {
+pub fn day_3_2(input: &str) -> yt::Result<aoc::Answer> {
     let re = Regex::new(
         r"(?<mul>mul\((?<left>\d{1,3}),(?<right>\d{1,3})\))|(?<do>do\(\))|(?<dont>don't\(\))",
     )

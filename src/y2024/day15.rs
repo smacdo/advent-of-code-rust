@@ -1,18 +1,19 @@
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::{Direction4, Grid};
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(15),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(15),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_15_1,
         examples: &[
-            Example {
+            yt::Example {
                 input: "########
 #..O.O.#
 ##@.O..#
@@ -23,9 +24,9 @@ static SOLVER: Solver = Solver {
 ########
 
 <^^>>>vv<v>>v<<",
-                expected: Answer::Int(2028),
+                expected: aoc::Answer::Int(2028),
             },
-            Example {
+            yt::Example {
                 input: "##########
 #..O..O.O#
 #......O.#
@@ -47,11 +48,11 @@ vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
 <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
 ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
 v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^",
-                expected: Answer::Int(10092),
+                expected: aoc::Answer::Int(10092),
             },
         ],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_15_2,
         examples: &[
             //(Answer::Int(0), "Example input",)
@@ -105,16 +106,16 @@ fn simulate(tilemap: &mut Grid<Tile>, _movement: Direction4) {
     //let mut has_movable_space =
 }
 
-pub fn day_15_1(input: &str) -> Result<Answer> {
+pub fn day_15_1(input: &str) -> yt::Result<aoc::Answer> {
     let (mut tilemap, moves) = parse_input(input);
 
     for m in moves {
         simulate(&mut tilemap, m);
     }
 
-    todo!("implement me! -- day15.rs:105");
+    Err(yuletide::SolverError::NotFinished)
 }
 
-pub fn day_15_2(_input: &str) -> Result<Answer> {
+pub fn day_15_2(_input: &str) -> yt::Result<aoc::Answer> {
     Err(yuletide::SolverError::NotFinished)
 }

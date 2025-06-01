@@ -1,28 +1,29 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::utils;
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(11),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(11),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_11_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "125 17",
-            expected: Answer::Int(55312),
+            expected: aoc::Answer::Int(55312),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_11_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "125 17",
-            expected: Answer::Int(65601038650482),
+            expected: aoc::Answer::Int(65601038650482),
         }],
     },
 };
@@ -74,7 +75,7 @@ fn parse_input(input: &str) -> HashMap<i64, usize> {
     new_stones
 }
 
-pub fn day_11_1(input: &str) -> Result<Answer> {
+pub fn day_11_1(input: &str) -> yt::Result<aoc::Answer> {
     let mut stones = parse_input(input);
 
     for _ in 0..25 {
@@ -84,7 +85,7 @@ pub fn day_11_1(input: &str) -> Result<Answer> {
     Ok(stones.values().sum::<usize>().into())
 }
 
-pub fn day_11_2(input: &str) -> Result<Answer> {
+pub fn day_11_2(input: &str) -> yt::Result<aoc::Answer> {
     let mut stones = parse_input(input);
 
     for _ in 0..75 {

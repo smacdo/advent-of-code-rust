@@ -1,21 +1,22 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::{Direction4, Grid, Point2};
 use linkme::distributed_slice;
 use thiserror::Error;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(6),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(6),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_6_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "....#.....
 .........#
 ..........
@@ -26,12 +27,12 @@ static SOLVER: Solver = Solver {
 ........#.
 #.........
 ......#...",
-            expected: Answer::Int(41),
+            expected: aoc::Answer::Int(41),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_6_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "....#.....
 .........#
 ..........
@@ -42,7 +43,7 @@ static SOLVER: Solver = Solver {
 ........#.
 #.........
 ......#...",
-            expected: Answer::Int(6),
+            expected: aoc::Answer::Int(6),
         }],
     },
 };
@@ -143,7 +144,7 @@ fn simulate_guard_walk(
     }
 }
 
-pub fn day_6_1(input: &str) -> Result<Answer> {
+pub fn day_6_1(input: &str) -> yt::Result<aoc::Answer> {
     let map = Grid::<char>::from_str(input).unwrap();
     let path = find_guard_path(&map).unwrap();
 
@@ -152,7 +153,7 @@ pub fn day_6_1(input: &str) -> Result<Answer> {
     Ok(path.len().into())
 }
 
-pub fn day_6_2(input: &str) -> Result<Answer> {
+pub fn day_6_2(input: &str) -> yt::Result<aoc::Answer> {
     let map = Grid::<char>::from_str(input).unwrap();
     let guard = find_guard(&map).unwrap();
 

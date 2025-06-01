@@ -1,19 +1,20 @@
 use std::str::FromStr;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
 use advent_of_code_rust::spatial::{Direction8, Grid, Point2};
+use yuletide as yt;
+
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(4),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(4),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_4_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "MMMSXXMASM
 MSAMXMSMSA
 AMXSXMAAMM
@@ -24,12 +25,12 @@ SMSMSASXSS
 SAXAMASAAA
 MAMMMXMMMM
 MXMXAXMASX",
-            expected: Answer::Int(18),
+            expected: aoc::Answer::Int(18),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_4_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: ".M.S......
 ..A..MSMS.
 .M.S.MAA..
@@ -40,7 +41,7 @@ S.S.S.S.S.
 .A.A.A.A..
 M.M.M.M.M.
 ..........",
-            expected: Answer::Int(9),
+            expected: aoc::Answer::Int(9),
         }],
     },
 };
@@ -63,7 +64,7 @@ pub fn is_word(grid: &Grid<char>, word: &str, pos: Point2, offset: Point2) -> bo
     true
 }
 
-pub fn day_4_1(input: &str) -> Result<Answer> {
+pub fn day_4_1(input: &str) -> yt::Result<aoc::Answer> {
     let grid = Grid::from_str(input).unwrap();
     let mut xmas_count = 0;
 
@@ -84,7 +85,7 @@ fn is_mas(grid: &Grid<char>, a: Point2, b: Point2) -> bool {
         && ((grid[a] == 'M' && grid[b] == 'S') || (grid[b] == 'M' && grid[a] == 'S'))
 }
 
-pub fn day_4_2(input: &str) -> Result<Answer> {
+pub fn day_4_2(input: &str) -> yt::Result<aoc::Answer> {
     let grid = Grid::from_str(input).unwrap();
     let mut xmas_count = 0;
 

@@ -1,27 +1,28 @@
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::utils;
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(2),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(2),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_2_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "7 6 4 2 1
 1 2 7 8 9
 9 7 6 2 1
 1 3 2 4 5
 8 6 4 4 1
 1 3 6 7 9",
-            expected: Answer::Int(2),
+            expected: aoc::Answer::Int(2),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_2_2,
         examples: &[
             // TODO: Example missing?
@@ -57,7 +58,7 @@ fn check_is_safe(levels: &[i64]) -> bool {
         .is_some()
 }
 
-pub fn day_2_1(input: &str) -> Result<Answer> {
+pub fn day_2_1(input: &str) -> yt::Result<aoc::Answer> {
     let mut safe_reports_count = 0;
 
     for report in input.lines() {
@@ -71,7 +72,7 @@ pub fn day_2_1(input: &str) -> Result<Answer> {
     Ok(safe_reports_count.into())
 }
 
-pub fn day_2_2(input: &str) -> Result<Answer> {
+pub fn day_2_2(input: &str) -> yt::Result<aoc::Answer> {
     let mut safe_reports_count = 0;
 
     for report in input.lines() {

@@ -1,21 +1,22 @@
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::{Grid, Point2};
 use advent_of_code_rust::utils::pairwise_combinations;
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(8),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(8),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_8_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "............
 ........0...
 .....0......
@@ -28,13 +29,13 @@ static SOLVER: Solver = Solver {
 .........A..
 ............
 ............",
-            expected: Answer::Int(14),
+            expected: aoc::Answer::Int(14),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_8_2,
         examples: &[
-            Example {
+            yt::Example {
                 input: "T.........
 ...T......
 .T........
@@ -45,9 +46,9 @@ static SOLVER: Solver = Solver {
 ..........
 ..........
 ..........",
-                expected: Answer::Int(9),
+                expected: aoc::Answer::Int(9),
             },
-            Example {
+            yt::Example {
                 input: "............
 ........0...
 .....0......
@@ -60,7 +61,7 @@ static SOLVER: Solver = Solver {
 .........A..
 ............
 ............",
-                expected: Answer::Int(34),
+                expected: aoc::Answer::Int(34),
             },
         ],
     },
@@ -80,7 +81,7 @@ fn visualize(map: &Grid<char>, antinodes: &HashSet<Point2>) {
     }
 }
 
-pub fn day_8_1(input: &str) -> Result<Answer> {
+pub fn day_8_1(input: &str) -> yt::Result<aoc::Answer> {
     let map = Grid::<char>::from_str(input).unwrap();
     let mut antennas: HashMap<char, Vec<Point2>> = HashMap::new();
     let mut antinodes: HashSet<Point2> = HashSet::new();
@@ -115,7 +116,7 @@ pub fn day_8_1(input: &str) -> Result<Answer> {
         .into())
 }
 
-pub fn day_8_2(input: &str) -> Result<Answer> {
+pub fn day_8_2(input: &str) -> yt::Result<aoc::Answer> {
     let map = Grid::<char>::from_str(input).unwrap();
     let mut antennas: HashMap<char, Vec<Point2>> = HashMap::new();
     let mut antinodes: HashSet<Point2> = HashSet::new();

@@ -1,19 +1,20 @@
 use std::collections::VecDeque;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::{Direction4, Direction8, Grid, Point2};
 use linkme::distributed_slice;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(12),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(12),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_12_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "RRRRIICCFF
 RRRRIICCCF
 VVRRRCCFFF
@@ -24,12 +25,12 @@ VVIIICJJEE
 MIIIIIJJEE
 MIIISIJEEE
 MMMISSJEEE",
-            expected: Answer::Int(1930),
+            expected: aoc::Answer::Int(1930),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_12_2,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "RRRRIICCFF
 RRRRIICCCF
 VVRRRCCFFF
@@ -40,7 +41,7 @@ VVIIICJJEE
 MIIIIIJJEE
 MIIISIJEEE
 MMMISSJEEE",
-            expected: Answer::Int(1206),
+            expected: aoc::Answer::Int(1206),
         }],
     },
 };
@@ -157,7 +158,7 @@ fn visit_region(pt: Point2, map: &mut Grid<Tile>) -> Region {
     region
 }
 
-pub fn day_12_1(input: &str) -> Result<Answer> {
+pub fn day_12_1(input: &str) -> yt::Result<aoc::Answer> {
     let mut map: Grid<Tile> = Grid::parse_str(input, |c| Tile { c, visited: false }).unwrap();
     let mut total_cost: usize = 0;
 
@@ -171,7 +172,7 @@ pub fn day_12_1(input: &str) -> Result<Answer> {
     Ok(total_cost.into())
 }
 
-pub fn day_12_2(input: &str) -> Result<Answer> {
+pub fn day_12_2(input: &str) -> yt::Result<aoc::Answer> {
     let mut map: Grid<Tile> = Grid::parse_str(input, |c| Tile { c, visited: false }).unwrap();
     let mut total_cost: usize = 0;
 
@@ -312,7 +313,7 @@ EXXXX
 EEEEE";
         assert_eq!(17, visit_region(Point2::new(0, 0), &mut parse(s)).area);
         assert_eq!(12, visit_region(Point2::new(0, 0), &mut parse(s)).corners);
-        assert_eq!(Answer::Int(236), day_12_2(s).unwrap());
+        assert_eq!(aoc::Answer::Int(236), day_12_2(s).unwrap());
     }
 
     #[test]
@@ -323,6 +324,6 @@ AAABBA
 ABBAAA
 ABBAAA
 AAAAAA";
-        assert_eq!(Answer::Int(368), day_12_2(s).unwrap());
+        assert_eq!(aoc::Answer::Int(368), day_12_2(s).unwrap());
     }
 }

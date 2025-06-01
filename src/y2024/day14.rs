@@ -1,22 +1,23 @@
 use std::collections::HashMap;
 
-use advent_of_code_data::{Answer, Day, Year};
+use advent_of_code_data as aoc;
+use yuletide as yt;
+
 use advent_of_code_rust::spatial::Point2;
 use linkme::distributed_slice;
 use regex::Regex;
-use yuletide::{Example, Result, Solver, SolverPart};
 
 // TODO: Consider using Grid rather than Hashmap
 
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: Solver = Solver {
-    day: Day(14),
-    year: Year(2024),
-    part_one: SolverPart {
+static SOLVER: yt::Solver = yt::Solver {
+    day: aoc::Day(14),
+    year: aoc::Year(2024),
+    part_one: yt::SolverPart {
         func: day_14_1,
-        examples: &[Example {
+        examples: &[yt::Example {
             input: "p=0,4 v=3,-3
 p=6,3 v=-1,-3
 p=10,3 v=-1,2
@@ -29,10 +30,10 @@ p=9,3 v=2,3
 p=7,3 v=-1,2
 p=2,4 v=2,-3
 p=9,5 v=-3,-3",
-            expected: Answer::Int(12),
+            expected: aoc::Answer::Int(12),
         }],
     },
-    part_two: SolverPart {
+    part_two: yt::SolverPart {
         func: day_14_2,
         examples: &[
             // TODO: missing example?
@@ -119,7 +120,7 @@ fn visualize(tiles: &HashMap<Point2, usize>, x_count: usize, y_count: usize) {
     tracing::debug!("\n{}", viz_str);
 }
 
-pub fn day_14_1(input: &str) -> Result<Answer> {
+pub fn day_14_1(input: &str) -> yt::Result<aoc::Answer> {
     let mut robots = parse_input(input);
 
     let is_example_input = input == SOLVER.part_one.examples[0].input;
@@ -160,7 +161,7 @@ pub fn day_14_1(input: &str) -> Result<Answer> {
     Ok(safety_factor.into())
 }
 
-pub fn day_14_2(input: &str) -> Result<Answer> {
+pub fn day_14_2(input: &str) -> yt::Result<aoc::Answer> {
     // Search for the first timestep where all the robots have unique positions.
     let mut robots = parse_input(input);
     let mut timestep = 0;
