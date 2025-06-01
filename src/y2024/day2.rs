@@ -58,10 +58,10 @@ fn check_is_safe(levels: &[i64]) -> bool {
         .is_some()
 }
 
-pub fn day_2_1(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_2_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut safe_reports_count = 0;
 
-    for report in input.lines() {
+    for report in args.input.lines() {
         let levels = utils::find_ints(report);
 
         if check_is_safe(&levels) {
@@ -72,10 +72,10 @@ pub fn day_2_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(safe_reports_count.into())
 }
 
-pub fn day_2_2(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_2_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut safe_reports_count = 0;
 
-    for report in input.lines() {
+    for report in args.input.lines() {
         let levels = utils::find_ints(report);
 
         if check_is_safe(&levels) {

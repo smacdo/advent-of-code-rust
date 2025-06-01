@@ -26,18 +26,18 @@ static SOLVER: yt::Solver = yt::Solver {
     },
 };
 
-pub fn day_3_1(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_3_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let re = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
     let mut mul_sum: i64 = 0;
 
-    for (_, [left, right]) in re.captures_iter(input).map(|c| c.extract()) {
+    for (_, [left, right]) in re.captures_iter(args.input).map(|c| c.extract()) {
         mul_sum += left.parse::<i64>().unwrap() * right.parse::<i64>().unwrap();
     }
 
     Ok(mul_sum.into())
 }
 
-pub fn day_3_2(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_3_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let re = Regex::new(
         r"(?<mul>mul\((?<left>\d{1,3}),(?<right>\d{1,3})\))|(?<do>do\(\))|(?<dont>don't\(\))",
     )
@@ -46,7 +46,7 @@ pub fn day_3_2(input: &str) -> yt::Result<aoc::Answer> {
     let mut mul_sum: i64 = 0;
     let mut mul_enabled = true;
 
-    for c in re.captures_iter(input) {
+    for c in re.captures_iter(args.input) {
         if c.name("mul").is_some() {
             if mul_enabled {
                 let left = c.name("left").unwrap().as_str();

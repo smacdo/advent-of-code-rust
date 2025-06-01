@@ -8,7 +8,10 @@ use advent_of_code_data::{
     Answer, Part,
 };
 
-use crate::registry::{Solver, SolverError};
+use crate::{
+    registry::{Solver, SolverError},
+    SolverArgs,
+};
 
 // TODO:
 //  - on_start_solver(solver)
@@ -122,7 +125,9 @@ impl SolverRunner {
 
             for (index, example) in examples.iter().enumerate() {
                 let example_start_time = Instant::now();
-                let result = (solver_part.func)(example.input);
+                let result = (solver_part.func)(&SolverArgs {
+                    input: example.input,
+                });
                 let example_duration = Instant::now() - example_start_time;
 
                 match result {
@@ -175,7 +180,7 @@ impl SolverRunner {
 
             // Run the solver against real puzzle input.
             let solve_start_time = Instant::now();
-            let run_solver_result = (solver_part.func)(&input);
+            let run_solver_result = (solver_part.func)(&SolverArgs { input: &input });
             let solve_duration = Instant::now() - solve_start_time;
 
             let part_result = run_solver_result

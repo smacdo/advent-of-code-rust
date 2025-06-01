@@ -28,7 +28,7 @@
 			"    },",
 			"};",
 			"",
-			"pub fn day_${1}_1(input: &str) -> Result<Answer> {",
+			"pub fn day_${1}_1(args: &yt::SolverArgs) -> Result<Answer> {",
 			"    $0",
 			"    Err(advent_of_code_data::registry::SolverError::NotFinished)",
 			"}",

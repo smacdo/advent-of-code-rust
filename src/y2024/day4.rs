@@ -64,8 +64,8 @@ pub fn is_word(grid: &Grid<char>, word: &str, pos: Point2, offset: Point2) -> bo
     true
 }
 
-pub fn day_4_1(input: &str) -> yt::Result<aoc::Answer> {
-    let grid = Grid::from_str(input).unwrap();
+pub fn day_4_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let grid = Grid::from_str(args.input).unwrap();
     let mut xmas_count = 0;
 
     for pos in grid.points() {
@@ -85,8 +85,8 @@ fn is_mas(grid: &Grid<char>, a: Point2, b: Point2) -> bool {
         && ((grid[a] == 'M' && grid[b] == 'S') || (grid[b] == 'M' && grid[a] == 'S'))
 }
 
-pub fn day_4_2(input: &str) -> yt::Result<aoc::Answer> {
-    let grid = Grid::from_str(input).unwrap();
+pub fn day_4_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let grid = Grid::from_str(args.input).unwrap();
     let mut xmas_count = 0;
 
     for p in grid.points() {

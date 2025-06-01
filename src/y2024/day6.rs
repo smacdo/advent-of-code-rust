@@ -144,8 +144,8 @@ fn simulate_guard_walk(
     }
 }
 
-pub fn day_6_1(input: &str) -> yt::Result<aoc::Answer> {
-    let map = Grid::<char>::from_str(input).unwrap();
+pub fn day_6_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let map = Grid::<char>::from_str(args.input).unwrap();
     let path = find_guard_path(&map).unwrap();
 
     visualize(&map, &path);
@@ -153,8 +153,8 @@ pub fn day_6_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(path.len().into())
 }
 
-pub fn day_6_2(input: &str) -> yt::Result<aoc::Answer> {
-    let map = Grid::<char>::from_str(input).unwrap();
+pub fn day_6_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let map = Grid::<char>::from_str(args.input).unwrap();
     let guard = find_guard(&map).unwrap();
 
     // Try every possible variation of adding one obstruction to the map, and

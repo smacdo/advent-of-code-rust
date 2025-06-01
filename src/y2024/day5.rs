@@ -118,8 +118,8 @@ fn is_page_following_rule(
         .any(|prev_page| *prev_page == rule.after)
 }
 
-pub fn day_5_1(input: &str) -> yt::Result<aoc::Answer> {
-    let (page_ordering_rules, updates) = parse_input(input);
+pub fn day_5_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let (page_ordering_rules, updates) = parse_input(args.input);
     let mut sum_of_middle_page_numers = 0;
 
     for update in updates.iter() {
@@ -139,8 +139,8 @@ pub fn day_5_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(sum_of_middle_page_numers.into())
 }
 
-pub fn day_5_2(input: &str) -> yt::Result<aoc::Answer> {
-    let (page_ordering_rules, mut updates) = parse_input(input);
+pub fn day_5_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let (page_ordering_rules, mut updates) = parse_input(args.input);
     let mut sum_of_middle_page_numers = 0;
 
     for update in updates.iter_mut() {

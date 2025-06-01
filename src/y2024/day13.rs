@@ -167,8 +167,8 @@ fn solve_linear_equation(machine: &Machine) -> Option<isize> {
     Some(a_moves * COST_A + b_moves * COST_B)
 }
 
-pub fn day_13_1(input: &str) -> yt::Result<aoc::Answer> {
-    let machines = parse_input(input);
+pub fn day_13_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let machines = parse_input(args.input);
     let fewest_tokens: isize = machines
         .into_iter()
         .filter_map(|machine| solve_linear_equation(&machine))
@@ -177,8 +177,8 @@ pub fn day_13_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(fewest_tokens.into())
 }
 
-pub fn day_13_2(input: &str) -> yt::Result<aoc::Answer> {
-    let machines = parse_input(input);
+pub fn day_13_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let machines = parse_input(args.input);
     let fewest_tokens: isize = machines
         .into_iter()
         .map(|mut machine| {

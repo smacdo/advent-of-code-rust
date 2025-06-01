@@ -81,8 +81,8 @@ fn visualize(map: &Grid<char>, antinodes: &HashSet<Point2>) {
     }
 }
 
-pub fn day_8_1(input: &str) -> yt::Result<aoc::Answer> {
-    let map = Grid::<char>::from_str(input).unwrap();
+pub fn day_8_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let map = Grid::<char>::from_str(args.input).unwrap();
     let mut antennas: HashMap<char, Vec<Point2>> = HashMap::new();
     let mut antinodes: HashSet<Point2> = HashSet::new();
 
@@ -116,8 +116,8 @@ pub fn day_8_1(input: &str) -> yt::Result<aoc::Answer> {
         .into())
 }
 
-pub fn day_8_2(input: &str) -> yt::Result<aoc::Answer> {
-    let map = Grid::<char>::from_str(input).unwrap();
+pub fn day_8_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let map = Grid::<char>::from_str(args.input).unwrap();
     let mut antennas: HashMap<char, Vec<Point2>> = HashMap::new();
     let mut antinodes: HashSet<Point2> = HashSet::new();
 

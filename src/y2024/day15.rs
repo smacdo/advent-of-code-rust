@@ -106,8 +106,8 @@ fn simulate(tilemap: &mut Grid<Tile>, _movement: Direction4) {
     //let mut has_movable_space =
 }
 
-pub fn day_15_1(input: &str) -> yt::Result<aoc::Answer> {
-    let (mut tilemap, moves) = parse_input(input);
+pub fn day_15_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let (mut tilemap, moves) = parse_input(args.input);
 
     for m in moves {
         simulate(&mut tilemap, m);
@@ -116,6 +116,6 @@ pub fn day_15_1(input: &str) -> yt::Result<aoc::Answer> {
     Err(yuletide::SolverError::NotFinished)
 }
 
-pub fn day_15_2(_input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_15_2(_args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     Err(yuletide::SolverError::NotFinished)
 }

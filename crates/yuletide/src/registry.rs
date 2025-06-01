@@ -4,6 +4,8 @@ use thiserror::Error;
 
 use advent_of_code_data::{Answer, Day, Part, Year};
 
+use crate::SolverArgs;
+
 /// Represents an error that can happen when running an Advent of Code solver.
 #[derive(Error, Debug)]
 pub enum SolverError {
@@ -21,7 +23,7 @@ pub enum SolverError {
 pub type Result<T> = core::result::Result<T, SolverError>;
 
 /// A function that solves an Advent of Code puzzle part.
-pub type SolverPartFn = fn(&str) -> Result<Answer>;
+pub type SolverPartFn = fn(&SolverArgs) -> Result<Answer>;
 
 /// A `Solver` is runnable Advent of Code puzzle solution for a given year and
 /// day.
@@ -124,7 +126,7 @@ impl SolverRegistry {
 mod tests {
     use super::*;
 
-    fn test_part(_input: &str) -> Result<Answer> {
+    fn test_part(_args: &SolverArgs) -> Result<Answer> {
         Err(SolverError::NotFinished)
     }
 

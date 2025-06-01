@@ -75,8 +75,8 @@ fn parse_input(input: &str) -> HashMap<i64, usize> {
     new_stones
 }
 
-pub fn day_11_1(input: &str) -> yt::Result<aoc::Answer> {
-    let mut stones = parse_input(input);
+pub fn day_11_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let mut stones = parse_input(args.input);
 
     for _ in 0..25 {
         stones = blink(&stones);
@@ -85,8 +85,8 @@ pub fn day_11_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(stones.values().sum::<usize>().into())
 }
 
-pub fn day_11_2(input: &str) -> yt::Result<aoc::Answer> {
-    let mut stones = parse_input(input);
+pub fn day_11_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let mut stones = parse_input(args.input);
 
     for _ in 0..75 {
         stones = blink(&stones);

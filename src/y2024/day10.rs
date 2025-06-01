@@ -70,8 +70,8 @@ fn count_trailheads(trailhead_pos: Point2, map: &Grid<usize>, allow_multiple: bo
     trailhead_count
 }
 
-pub fn day_10_1(input: &str) -> yt::Result<aoc::Answer> {
-    let map = Grid::parse_str(input, |c| c.to_digit(10).unwrap() as usize).unwrap();
+pub fn day_10_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let map = Grid::parse_str(args.input, |c| c.to_digit(10).unwrap() as usize).unwrap();
     let trailhead_score_sum: usize = map
         .points()
         .map(|pos| count_trailheads(pos, &map, false))
@@ -80,8 +80,8 @@ pub fn day_10_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(trailhead_score_sum.into())
 }
 
-pub fn day_10_2(input: &str) -> yt::Result<aoc::Answer> {
-    let map = Grid::parse_str(input, |c| c.to_digit(10).unwrap() as usize).unwrap();
+pub fn day_10_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let map = Grid::parse_str(args.input, |c| c.to_digit(10).unwrap() as usize).unwrap();
     let trailhead_score_sum: usize = map
         .points()
         .map(|pos| count_trailheads(pos, &map, true))

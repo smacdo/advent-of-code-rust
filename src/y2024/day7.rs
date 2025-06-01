@@ -167,8 +167,8 @@ fn evaluate(numbers: &[i64], operators: &[Operator]) -> i64 {
     test_value
 }
 
-pub fn day_7_1(input: &str) -> yt::Result<aoc::Answer> {
-    let equations = parse_input(input);
+pub fn day_7_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let equations = parse_input(args.input);
     let mut total_calibration_result = 0;
 
     for mut equation in equations {
@@ -180,8 +180,8 @@ pub fn day_7_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(total_calibration_result.into())
 }
 
-pub fn day_7_2(input: &str) -> yt::Result<aoc::Answer> {
-    let equations = parse_input(input);
+pub fn day_7_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let equations = parse_input(args.input);
     let mut total_calibration_result = 0;
 
     for mut equation in equations {

@@ -158,8 +158,8 @@ fn visit_region(pt: Point2, map: &mut Grid<Tile>) -> Region {
     region
 }
 
-pub fn day_12_1(input: &str) -> yt::Result<aoc::Answer> {
-    let mut map: Grid<Tile> = Grid::parse_str(input, |c| Tile { c, visited: false }).unwrap();
+pub fn day_12_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let mut map: Grid<Tile> = Grid::parse_str(args.input, |c| Tile { c, visited: false }).unwrap();
     let mut total_cost: usize = 0;
 
     for pt in map.points() {
@@ -172,8 +172,8 @@ pub fn day_12_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(total_cost.into())
 }
 
-pub fn day_12_2(input: &str) -> yt::Result<aoc::Answer> {
-    let mut map: Grid<Tile> = Grid::parse_str(input, |c| Tile { c, visited: false }).unwrap();
+pub fn day_12_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let mut map: Grid<Tile> = Grid::parse_str(args.input, |c| Tile { c, visited: false }).unwrap();
     let mut total_cost: usize = 0;
 
     for pt in map.points() {
@@ -188,6 +188,8 @@ pub fn day_12_2(input: &str) -> yt::Result<aoc::Answer> {
 
 #[cfg(test)]
 mod tests {
+    use yuletide::SolverArgs;
+
     use super::*;
 
     fn parse(input: &str) -> Grid<Tile> {
@@ -313,7 +315,10 @@ EXXXX
 EEEEE";
         assert_eq!(17, visit_region(Point2::new(0, 0), &mut parse(s)).area);
         assert_eq!(12, visit_region(Point2::new(0, 0), &mut parse(s)).corners);
-        assert_eq!(aoc::Answer::Int(236), day_12_2(s).unwrap());
+        assert_eq!(
+            aoc::Answer::Int(236),
+            day_12_2(&SolverArgs { input: s }).unwrap()
+        );
     }
 
     #[test]
@@ -324,6 +329,9 @@ AAABBA
 ABBAAA
 ABBAAA
 AAAAAA";
-        assert_eq!(aoc::Answer::Int(368), day_12_2(s).unwrap());
+        assert_eq!(
+            aoc::Answer::Int(368),
+            day_12_2(&SolverArgs { input: s }).unwrap()
+        );
     }
 }

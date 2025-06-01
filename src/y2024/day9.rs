@@ -52,12 +52,17 @@ fn visualize2(disk: &[Chunk]) {
 
     println!();
 }
-pub fn day_9_1(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_9_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     // Build the initial disk using the disk map input.
     let mut disk: Vec<Option<usize>> = Vec::new();
     let mut next_id = 0;
 
-    for (i, c) in input.chars().filter(|c| c.is_ascii_digit()).enumerate() {
+    for (i, c) in args
+        .input
+        .chars()
+        .filter(|c| c.is_ascii_digit())
+        .enumerate()
+    {
         let length = c.to_digit(10).unwrap() as usize;
         let file_id: Option<usize> = if i % 2 == 0 {
             // file
@@ -118,13 +123,18 @@ struct Chunk {
     length: usize,
 }
 
-pub fn day_9_2(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_9_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     // Build the initial disk using the disk map input.
     let mut disk: Vec<Chunk> = Vec::new();
     //let mut disk: Vec<Option<usize>> = Vec::new();
     let mut next_id = 0;
 
-    for (i, c) in input.chars().filter(|c| c.is_ascii_digit()).enumerate() {
+    for (i, c) in args
+        .input
+        .chars()
+        .filter(|c| c.is_ascii_digit())
+        .enumerate()
+    {
         let length = c.to_digit(10).unwrap() as usize;
         let file_id: Option<usize> = if i % 2 == 0 {
             // file

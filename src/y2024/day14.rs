@@ -120,10 +120,10 @@ fn visualize(tiles: &HashMap<Point2, usize>, x_count: usize, y_count: usize) {
     tracing::debug!("\n{}", viz_str);
 }
 
-pub fn day_14_1(input: &str) -> yt::Result<aoc::Answer> {
-    let mut robots = parse_input(input);
+pub fn day_14_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let mut robots = parse_input(args.input);
 
-    let is_example_input = input == SOLVER.part_one.examples[0].input;
+    let is_example_input = args.input == SOLVER.part_one.examples[0].input;
     let x_count = if is_example_input { 11 } else { X_COUNT };
     let y_count = if is_example_input { 7 } else { Y_COUNT };
 
@@ -161,9 +161,9 @@ pub fn day_14_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(safety_factor.into())
 }
 
-pub fn day_14_2(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_14_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     // Search for the first timestep where all the robots have unique positions.
-    let mut robots = parse_input(input);
+    let mut robots = parse_input(args.input);
     let mut timestep = 0;
     let mut positions: HashMap<Point2, usize> = HashMap::new();
 

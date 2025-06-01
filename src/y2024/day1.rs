@@ -28,12 +28,12 @@ static SOLVER: yt::Solver = yt::Solver {
     },
 };
 
-pub fn day_1_1(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_1_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     // Read input into two lists - left side numbers and right side numbers.
     let mut left = Vec::<i64>::new();
     let mut right = Vec::<i64>::new();
 
-    for line in input.lines() {
+    for line in args.input.lines() {
         let numbers = find_ints(line);
 
         left.push(numbers[0]);
@@ -55,12 +55,12 @@ pub fn day_1_1(input: &str) -> yt::Result<aoc::Answer> {
     Ok(total_distance.into())
 }
 
-pub fn day_1_2(input: &str) -> yt::Result<aoc::Answer> {
+pub fn day_1_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     // Read input into two lists - left side numbers and right side numbers.
     let mut left = Vec::<i64>::new();
     let mut right = Vec::<i64>::new();
 
-    for line in input.lines() {
+    for line in args.input.lines() {
         let numbers = find_ints(line);
 
         left.push(numbers[0]);
