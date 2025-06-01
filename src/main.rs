@@ -2,6 +2,7 @@ mod y2024;
 
 use advent_of_code_data::{
     client::{Client, WebClient},
+    settings::ClientOptions,
     Day, Part, Year,
 };
 use advent_of_code_rust::terminal_output::ConsoleRunnerEventHandler;
@@ -86,7 +87,13 @@ fn main() {
     let solver_registry = SolverRegistry::compiled_from(&SOLVERS);
 
     // Create the Advent of Code client.
-    let client: WebClient = Default::default();
+    let client = WebClient::with_options(
+        ClientOptions::new()
+            .with_user_cache()
+            .with_user_config()
+            .with_local_dir_config()
+            .with_env_vars(),
+    );
 
     match &cli.command {
         Some(Commands::Run { days, year }) => {

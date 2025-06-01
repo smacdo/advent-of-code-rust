@@ -88,6 +88,7 @@ impl ClientOptions {
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
         const ENCRYPTION_TOKEN_KEY: &str = "encryption_token";
+        const REPLACE_ME: &str = "REPLACE_ME";
 
         fn try_get_key<F: FnOnce(&str)>(
             group: &serde_json::Map<String, serde_json::Value>,
@@ -96,7 +97,15 @@ impl ClientOptions {
         ) {
             if group.contains_key(key) {
                 match &group[key] {
-                    serde_json::Value::String(s) => setter(s),
+                    serde_json::Value::String(s) => {
+                        if s == REPLACE_ME {
+                            tracing::debug!(
+                                "ignoring JSON key {key} because value is `{REPLACE_ME}`"
+                            );
+                        } else {
+                            setter(s)
+                        }
+                    }
                     _ => {
                         // TODO: convert to Error
                         panic!("{} key must be a string value", key)
@@ -107,19 +116,20 @@ impl ClientOptions {
 
         let j: serde_json::Value = serde_json::from_str(json_config)?;
 
-        // TODO: log each key that is found and used.
-
         match j {
             serde_json::Value::Object(group) => {
                 try_get_key(&group, SESSION_ID_KEY, |v| {
+                    tracing::debug!("found JSON key `{SESSION_ID_KEY}` with value `{v}`");
                     self.session_id = Some(v.to_string())
                 });
 
                 try_get_key(&group, PUZZLE_DIR_KEY, |v| {
+                    tracing::debug!("found JSON key `{PUZZLE_DIR_KEY}` with value `{v}`");
                     self.puzzle_dir = Some(PathBuf::from_str(v).unwrap())
                 });
 
                 try_get_key(&group, ENCRYPTION_TOKEN_KEY, |v| {
+                    tracing::debug!("found JSON key `{ENCRYPTION_TOKEN_KEY}` with value `{v}`");
                     self.encryption_token = Some(v.to_string())
                 });
             }
