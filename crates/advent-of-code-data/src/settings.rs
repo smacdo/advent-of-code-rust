@@ -247,4 +247,24 @@ mod tests {
         assert!(options.puzzle_dir.is_none());
         assert!(options.encryption_token.is_none());
     }
+
+    #[test]
+    fn set_client_options_from_json_ignores_replace_me_values() {
+        let json_data = r#"
+        {
+            "session_id": "REPLACE_ME",
+            "puzzle_dir": "path/to/puzzle/dir",
+            "encryption_token": "REPLACE_ME"
+        }
+        "#;
+
+        let options = ClientOptions::new().with_json_config(json_data).unwrap();
+
+        assert!(options.session_id.is_none());
+        assert!(options.encryption_token.is_none());
+        assert_eq!(
+            options.puzzle_dir,
+            Some(PathBuf::from_str("path/to/puzzle/dir").unwrap())
+        );
+    }
 }
