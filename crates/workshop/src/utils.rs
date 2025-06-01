@@ -3,6 +3,19 @@ use std::sync::OnceLock;
 
 static RE_CELL_FIND_INTS: OnceLock<Regex> = OnceLock::new();
 
+/// Find all integers present in `text`, ignoring any values that are not digit
+/// characters.
+///
+/// This utility is helpful for quickly extracting all integers from text when
+/// they are separated by spaces, tabs etc and you don't expect any non-integer
+/// values.
+///
+/// ```
+/// use workshop::utils::find_ints;
+///
+/// assert_eq!(find_ints("123   -57 \n  2321"), vec![123, -57, 2321]);
+/// assert_eq!(find_ints("123, -57xxx2321"), vec![123, -57, 2321]);
+/// ```
 pub fn find_ints(text: &str) -> Vec<i64> {
     let re = RE_CELL_FIND_INTS
         .get_or_init(|| Regex::new(r"-?[0-9]+").expect("find_ints regex failed to compile"));
@@ -16,8 +29,9 @@ pub fn find_ints(text: &str) -> Vec<i64> {
 /// out repetition.
 ///
 /// ```
-/// use advent_of_code_rust::utils::pairwise_combinations;
+/// use workshop::utils::pairwise_combinations;
 ///
+/// // (abc) -> [(ab), (ac), (bc)]
 /// assert_eq!(
 ///   pairwise_combinations(&['a', 'b', 'c']).collect::<Vec<_>>(),
 ///   vec![(&'a', &'b'), (&'a', &'c'), (&'b', &'c')]
@@ -36,7 +50,7 @@ pub struct PairwiseCombinations<'a, T> {
 }
 
 impl<'a, T> PairwiseCombinations<'a, T> {
-    pub fn new(items: &'a [T]) -> Self {
+    fn new(items: &'a [T]) -> Self {
         Self { items, i: 0, j: 1 }
     }
 }
