@@ -1,5 +1,6 @@
 mod registry;
 pub mod runner;
+pub mod terminal_output;
 
 pub use registry::*;
 

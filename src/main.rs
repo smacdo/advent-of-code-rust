@@ -5,9 +5,9 @@ use advent_of_code_data::{
     settings::ClientOptions,
     Day, Part, Year,
 };
-use advent_of_code_rust::terminal_output::ConsoleRunnerEventHandler;
 use clap::{Parser, Subcommand};
 use linkme::distributed_slice;
+use yuletide::terminal_output::ConsoleRunnerEventHandler;
 use yuletide::{runner::SolverRunner, SolverAutoRegister, SolverRegistry};
 
 #[distributed_slice]

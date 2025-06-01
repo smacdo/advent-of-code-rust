@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use advent_of_code_data::{data::CheckResult, Answer, Part};
-use tracing::{event, Level};
-use yuletide::{
+use crate::{
     runner::{RunDetails, RunnerError, RunnerEventHandler},
     {Solver, SolverError},
 };
+use advent_of_code_data::{data::CheckResult, Answer, Part};
+use tracing::{event, Level};
 
 pub struct ConsoleRunnerEventHandler {}
 
