@@ -9,10 +9,9 @@
 - Reject submissions for future dates automatically unless forced
 
 # Runner Improvements
-- Move registry.rs, runner.rs -> rudolph package
-- Use per-function registration and de-dup in registry.
-- #[PuzzleSolver(day=,year=,part=)]
-- #[Example(answer=,input=)]
+- Use solver attribute for registration #[PuzzleSolver(day=,year=,part=)]
+- Use example attribute #[Example(part_1="",answer=)]
+- Support a "universal" solver fn (eg, both parts in one function)
 
 # Bugs
 - No warning or error when running a day that doesn't exist

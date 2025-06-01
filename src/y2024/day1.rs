@@ -9,9 +9,8 @@ use linkme::distributed_slice;
 use crate::SOLVERS;
 
 #[distributed_slice(SOLVERS)]
-static SOLVER: yt::Solver = yt::Solver {
-    day: aoc::Day(1),
-    year: aoc::Year(2024),
+static SOLVER: yt::SolverRegistration = yt::SolverRegistration {
+    modpath: std::module_path!(),
     part_one: yt::SolverPart {
         func: day_1_1,
         examples: &[yt::Example {
@@ -29,6 +28,7 @@ static SOLVER: yt::Solver = yt::Solver {
 };
 
 pub fn day_1_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    eprintln!("module name is: {}", std::module_path!());
     // Read input into two lists - left side numbers and right side numbers.
     let mut left = Vec::<i64>::new();
     let mut right = Vec::<i64>::new();

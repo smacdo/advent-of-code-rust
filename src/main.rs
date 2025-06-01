@@ -8,10 +8,10 @@ use advent_of_code_data::{
 use advent_of_code_rust::terminal_output::ConsoleRunnerEventHandler;
 use clap::{Parser, Subcommand};
 use linkme::distributed_slice;
-use yuletide::{runner::SolverRunner, Solver, SolverRegistry};
+use yuletide::{runner::SolverRunner, SolverRegistration, SolverRegistry};
 
 #[distributed_slice]
-pub static SOLVERS: [Solver];
+pub static SOLVERS: [SolverRegistration];
 
 // TODO: validation day, year
 

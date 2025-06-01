@@ -13,3 +13,4 @@ advent-of-code-data = { path = "../advent-of-code-data" }
 anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+regex.workspace = true

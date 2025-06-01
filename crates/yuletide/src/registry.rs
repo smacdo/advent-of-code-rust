@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use regex::Regex;
 use thiserror::Error;
 
 use advent_of_code_data::{Answer, Day, Part, Year};
@@ -24,6 +25,20 @@ pub type Result<T> = core::result::Result<T, SolverError>;
 
 /// A function that solves an Advent of Code puzzle part.
 pub type SolverPartFn = fn(&SolverArgs) -> Result<Answer>;
+
+///
+#[derive(Clone, Debug)]
+pub struct SolverRegistration {
+    /// Module path containing the solver.
+    ///
+    /// The module path must end in the form `yYYYY::dayD` where `YYYY` is the
+    /// puzzle year, and `D` is the day.
+    pub modpath: &'static str, //std::borrow::Cow<'static, str>,
+    /// A function that solves part one.
+    pub part_one: SolverPart,
+    /// A function that solves part two.
+    pub part_two: SolverPart,
+}
 
 /// A `Solver` is runnable Advent of Code puzzle solution for a given year and
 /// day.
@@ -81,17 +96,47 @@ pub struct SolverRegistry {
 
 impl SolverRegistry {
     /// Create a new `SolverRegistry` from a collection of existing solvers.
-    pub fn compiled_from(all_solvers: &[Solver]) -> Self {
+    pub fn compiled_from(all_solvers: &[SolverRegistration]) -> Self {
         // TODO: Support multiple solvers for the same year + day (e.g., alternative solutions).
         let mut solvers: HashMap<Year, HashMap<Day, Solver>> = Default::default();
+        let re = Regex::new(r"::y(?<year>\d{4,4})::day(?<day>(\d+))$").unwrap();
 
-        for s in all_solvers.iter() {
-            match solvers.get_mut(&s.year) {
+        for registration in all_solvers.iter() {
+            eprintln!("{}", registration.modpath);
+            // Parse the puzzle year and day from the module path.
+            let captures = re
+                .captures(registration.modpath)
+                .expect("module path must be in expected form ::yYYYY::dayD");
+
+            let year = Year(
+                captures
+                    .name("year")
+                    .unwrap()
+                    .as_str()
+                    .parse::<usize>()
+                    .unwrap(),
+            );
+
+            let day = Day(captures
+                .name("day")
+                .unwrap()
+                .as_str()
+                .parse::<usize>()
+                .unwrap());
+
+            let solver = Solver {
+                year,
+                day,
+                part_one: registration.part_one.clone(),
+                part_two: registration.part_two.clone(),
+            };
+
+            match solvers.get_mut(&year) {
                 Some(solvers_for_year) => {
-                    solvers_for_year.insert(s.day, s.clone());
+                    solvers_for_year.insert(day, solver);
                 }
                 None => {
-                    solvers.insert(s.year, HashMap::from([(s.day, s.clone())]));
+                    solvers.insert(year, HashMap::from([(day, solver)]));
                 }
             }
         }
@@ -130,10 +175,9 @@ mod tests {
         Err(SolverError::NotFinished)
     }
 
-    fn create_solver(year: Year, day: Day) -> Solver {
-        Solver {
-            day,
-            year,
+    fn create_solver(modpath: &'static str) -> SolverRegistration {
+        SolverRegistration {
+            modpath,
             part_one: SolverPart {
                 func: test_part,
                 examples: &[],
@@ -155,18 +199,18 @@ mod tests {
     fn years_are_from_solvers_in_registry() {
         // Include duplicate years, and years that are out of order.
         let registry = SolverRegistry::compiled_from(&[
-            create_solver(Year(2024), Day(1)),
-            create_solver(Year(2024), Day(1)),
-            create_solver(Year(2024), Day(5)),
-            create_solver(Year(2025), Day(1)),
-            create_solver(Year(1999), Day(1)),
+            create_solver("testcrate::y2024::day1"),
+            create_solver("testcrate::y2024::day1"),
+            create_solver("testcrate::y2024::day5"),
+            create_solver("testcrate::y2025::day1"),
+            create_solver("testcrate::y1999::day1"),
         ]);
         assert_eq!(registry.years(), vec![Year(1999), Year(2024), Year(2025)]);
     }
 
     #[test]
     fn days_empty_if_no_solvers() {
-        let registry = SolverRegistry::compiled_from(&[create_solver(Year(2024), Day(1))]);
+        let registry = SolverRegistry::compiled_from(&[create_solver("testcrate::y2024::day1")]);
         assert!(registry.days(Year(2023)).is_none());
         assert!(registry.days(Year(2024)).is_some());
     }
@@ -175,13 +219,13 @@ mod tests {
     fn days_are_only_for_the_requested_year() {
         // Include duplicate days, and days that are out of order.
         let registry = SolverRegistry::compiled_from(&[
-            create_solver(Year(2024), Day(1)),
-            create_solver(Year(2024), Day(1)),
-            create_solver(Year(2024), Day(7)),
-            create_solver(Year(2024), Day(5)),
-            create_solver(Year(2025), Day(1)),
-            create_solver(Year(1999), Day(19)),
-            create_solver(Year(1999), Day(15)),
+            create_solver("testcrate::y2024::day1"),
+            create_solver("testcrate::y2024::day1"),
+            create_solver("testcrate::y2024::day7"),
+            create_solver("testcrate::y2024::day5"),
+            create_solver("testcrate::y2025::day1"),
+            create_solver("testcrate::y1999::day19"),
+            create_solver("testcrate::y1999::day15"),
         ]);
 
         assert_eq!(registry.days(Year(1999)), Some(vec![Day(15), Day(19)]));
@@ -194,7 +238,7 @@ mod tests {
 
     #[test]
     fn get_solver_empty_if_year_or_day_do_not_exist() {
-        let registry = SolverRegistry::compiled_from(&[create_solver(Year(2024), Day(1))]);
+        let registry = SolverRegistry::compiled_from(&[create_solver("testcrate::y2024::day1")]);
         assert!(registry.solver(Year(2025), Day(1)).is_none());
         assert!(registry.solver(Year(2024), Day(2)).is_none());
         assert!(registry.solver(Year(2024), Day(1)).is_some());
@@ -203,9 +247,9 @@ mod tests {
     #[test]
     fn get_solver_matches_day_and_year() {
         let registry = SolverRegistry::compiled_from(&[
-            create_solver(Year(2024), Day(1)),
-            create_solver(Year(2024), Day(5)),
-            create_solver(Year(2025), Day(2)),
+            create_solver("testcrate::y2024::day1"),
+            create_solver("testcrate::y2024::day5"),
+            create_solver("testcrate::y2025::day2"),
         ]);
 
         assert_eq!(
