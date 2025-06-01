@@ -65,21 +65,24 @@ impl ClientOptions {
     }
 
     pub fn with_env_vars(mut self) -> Self {
-        // TODO: log when keys are found and used
-        // TODO: tests
+        // TODO: add key for custom puzzle cache directory.
         const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
+        const PASSWORD_ENV_KEY: &str = "AOC_PASSWORD";
 
-        if let Ok(v) = std::env::var(SESSION_ID_ENV_KEY) {
-            tracing::debug!(
-                "using session id `{}` from env var {}",
-                v,
-                SESSION_ID_ENV_KEY
-            );
-            self.session_id = Some(v);
+        fn try_read_env_var<F: FnOnce(String)>(name: &str, setter: F) {
+            if let Ok(v) = std::env::var(name) {
+                tracing::debug!("found env var `{name}` with value `{v}`");
+                setter(v)
+            }
         }
 
-        // TODO: add key for puzzle directory.
-        // TODO: add key for encryption token.
+        try_read_env_var(SESSION_ID_ENV_KEY, |v| {
+            self.session_id = Some(v);
+        });
+
+        try_read_env_var(PASSWORD_ENV_KEY, |v| {
+            self.encryption_token = Some(v);
+        });
 
         self
     }
@@ -90,7 +93,7 @@ impl ClientOptions {
         const ENCRYPTION_TOKEN_KEY: &str = "encryption_token";
         const REPLACE_ME: &str = "REPLACE_ME";
 
-        fn try_get_key<F: FnOnce(&str)>(
+        fn try_read_key<F: FnOnce(&str)>(
             group: &serde_json::Map<String, serde_json::Value>,
             key: &str,
             setter: F,
@@ -103,6 +106,7 @@ impl ClientOptions {
                                 "ignoring JSON key {key} because value is `{REPLACE_ME}`"
                             );
                         } else {
+                            tracing::debug!("found JSON key `{key}` with value `{s}`");
                             setter(s)
                         }
                     }
@@ -118,18 +122,15 @@ impl ClientOptions {
 
         match j {
             serde_json::Value::Object(group) => {
-                try_get_key(&group, SESSION_ID_KEY, |v| {
-                    tracing::debug!("found JSON key `{SESSION_ID_KEY}` with value `{v}`");
+                try_read_key(&group, SESSION_ID_KEY, |v| {
                     self.session_id = Some(v.to_string())
                 });
 
-                try_get_key(&group, PUZZLE_DIR_KEY, |v| {
-                    tracing::debug!("found JSON key `{PUZZLE_DIR_KEY}` with value `{v}`");
+                try_read_key(&group, PUZZLE_DIR_KEY, |v| {
                     self.puzzle_dir = Some(PathBuf::from_str(v).unwrap())
                 });
 
-                try_get_key(&group, ENCRYPTION_TOKEN_KEY, |v| {
-                    tracing::debug!("found JSON key `{ENCRYPTION_TOKEN_KEY}` with value `{v}`");
+                try_read_key(&group, ENCRYPTION_TOKEN_KEY, |v| {
                     self.encryption_token = Some(v.to_string())
                 });
             }
