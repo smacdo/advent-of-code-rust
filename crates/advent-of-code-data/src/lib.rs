@@ -2,16 +2,13 @@ use std::str::FromStr;
 
 use client::{Client, ClientError, WebClient};
 use data::CheckResult;
-use thiserror::Error;
 
 pub mod cache;
 pub mod client;
 pub mod data;
 pub mod settings;
-mod utils;
 
-// TODO: Remove string parse errors (no more errors when converting). This check
-//       should happen in the cache storage, maybe w/ a TODO to support it.
+mod utils;
 
 /// Represents a day in an Advent of Code year. Days are typically in the range
 /// [1, 25].
@@ -82,31 +79,43 @@ impl std::fmt::Display for Part {
     }
 }
 
-/// Represents possible errors when parsing puzzle answers.
-#[derive(Clone, Debug, PartialEq, Error)]
-pub enum AnswerParseError {
-    #[error("answers with empty strings or only whitespace chars are not allowed")]
-    EmptyNotAllowed,
-    #[error("answers with newline characters are not allowed")]
-    NewlinesNotAllowed,
-}
-
-/// Holds a string or integer answer to an Advent of Code puzzle.
-///
-/// It is important to note that `Answer` does not denote a _correct_ answer to
-/// a puzzle. To determine if a given `Answer` is correct you must submit it and
-/// inspect the result.
+/// Represents an Advent of Code integer or string puzzle answer. Answers may or
+/// may not be valid solutions.
 ///
 /// ```
 /// use advent_of_code_data::Answer;
 ///
-/// // Answers can be created via their enum constructors.
 /// let string_answer = Answer::String("hello world".to_string());
 /// let int_answer = Answer::Int(42);
+/// ```
 ///
-/// // Answers also support explicit conversion.
-/// let string_answer: Answer = "hello world".into().unwrap();
+/// # Automatic Conversions
+/// `Answer` implements `From` for common string and integer types:
+///
+///   - `String`, &str` -> `Answer::String`
+///   - Numeric types (`i8`, `i16`, `i32`, `i64`, `isize`, `usize`, etc) -> `Answer::Int`
+///
+/// ```
+/// use advent_of_code_data::Answer;
+///
+/// let string_answer: Answer = "hello world".into();
+/// assert_eq!(string_answer, Answer::String("hello world".to_string()));
+///
 /// let int_answer: Answer = 42.into();
+/// assert_eq!(int_answer, Answer::Int(42));
+/// ```
+///
+/// # FromStr (string parsing)
+/// `Answer` supports string parsing for both integer and string values.
+///
+/// ```
+/// use advent_of_code_data::Answer;
+///
+/// let answer: Answer = "testing 123".parse::<Answer>().unwrap();
+/// assert_eq!(answer, Answer::String("testing 123".to_string()));
+///
+/// let answer: Answer = "-5713".parse::<Answer>().unwrap();
+/// assert_eq!(answer, Answer::Int(-5713));
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub enum Answer {
@@ -147,6 +156,24 @@ impl From<String> for Answer {
     }
 }
 
+impl From<&str> for Answer {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_string())
+    }
+}
+
+impl From<i8> for Answer {
+    fn from(value: i8) -> Self {
+        Self::Int(value as i128)
+    }
+}
+
+impl From<i16> for Answer {
+    fn from(value: i16) -> Self {
+        Self::Int(value as i128)
+    }
+}
+
 impl From<i32> for Answer {
     fn from(value: i32) -> Self {
         Self::Int(value as i128)
@@ -155,6 +182,29 @@ impl From<i32> for Answer {
 
 impl From<i64> for Answer {
     fn from(value: i64) -> Self {
+        Self::Int(value as i128)
+    }
+}
+impl From<u8> for Answer {
+    fn from(value: u8) -> Self {
+        Self::Int(value as i128)
+    }
+}
+
+impl From<u16> for Answer {
+    fn from(value: u16) -> Self {
+        Self::Int(value as i128)
+    }
+}
+
+impl From<u32> for Answer {
+    fn from(value: u32) -> Self {
+        Self::Int(value as i128)
+    }
+}
+
+impl From<u64> for Answer {
+    fn from(value: u64) -> Self {
         Self::Int(value as i128)
     }
 }
@@ -218,5 +268,51 @@ mod tests {
         );
 
         assert_eq!(&format!("{}", Answer::Int(42)), "42");
+    }
+
+    #[test]
+    #[allow(clippy::unnecessary_cast)]
+    fn int_answer_conversions() {
+        let answer: Answer = (-22 as i8).into();
+        assert_eq!(answer, Answer::Int(-22));
+
+        let answer: Answer = (-1317 as i16).into();
+        assert_eq!(answer, Answer::Int(-1317));
+
+        let answer: Answer = (-100_512 as i32).into();
+        assert_eq!(answer, Answer::Int(-100_512));
+
+        let answer: Answer = (-3_183_512_681 as i64).into();
+        assert_eq!(answer, Answer::Int(-3_183_512_681));
+
+        let answer: Answer = (22 as u8).into();
+        assert_eq!(answer, Answer::Int(22));
+
+        let answer: Answer = (1317 as u16).into();
+        assert_eq!(answer, Answer::Int(1317));
+
+        let answer: Answer = (100_512 as u32).into();
+        assert_eq!(answer, Answer::Int(100_512));
+
+        let answer: Answer = (3_183_512_681 as u64).into();
+        assert_eq!(answer, Answer::Int(3_183_512_681));
+    }
+
+    #[test]
+    fn string_answer_conversions() {
+        let answer: Answer = "hello world".to_string().into();
+        assert_eq!(answer, Answer::String("hello world".to_string()));
+
+        let answer: Answer = "testing 123".into();
+        assert_eq!(answer, Answer::String("testing 123".to_string()));
+    }
+
+    #[test]
+    fn parse_string_to_answer() {
+        let answer: Answer = "this is text".parse::<Answer>().unwrap();
+        assert_eq!(answer, Answer::String("this is text".to_string()));
+
+        let answer: Answer = "123".parse::<Answer>().unwrap();
+        assert_eq!(answer, Answer::Int(123));
     }
 }
