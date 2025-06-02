@@ -15,6 +15,10 @@ use crate::{
 
 #[derive(Debug, Error)]
 pub enum CacheError {
+    #[error("AOC encryption token expected but not provided (check your config)")]
+    EncryptionTokenNotSet,
+    #[error("Cached input file is not encrypted but encryption token was provided")]
+    EncryptionTokenNotNeeded,
     #[error("base 64 decoding failed: {}", .0)]
     DecodeBase64(#[from] base64::DecodeError),
     #[error("decryption failed: {}", .0)]
@@ -116,15 +120,30 @@ impl PuzzleCache for PuzzleFsCache {
 
     fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError> {
         // Load the cached input file from disk.
-        let input_path =
-            Self::input_file_path(&self.cache_dir, day, year, self.encryption_token.is_some());
-        tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
+        let using_encryption = self.encryption_token.is_some();
+        let input_path = Self::input_file_path(&self.cache_dir, day, year, using_encryption);
 
+        // Check for the existence or non-existence of the input file, and hint
+        // to the user if encryption seems to be incorrectly configured.
+        if !std::fs::exists(&input_path)? {
+            let alt_input_path =
+                Self::input_file_path(&self.cache_dir, day, year, !using_encryption);
+
+            match (
+                std::fs::exists(&alt_input_path).unwrap_or(false),
+                using_encryption,
+            ) {
+                (true, false) => return Err(CacheError::EncryptionTokenNotSet),
+                (true, true) => return Err(CacheError::EncryptionTokenNotNeeded),
+                _ => {}
+            }
+        }
+
+        // Read the input file.
+        tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
         let mut input_text = std::fs::read_to_string(input_path)?;
 
         // Decrypt the input data.
-        // TODO: Add error check to see if input file is encrypted and the password
-        //       token is `None` leading to encrypted input passed to puzzle.
         if let Some(encryption_token) = &self.encryption_token {
             let encrypted_bytes = BASE64_STANDARD
                 .decode(input_text.as_bytes())
