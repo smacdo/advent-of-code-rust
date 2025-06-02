@@ -93,7 +93,7 @@ impl<T> Grid<T> {
     /// map function. Rows are expected to be the same length.
     ///
     /// ```
-    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    /// use workshop::spatial::{Grid, Point2};
     ///
     /// let input = "379\n281";
     /// let grid: Grid<u32> = Grid::parse_str(input, |c| c.to_digit(10).unwrap()).unwrap();
@@ -127,7 +127,7 @@ impl<T> Grid<T> {
     /// value is taken from the iterator `vals` in row major order.
     ///
     /// ```
-    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    /// use workshop::spatial::{Grid, Point2};
     /// let grid: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
     ///
     /// assert_eq!(grid[Point2::new(0, 0)], 10);
@@ -168,7 +168,7 @@ impl<T> Grid<T> {
     /// present in the grid.
     ///
     /// ```
-    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    /// use workshop::spatial::{Grid, Point2};
     ///
     /// let grid: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
     /// assert_eq!(grid.x_count(), 3);
@@ -181,7 +181,7 @@ impl<T> Grid<T> {
     /// the grid.
     ///
     /// ```
-    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    /// use workshop::spatial::{Grid, Point2};
     ///
     /// let grid: Grid<i32> = Grid::with_values(3, 2, [10, 20, 30, 40, 50, 60]).unwrap();
     /// assert_eq!(grid.y_count(), 2);
@@ -315,7 +315,7 @@ impl<T: PartialEq> Grid<T> {
     /// Return the location of `val` if it exists in the grid.
     ///
     /// ```
-    /// use advent_of_code_rust::spatial::{Grid, Point2};
+    /// use workshop::spatial::{Grid, Point2};
     ///
     /// let grid = Grid::with_values(4, 3, "ABCDABCD1234".chars()).unwrap();
     /// assert_eq!(grid.find(&'B'), Some(Point2::new(1, 0)));
