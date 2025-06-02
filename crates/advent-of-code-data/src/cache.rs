@@ -68,10 +68,9 @@ pub struct PuzzleFsCache {
     encryption_token: Option<String>,
 }
 
-// TODO: Use '*.encrypted.txt' vs '*.txt' for encrypted data.
-
 impl PuzzleFsCache {
     const INPUT_FILE_NAME: &'static str = "input.txt";
+    const ENCRYPTED_INPUT_FILE_NAME: &'static str = "input.encrypted.txt";
     const PART_ONE_ANSWERS_FILE_NAME: &'static str = "part-1-answers.txt";
     const PART_TWO_ANSWERS_FILE_NAME: &'static str = "part-2-answers.txt";
 
@@ -90,8 +89,12 @@ impl PuzzleFsCache {
         cache_dir.join(format!("y{}", year)).join(day.to_string())
     }
 
-    pub fn input_file_path(cache_dir: &Path, day: Day, year: Year) -> PathBuf {
-        Self::dir_for_puzzle(cache_dir, day, year).join(Self::INPUT_FILE_NAME)
+    pub fn input_file_path(cache_dir: &Path, day: Day, year: Year, encrypted: bool) -> PathBuf {
+        Self::dir_for_puzzle(cache_dir, day, year).join(if encrypted {
+            Self::ENCRYPTED_INPUT_FILE_NAME
+        } else {
+            Self::INPUT_FILE_NAME
+        })
     }
 
     pub fn answers_file_path(cache_dir: &Path, part: Part, day: Day, year: Year) -> PathBuf {
@@ -113,7 +116,8 @@ impl PuzzleCache for PuzzleFsCache {
 
     fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError> {
         // Load the cached input file from disk.
-        let input_path = Self::input_file_path(&self.cache_dir, day, year);
+        let input_path =
+            Self::input_file_path(&self.cache_dir, day, year, self.encryption_token.is_some());
         tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
 
         let mut input_text = std::fs::read_to_string(input_path)?;
@@ -166,7 +170,8 @@ impl PuzzleCache for PuzzleFsCache {
 
     fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError> {
         // Calculate the path to the puzzle's input file.
-        let input_path = Self::input_file_path(&self.cache_dir, day, year);
+        let input_path =
+            Self::input_file_path(&self.cache_dir, day, year, self.encryption_token.is_some());
 
         // Create puzzle directory if it does not already exist.
         let mut puzzle_dir = input_path.clone();
