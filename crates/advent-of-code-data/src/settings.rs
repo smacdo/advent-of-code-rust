@@ -24,7 +24,7 @@ impl ClientOptions {
     }
 
     pub fn with_config_file<P: AsRef<Path>>(self, path: P) -> Self {
-        // TODO: raise error if the file does not exist
+        // TODO: log if file is found/not found
         // TODO: raise error if TOML parsing fails
         // TODO: add tests
         let config_text = fs::read_to_string(&path).expect("config file should exist");
@@ -33,14 +33,16 @@ impl ClientOptions {
     }
 
     pub fn with_local_dir_config(mut self) -> Self {
-        // TODO: log if file is found/not found
         // TODO: add tests
         let local_config_path = std::env::current_dir()
             .expect("current_dir is expected to work")
             .join("aoc_settings.toml");
 
         if local_config_path.exists() {
+            tracing::debug!("loading config values from: {local_config_path:?}");
             self = self.with_config_file(local_config_path);
+        } else {
+            tracing::debug!("local dir config not found: {local_config_path:?}")
         }
 
         self
