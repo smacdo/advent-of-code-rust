@@ -25,11 +25,11 @@ impl ClientOptions {
 
     pub fn with_config_file<P: AsRef<Path>>(self, path: P) -> Self {
         // TODO: raise error if the file does not exist
-        // TODO: raise error if JSON parsing fails
+        // TODO: raise error if TOML parsing fails
         // TODO: add tests
         let config_text = fs::read_to_string(&path).expect("config file should exist");
-        self.with_json_config(&config_text)
-            .expect("json parsing failed")
+        self.with_toml_config(&config_text)
+            .expect("toml parsing failed")
     }
 
     pub fn with_local_dir_config(mut self) -> Self {
@@ -37,7 +37,7 @@ impl ClientOptions {
         // TODO: add tests
         let local_config_path = std::env::current_dir()
             .expect("current_dir is expected to work")
-            .join("aoc_settings.json");
+            .join("aoc_settings.toml");
 
         if local_config_path.exists() {
             self = self.with_config_file(local_config_path);
@@ -87,56 +87,52 @@ impl ClientOptions {
         self
     }
 
-    pub fn with_json_config(mut self, json_config: &str) -> serde_json::Result<Self> {
+    pub fn with_toml_config(mut self, config_text: &str) -> Result<Self, toml::de::Error> {
+        const CLIENT_TABLE_NAME: &str = "client";
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
         const ENCRYPTION_TOKEN_KEY: &str = "encryption_token";
         const REPLACE_ME: &str = "REPLACE_ME";
 
-        fn try_read_key<F: FnOnce(&str)>(
-            group: &serde_json::Map<String, serde_json::Value>,
-            key: &str,
-            setter: F,
-        ) {
-            if group.contains_key(key) {
-                match &group[key] {
-                    serde_json::Value::String(s) => {
-                        if s == REPLACE_ME {
-                            tracing::debug!(
-                                "ignoring JSON key {key} because value is `{REPLACE_ME}`"
-                            );
-                        } else {
-                            tracing::debug!("found JSON key `{key}` with value `{s}`");
-                            setter(s)
-                        }
+        fn try_read_key<F: FnOnce(&str)>(table: &toml::Table, key: &str, setter: F) {
+            match table.get(key).as_ref() {
+                Some(toml::Value::String(s)) => {
+                    if s == REPLACE_ME {
+                        tracing::debug!("ignoring TOML key {key} because value is `{REPLACE_ME}`");
+                    } else {
+                        tracing::debug!("found TOML key `{key}` with value `{s}`");
+                        setter(s)
                     }
-                    _ => {
-                        // TODO: convert to Error
-                        panic!("{} key must be a string value", key)
-                    }
-                };
-            }
+                }
+                None => {
+                    tracing::debug!("TOML key {key} not present, or its value was not a string");
+                }
+                _ => {
+                    tracing::warn!("TOML key {key} must be string value");
+                }
+            };
         }
 
-        let j: serde_json::Value = serde_json::from_str(json_config)?;
+        let toml: toml::Table = config_text.parse::<toml::Table>()?;
 
-        match j {
-            serde_json::Value::Object(group) => {
-                try_read_key(&group, SESSION_ID_KEY, |v| {
+        match toml.get(CLIENT_TABLE_NAME) {
+            Some(toml::Value::Table(client_config)) => {
+                try_read_key(client_config, SESSION_ID_KEY, |v| {
                     self.session_id = Some(v.to_string())
                 });
 
-                try_read_key(&group, PUZZLE_DIR_KEY, |v| {
+                try_read_key(client_config, PUZZLE_DIR_KEY, |v| {
                     self.puzzle_dir = Some(PathBuf::from_str(v).unwrap())
                 });
 
-                try_read_key(&group, ENCRYPTION_TOKEN_KEY, |v| {
+                try_read_key(client_config, ENCRYPTION_TOKEN_KEY, |v| {
                     self.encryption_token = Some(v.to_string())
                 });
             }
             _ => {
-                // TODO: convert to Error
-                panic!("expected json config to be an object");
+                tracing::debug!(
+                    "TOML table {CLIENT_TABLE_NAME} not found, no config keys will be loaded"
+                );
             }
         }
 
@@ -213,16 +209,15 @@ mod tests {
     }
 
     #[test]
-    fn set_client_options_from_json() {
-        let json_data = r#"
-        {
-            "session_id": "12345",
-            "puzzle_dir": "path/to/puzzle/dir",
-            "encryption_token": "foobar"
-        }
+    fn set_client_options_from_toml() {
+        let config_text = r#"
+        [client]
+        session_id = "12345"
+        puzzle_dir = "path/to/puzzle/dir"
+        encryption_token = "foobar"
         "#;
 
-        let options = ClientOptions::new().with_json_config(json_data).unwrap();
+        let options = ClientOptions::new().with_toml_config(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert_eq!(
@@ -233,15 +228,14 @@ mod tests {
     }
 
     #[test]
-    fn set_client_options_from_json_ignores_missing_fields() {
-        let json_data = r#"
-        {
-            "session_id": "12345",
-            "encryption_token_XXXX": "foobar"
-        }
+    fn set_client_options_from_toml_ignores_missing_fields() {
+        let config_text = r#"
+        [client]
+        session_id = "12345"
+        encryption_token_XXXX = "foobar"
         "#;
 
-        let options = ClientOptions::new().with_json_config(json_data).unwrap();
+        let options = ClientOptions::new().with_toml_config(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert!(options.puzzle_dir.is_none());
@@ -249,16 +243,15 @@ mod tests {
     }
 
     #[test]
-    fn set_client_options_from_json_ignores_replace_me_values() {
-        let json_data = r#"
-        {
-            "session_id": "REPLACE_ME",
-            "puzzle_dir": "path/to/puzzle/dir",
-            "encryption_token": "REPLACE_ME"
-        }
+    fn set_client_options_from_toml_ignores_replace_me_values() {
+        let config_text = r#"
+        [client]
+        session_id = "REPLACE_ME"
+        puzzle_dir = "path/to/puzzle/dir"
+        encryption_token = "REPLACE_ME"
         "#;
 
-        let options = ClientOptions::new().with_json_config(json_data).unwrap();
+        let options = ClientOptions::new().with_toml_config(config_text).unwrap();
 
         assert!(options.session_id.is_none());
         assert!(options.encryption_token.is_none());
