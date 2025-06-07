@@ -6,6 +6,7 @@ use std::{
 
 // TODO: Switch local directory config name to .advent_of_code_data.toml
 // TODO: Also switch the example file.
+// TODO: User config option for custom user/session cache dir.
 
 const DIRS_QUALIFIER: &str = "com";
 const DIRS_ORG: &str = "smacdo";
@@ -136,16 +137,30 @@ impl ClientOptions {
 
     /// Use the local user's cache directory as the storage location for user
     /// data caching.
-    pub fn with_user_cache(self) -> Self {
-        // TODO: implement XDG lookup.
-        // TODO: check if env variable has changed the user cache dir.
-        // TODO: log if file is found/not found
+    pub fn with_cache(mut self) -> Self {
+        // TODO: user cache env variable.
+        // TODO: puzzle cache env variable.
+        // TODO: document cache behavior.
+
         // TODO: add tests
+
+        // Configure default locations for puzzle and user data caching.
+        if let Some(project_dir) =
+            directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP)
+        {
+            let user_cache_dir = project_dir.cache_dir().join("sessions");
+            self.user_cache_dir = Some(user_cache_dir.to_path_buf());
+
+            let puzzle_cache_dir = project_dir.cache_dir().join("puzzles");
+            self.puzzle_dir = Some(puzzle_cache_dir.to_path_buf());
+        } else {
+            tracing::error!("could not calculate cache directories");
+        }
+
         self
     }
 
     pub fn with_env_vars(mut self) -> Self {
-        // TODO: add key for custom puzzle cache directory.
         const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
         const PASSWORD_ENV_KEY: &str = "AOC_PASSWORD";
 
@@ -244,7 +259,7 @@ impl Default for ClientOptions {
     fn default() -> Self {
         Self::new()
             .with_user_config()
-            .with_user_cache()
+            .with_cache()
             .with_local_dir_config()
             .with_env_vars()
     }

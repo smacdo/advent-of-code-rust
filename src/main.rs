@@ -89,7 +89,7 @@ fn main() {
     // Create the Advent of Code client.
     let client = WebClient::with_options(
         ClientOptions::new()
-            .with_user_cache()
+            .with_cache()
             .with_user_config()
             .with_local_dir_config()
             .with_env_vars(),

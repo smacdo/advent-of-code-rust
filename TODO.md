@@ -17,6 +17,7 @@
 - No warning or error when running a day that doesn't exist
 - No warning for overwriting same day
 - Should not fetch input before succesfully running examples
+- No error when the encryption password is incorrect
 
 # Solution Improvements
 - Day 10
