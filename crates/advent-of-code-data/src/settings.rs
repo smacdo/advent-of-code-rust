@@ -4,6 +4,18 @@ use std::{
     str::FromStr,
 };
 
+// TODO: Switch local directory config name to .advent_of_code_data.toml
+// TODO: Also switch the example file.
+
+const DIRS_QUALIFIER: &str = "com";
+const DIRS_ORG: &str = "smacdo";
+const DIRS_APP: &str = "advent_of_code_data";
+
+const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
+# session_id = "REPLACE_ME"
+# encryption_token = "REPLACE_ME"
+"#;
+
 pub struct ClientOptions {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
@@ -24,8 +36,7 @@ impl ClientOptions {
     }
 
     pub fn with_config_file<P: AsRef<Path>>(self, path: P) -> Self {
-        // TODO: log if file is found/not found
-        // TODO: raise error if TOML parsing fails
+        // TODO: return errors instead of panicing
         // TODO: add tests
         let config_text = fs::read_to_string(&path).expect("config file should exist");
         self.with_toml_config(&config_text)
@@ -48,11 +59,78 @@ impl ClientOptions {
         self
     }
 
-    pub fn with_user_config(self) -> Self {
-        // TODO: implement loading config from path relative to home directory.
-        // TODO: check if env variable has changed the user config path.
-        // TODO: log if file is found/not found
+    pub fn with_user_config(mut self) -> Self {
         // TODO: add tests
+
+        // Read local application configuration.
+        if let Some(project_dir) =
+            directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP)
+        {
+            const EXAMPLE_FILE_NAME: &str = "config.example.toml";
+            const CONFIG_FILE_NAME: &str = "config.toml";
+
+            let config_dir = project_dir.config_dir();
+            let example_config_path = config_dir.join(EXAMPLE_FILE_NAME);
+
+            // Create the application's config dir if its missing.
+            if !std::fs::exists(config_dir).unwrap_or(false) {
+                std::fs::create_dir_all(config_dir).unwrap_or_else(|e| {
+                    tracing::debug!("failed to create app config dir: {e:?}");
+                });
+            }
+
+            // Create an example config file in the user config dir to help
+            // users get started.
+            if !std::fs::exists(&example_config_path).unwrap_or(false) {
+                tracing::debug!("created example config at {example_config_path:?}");
+
+                std::fs::write(example_config_path, EXAMPLE_CONFIG_TEXT).unwrap_or_else(|e| {
+                    tracing::debug!("failed to create example config: {e:?}");
+                });
+            }
+
+            // Load the user config if it exists.
+            let config_path = config_dir.join(CONFIG_FILE_NAME);
+
+            if std::fs::exists(&config_path).unwrap_or(false) {
+                tracing::debug!("loading user config at: {config_path:?}");
+                self = self.with_config_file(config_path);
+            } else {
+                tracing::debug!("no user config found at: {config_path:?}");
+            }
+        } else {
+            tracing::debug!("could not calculate user config dir on this machine");
+        }
+
+        // Read home directory.
+        if let Some(base_dirs) = directories::BaseDirs::new() {
+            const HOME_CONFIG_NAME: &str = ".advent_of_code_data.toml";
+            let home_config_path = base_dirs.home_dir().join(HOME_CONFIG_NAME);
+
+            if std::fs::exists(&home_config_path).unwrap_or(false) {
+                tracing::debug!("loading user config at: {home_config_path:?}");
+                self = self.with_config_file(home_config_path);
+            } else {
+                tracing::debug!("no user config found at: {home_config_path:?}");
+            }
+        }
+
+        // Read custom configuration path from `AOC_CONFIG_PATH`.
+        const CUSTOM_CONFIG_ENV_KEY: &str = "AOC_CONFIG_PATH";
+
+        if let Ok(custom_config_path) = std::env::var(CUSTOM_CONFIG_ENV_KEY) {
+            if std::fs::exists(&custom_config_path).unwrap_or(false) {
+                tracing::debug!("loading user config at: {custom_config_path:?}");
+                self = self.with_config_file(custom_config_path);
+            } else {
+                tracing::debug!("no user config found at: {custom_config_path:?}");
+            }
+        } else {
+            tracing::debug!(
+                "skipping custom user config because env var `{CUSTOM_CONFIG_ENV_KEY}` is not set"
+            );
+        }
+
         self
     }
 
