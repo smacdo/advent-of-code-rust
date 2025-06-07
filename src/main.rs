@@ -158,6 +158,15 @@ fn run_solver_command(
         .days(year)
         .expect("TODO: handle when there are no solvers for the year");
 
+    // Error out if any of the requested days do not have a solver.
+    if let Some(missing_day) = requested_days
+        .iter()
+        .find(|day| !available_days.contains(day))
+    {
+        return Err(AppError::PuzzleDayNotFound(year, *missing_day));
+    }
+
+    // Run a solver for each requested day.
     for requested_day in requested_days {
         if available_days.contains(&requested_day) {
             runner.push(
