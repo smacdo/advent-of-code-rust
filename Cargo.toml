@@ -30,7 +30,6 @@ edition = "2021"
 advent-of-code-data = { path = "./crates/advent-of-code-data" }
 workshop = { path = "./crates/workshop" }
 yuletide = { path = "./crates/yuletide" }
-anyhow.workspace = true
 regex.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
