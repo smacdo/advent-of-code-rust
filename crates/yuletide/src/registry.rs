@@ -106,7 +106,6 @@ impl SolverRegistry {
         let re = Regex::new(r"::y(?<year>\d{4,4})::day(?<day>(\d+))$").unwrap();
 
         for registration in all_solvers.iter() {
-            eprintln!("{}", registration.modpath);
             // Parse the puzzle year and day from the module path.
             let captures = re
                 .captures(registration.modpath)

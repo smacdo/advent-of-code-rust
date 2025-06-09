@@ -72,10 +72,18 @@ enum Commands {
     },
 }
 
+// TODO: Merge all of the no puzzle errors into one, and then provided a better
+// custom formatter to print descriptive errors.
 #[derive(Debug, Clone, Error)]
 pub enum AppError {
-    #[error("no puzzle found for year {} day {}", .0, .1)]
-    PuzzleDayNotFound(Year, Day),
+    #[error("no puzzle solver found for year {} day {}", .0, .1)]
+    SolverNotFound(Year, Day),
+    #[error("no puzzle solvers were found for year {}", .0)]
+    NoSolversForYear(Year),
+    #[error("no puzzle solvers were found")]
+    NoSolversFound,
+    #[error("an error happened while communicating with the Advent of Code service: {}", .0)]
+    ClientError(#[from] advent_of_code_data::client::ClientError),
 }
 
 fn main() -> Result<(), AppError> {
@@ -110,7 +118,9 @@ fn main() -> Result<(), AppError> {
             run_check_command(&solver_registry, client, days, year)
         }
         Some(Commands::Input { day, year }) => {
-            println!("{}", client.get_input(Day(*day), Year(*year)).unwrap());
+            let puzzle_input = client.get_input(Day(*day), Year(*year))?;
+            println!("{puzzle_input}");
+
             Ok(())
         }
         _ => {
@@ -133,37 +143,40 @@ fn run_solver_command(
                 .years()
                 .into_iter()
                 .max()
-                .expect("TODO: handle when there are no solvers")
+                .ok_or(AppError::NoSolversFound)
         },
-        Year,
-    );
+        |year| Ok(Year(year)),
+    )?;
 
     // Use the puzzle day given on the command line, or if not specified find the most
     // recent day in the registry for the selected year.
     let requested_days = days.as_ref().map_or_else(
-        || {
-            vec![solver_registry
+        || -> Result<_, AppError> {
+            Ok(vec![solver_registry
                 .days(year)
-                .expect("TODO: handle when there are no solvers for the year")
+                .ok_or(AppError::NoSolversForYear(year))?
                 .into_iter()
                 .max()
-                .expect("TODO: handle when there are no solvers for the year")]
+                .expect(
+                    "expected only years with at least one solver from SolverRegistry::years()",
+                )])
         },
-        |days| days.iter().map(|d| Day(*d)).collect(),
-    );
+        |days| Ok(days.iter().map(|d| Day(*d)).collect()),
+    )?;
 
     let mut runner =
         SolverRunner::new(Box::new(client), Box::new(ConsoleRunnerEventHandler::new()));
+
     let available_days = solver_registry
         .days(year)
-        .expect("TODO: handle when there are no solvers for the year");
+        .ok_or(AppError::NoSolversForYear(year))?;
 
     // Error out if any of the requested days do not have a solver.
     if let Some(missing_day) = requested_days
         .iter()
         .find(|day| !available_days.contains(day))
     {
-        return Err(AppError::PuzzleDayNotFound(year, *missing_day));
+        return Err(AppError::SolverNotFound(year, *missing_day));
     }
 
     // Run a solver for each requested day.
@@ -172,13 +185,13 @@ fn run_solver_command(
             runner.push(
                 solver_registry
                     .solver(year, requested_day)
-                    .expect("TODO: handle when there are no solvers for this day + year")
+                    .ok_or(AppError::SolverNotFound(year, requested_day))?
                     .clone(),
             );
         }
     }
 
-    runner.run_all();
+    runner.run_all(); // TODO: This should return Result and be changed to ?.
     Ok(())
 }
 
@@ -188,23 +201,28 @@ fn run_check_command(
     days: &Option<Vec<usize>>,
     year: &Option<usize>,
 ) -> Result<(), AppError> {
-    // Iterate all the year(r) and day(s) from the arguments, and save a list
-    // of puzzles that have at least one part with a correct answer in the puzzle
-    // cache.
+    // Iterate all the year(r) and day(s) from the arguments, and save a list of puzzles that have
+    // at least one part with a correct answer in the puzzle cache.
+    //
+    // If no years are given, assume the caller wants to run a check on all years with at least one
+    // solver.
     let mut puzzles: Vec<(Year, Day)> = Vec::new();
 
-    for year in year
-        .map(|y| vec![Year(y)])
-        .unwrap_or_else(|| solver_registry.years())
-    {
+    for year in year.map(|y| vec![Year(y)]).unwrap_or_else(|| {
+        // When the caller does not provide a year, default to every year that
+        // has at least one solver.
+        solver_registry.years()
+    }) {
         for day in days
             .as_ref()
-            .map(|days| days.iter().map(|d| Day(*d)).collect())
+            .map(|days| Ok(days.iter().map(|d| Day(*d)).collect()))
             .unwrap_or_else(|| {
+                // When the daller does not provide a list of days, default to
+                // every day in the year that has a solver.
                 solver_registry
                     .days(year)
-                    .expect("TODO: handle when there are no solvers for the year")
-            })
+                    .ok_or(AppError::NoSolversForYear(year))
+            })?
         {
             for part in [Part::One, Part::Two] {
                 if let Ok(answers) = client.puzzle_cache.load_answers(part, day, year) {
@@ -228,11 +246,11 @@ fn run_check_command(
         runner.push(
             solver_registry
                 .solver(year, day)
-                .expect("TODO: handle when there are no solvers for this day + year")
+                .expect("puzzles array is exepcted to contain only valid year/day values")
                 .clone(),
         );
     }
 
-    runner.run_all();
+    runner.run_all(); // TODO: This should return Result and be changed to ?.
     Ok(())
 }
