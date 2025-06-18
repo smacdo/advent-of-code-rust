@@ -111,28 +111,35 @@ impl PuzzleFsCache {
 
 impl PuzzleCache for PuzzleFsCache {
     fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
-        // Load the cached input file from disk.
+        // Check for common encryption misconfiguration scenarios and warn or return an error
+        // depending on severity.
         let using_encryption = self.encryption_token.is_some();
         let input_path = Self::input_file_path(&self.cache_dir, day, year, using_encryption);
+        let input_path_exists = std::fs::exists(&input_path).unwrap_or(false);
 
-        // Check for the existence or non-existence of the input file, and hint
-        // to the user if encryption seems to be incorrectly configured.
-        if !std::fs::exists(&input_path)? {
-            let alt_input_path =
-                Self::input_file_path(&self.cache_dir, day, year, !using_encryption);
+        let alt_input_path = Self::input_file_path(&self.cache_dir, day, year, !using_encryption);
+        let alt_input_path_exists = std::fs::exists(alt_input_path).unwrap_or(false);
 
-            match (
-                std::fs::exists(&alt_input_path).unwrap_or(false),
-                using_encryption,
-            ) {
-                (true, false) => return Err(CacheError::EncryptionTokenNotSet),
-                (true, true) => return Err(CacheError::EncryptionTokenNotNeeded),
-                _ => {}
+        match (using_encryption, input_path_exists, alt_input_path_exists) {
+            (true, true, true) => {
+                tracing::warn!(
+                    "encrypted and unencrypted input for year {year} day {day} found in cache"
+                );
             }
+            (true, false, true) => return Err(CacheError::EncryptionTokenNotNeeded),
+            (false, true, true) => {
+                tracing::warn!(
+                    "encrypted and unencrypted input for year {year} day {day} found in cache"
+                );
+            }
+            (false, false, true) => return Err(CacheError::EncryptionTokenNotSet),
+            (_, false, _) => return Ok(None),
+            _ => {}
         }
 
-        // Read the input file.
+        // Read the cached input file.
         tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
+
         match std::fs::read_to_string(input_path) {
             Ok(input_text) => {
                 // Check if the input file needs to be decrypted or if it can simply be returned as

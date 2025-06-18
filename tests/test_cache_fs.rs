@@ -5,7 +5,7 @@ use advent_of_code_data::{
 use tempfile::tempdir;
 
 #[test]
-fn persist_puzzle_input() {
+fn load_encrypted_input() {
     let cache_dir = tempdir().unwrap();
     let encryption_token = Some("TEST".to_string());
 
@@ -25,7 +25,7 @@ fn persist_puzzle_input() {
             .unwrap();
     }
 
-    // Read input data back with another temporary client.
+    // Read input data with the same password.
     let read_cached_input = |day: Day, year: Year| {
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache
@@ -44,7 +44,7 @@ fn load_unencrypted_input() {
     let cache_dir = tempdir().unwrap();
     let encryption_token: Option<String> = None;
 
-    // Write input data with a temporary client.
+    // Write input data without a password.
     {
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache
@@ -52,7 +52,7 @@ fn load_unencrypted_input() {
             .unwrap();
     }
 
-    // Read input data back with another temporary client.
+    // Read input data without a password.
     let read_cached_input = |day: Day, year: Year| {
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
         puzzle_cache
@@ -67,7 +67,7 @@ fn load_unencrypted_input() {
 }
 
 #[test]
-fn load_input_exists() {
+fn load_input_returns_some_if_cache_exists() {
     let cache_dir = tempdir().unwrap();
     let encryption_token = Some("TEST".to_string());
 
@@ -94,7 +94,7 @@ fn load_input_exists() {
 }
 
 #[test]
-fn load_missing_puzzle_input() {
+fn load_input_returns_none_if_cache_not_found() {
     let cache_dir = tempdir().unwrap();
     let encryption_token = Some("TEST".to_string());
 
@@ -119,7 +119,7 @@ fn load_input_err_if_wrong_password() {
             .unwrap();
     }
 
-    // Read input data back with another temporary client.
+    // Read input data with the wrong encryption password.
     let read_cached_input = |day: Day, year: Year| {
         let encryption_token = Some("wrong password".to_string());
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
@@ -145,7 +145,7 @@ fn load_input_err_if_password_missing() {
             .unwrap();
     }
 
-    // Read input data back with another temporary client.
+    // Read input data without an encryption password.
     let read_cached_input = |day: Day, year: Year| {
         let encryption_token: Option<String> = None;
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
@@ -159,10 +159,10 @@ fn load_input_err_if_password_missing() {
 }
 
 #[test]
-fn load_input_err_uses_unencrypted_input_if_possible() {
+fn load_input_err_if_password_provided_but_input_not_encrypted() {
     let cache_dir = tempdir().unwrap();
 
-    // Write encrypted input data with a temporary client.
+    // Write unencrypted input data with a temporary client.
     {
         let encryption_token: Option<String> = None;
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
@@ -171,7 +171,7 @@ fn load_input_err_uses_unencrypted_input_if_possible() {
             .unwrap();
     }
 
-    // Read input data back with another temporary client.
+    // Read input data with an encryption password.
     let read_cached_input = |day: Day, year: Year| {
         let encryption_token = Some("TEST".to_string());
         let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
