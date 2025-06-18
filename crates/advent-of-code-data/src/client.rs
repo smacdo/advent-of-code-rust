@@ -127,8 +127,6 @@ impl Client for WebClient {
     fn get_input(&self, day: Day, year: Year) -> Result<String, ClientError> {
         tracing::trace!("get_input(day=`{day}`, year=`{year}`)",);
 
-        // TODO: Convert expects and unwraps into errors.
-
         // Check if the input for this puzzle is cached locally before fetching
         // it from the Advent of Code service.
         if let Some(input) = self
@@ -144,7 +142,7 @@ impl Client for WebClient {
 
         // Cache the puzzle input on disk before returning to avoid repeatedly
         // fetching input from the Advent of Code service.
-        self.puzzle_cache.save_input(&input, day, year).unwrap();
+        self.puzzle_cache.save_input(&input, day, year)?;
         Ok(input)
     }
 
@@ -155,7 +153,6 @@ impl Client for WebClient {
         day: Day,
         year: Year,
     ) -> Result<CheckResult, ClientError> {
-        // TODO: Convert expects and unwraps into errors.
         tracing::trace!(
             "submit_answer(answer=`{:?}`, part=`{}`, day=`{}`, year=`{}`)",
             answer,
@@ -180,7 +177,7 @@ impl Client for WebClient {
 
         // Check if there is an active time out on new submissions prior to
         // submitting to the advent of code service.
-        let mut user = self.user_cache.load(&self.config.session_id).unwrap();
+        let mut user = self.user_cache.load(&self.config.session_id)?;
 
         if let Some(submit_wait_until) = user.submit_wait_until {
             if self.config.start_time <= submit_wait_until {
@@ -204,7 +201,7 @@ impl Client for WebClient {
             tracing::debug!("setting time to wait ({time_to_wait}) to be {wait_until}");
 
             user.submit_wait_until = Some(wait_until);
-            self.user_cache.save(&user).unwrap();
+            self.user_cache.save(&user)?;
         }
 
         // Write the response to the answers database and then save it back to
@@ -228,11 +225,8 @@ impl Client for WebClient {
             }
         };
 
-        // TODO: Report errors.
         tracing::debug!("Saving answers database to puzzle cache");
-        self.puzzle_cache
-            .save_answers(&answers, part, day, year)
-            .unwrap();
+        self.puzzle_cache.save_answers(&answers, part, day, year)?;
 
         Ok(check_result)
     }

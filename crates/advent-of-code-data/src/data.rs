@@ -248,6 +248,7 @@ impl Answers {
     pub fn deserialize<R: Read>(
         reader: &mut BufReader<R>,
     ) -> Result<Self, AnswerDeserializationError> {
+        // TODO: Convert unwrap/expect into Errors
         // TODO: Write tests.
         let mut answers = Answers::new();
 
