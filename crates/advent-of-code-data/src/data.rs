@@ -1,9 +1,8 @@
-use std::{
-    io::{BufRead, BufReader, BufWriter, Read, Write},
-    str::FromStr,
-};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use thiserror::Error;
 
 use crate::{Answer, Day, Part, Year};
 
@@ -240,14 +239,16 @@ impl Answers {
         }
     }
 
-    pub fn deserialize_from_str(text: &str) -> Self {
-        // TODO: Convert unwraps to Errors.
+    pub fn deserialize_from_str(text: &str) -> Result<Self, AnswerDeserializationError> {
+        // TODO: Write tests.
         let mut buf = BufReader::new(text.as_bytes());
         Self::deserialize(&mut buf)
     }
 
-    pub fn deserialize<R: Read>(reader: &mut BufReader<R>) -> Self {
-        // TODO: Convert unwraps to Errors.
+    pub fn deserialize<R: Read>(
+        reader: &mut BufReader<R>,
+    ) -> Result<Self, AnswerDeserializationError> {
+        // TODO: Write tests.
         let mut answers = Answers::new();
 
         // Each line in the input string is an entry in the answers database.
@@ -255,32 +256,40 @@ impl Answers {
         // following the space hold the answer value.
         for line in reader.lines() {
             let line = line.unwrap();
-            let (ty, value) = line.split_once(' ').unwrap();
+            let (ty, value) = line
+                .split_once(' ')
+                .ok_or_else(|| AnswerDeserializationError::UnknownLineFormat(line.clone()))?;
 
             match ty.chars().next().unwrap() {
                 CORRECT_ANSWER_CHAR => {
-                    answers.set_correct_answer(Answer::from_str(value).unwrap());
+                    answers.set_correct_answer(
+                        Answer::from_str(value).expect("Answer::from_str does not return Err"),
+                    );
                 }
                 WRONG_ANSWER_CHAR => {
-                    answers.add_wrong_answer(Answer::from_str(value).unwrap());
+                    answers.add_wrong_answer(
+                        Answer::from_str(value).expect("Answer::from_str does not return Err"),
+                    );
                 }
                 LOW_ANSWER_CHAR => {
-                    let low = value.parse::<i128>().expect("low bounds value must be int");
+                    let low = value.parse::<i128>().map_err(|_| {
+                        AnswerDeserializationError::LowBoundRequiresInt(value.to_string())
+                    })?;
                     answers.set_low_bounds(Answer::Int(low));
                 }
                 HIGH_ANSWER_CHAR => {
-                    let high = value
-                        .parse::<i128>()
-                        .expect("high bounds value must be int");
+                    let high = value.parse::<i128>().map_err(|_| {
+                        AnswerDeserializationError::HighBoundRequiresInt(value.to_string())
+                    })?;
                     answers.set_high_bounds(Answer::Int(high));
                 }
-                _ => {
-                    panic!("unknown answer entry type when deserializing");
+                c => {
+                    return Err(AnswerDeserializationError::UnknownAnswerType(c));
                 }
             }
         }
 
-        answers
+        Ok(answers)
     }
 }
 
@@ -288,6 +297,27 @@ impl Default for Answers {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[derive(Debug, Error)]
+pub enum AnswerDeserializationError {
+    #[error(
+        "expected type char followed by a space followed by the answer value, but got `{}`", .0
+    )]
+    UnknownLineFormat(String),
+    #[error(
+        "unknown answer type char `{}` when deserializing (expected `{}`, `{}`, `{}`, or `{}`)",
+        .0,
+        CORRECT_ANSWER_CHAR,
+        WRONG_ANSWER_CHAR,
+        LOW_ANSWER_CHAR,
+        HIGH_ANSWER_CHAR
+    )]
+    UnknownAnswerType(char),
+    #[error("the low bound answer `{}` must be parsable as an i128 integer", .0)]
+    LowBoundRequiresInt(String),
+    #[error("the high bound answer `{}` must be parsable as an i128 integer", .0)]
+    HighBoundRequiresInt(String),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -307,6 +337,7 @@ impl User {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -574,7 +605,9 @@ mod tests {
 
     #[test]
     fn deserialize_answers_from_text() {
-        let answers = Answers::deserialize_from_str("= 12\n[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
+        let answers = Answers::deserialize_from_str("= 12\n[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n")
+            .expect("no deserialization errors exepcted");
+
         assert_eq!(
             answers,
             Answers {
@@ -593,7 +626,9 @@ mod tests {
 
     #[test]
     fn deserialize_answers_to_text_with_no_correct() {
-        let answers = Answers::deserialize_from_str("[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n");
+        let answers = Answers::deserialize_from_str("[ -50\n] 25\nX -9\nX 1\nX 100\nX xyz\n")
+            .expect("no deserialization errors exepcted");
+
         assert_eq!(
             answers,
             Answers {
@@ -612,7 +647,9 @@ mod tests {
 
     #[test]
     fn deserialize_answers_to_text_with_missing_correct_and_high() {
-        let answers = Answers::deserialize_from_str("[ -50\nX -9\nX 1\nX 100\nX xyz\n");
+        let answers = Answers::deserialize_from_str("[ -50\nX -9\nX 1\nX 100\nX xyz\n")
+            .expect("no deserialization errors exepcted");
+
         assert_eq!(
             answers,
             Answers {
@@ -631,7 +668,9 @@ mod tests {
 
     #[test]
     fn deserialize_answers_with_spaces() {
-        let answers = Answers::deserialize_from_str("= hello world\nX foobar\nX one two three\n");
+        let answers = Answers::deserialize_from_str("= hello world\nX foobar\nX one two three\n")
+            .expect("no deserialization errors exepcted");
+
         assert_eq!(
             answers,
             Answers {

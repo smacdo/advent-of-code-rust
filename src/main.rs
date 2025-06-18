@@ -225,7 +225,7 @@ fn run_check_command(
             })?
         {
             for part in [Part::One, Part::Two] {
-                if let Ok(answers) = client.puzzle_cache.load_answers(part, day, year) {
+                if let Ok(Some(answers)) = client.puzzle_cache.load_answers(part, day, year) {
                     if answers.correct_answer_ref().is_some() {
                         puzzles.push((year, day));
                     }

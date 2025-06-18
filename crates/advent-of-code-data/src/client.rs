@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
-    data::{CheckResult, Puzzle},
+    data::{Answers, CheckResult, Puzzle},
     settings::ClientOptions,
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
@@ -29,7 +29,7 @@ pub enum ClientError {
     #[error("an unexpected HTTP {} error was returned by the Advent of Code service", .0)]
     Http(reqwest::StatusCode),
     #[error("an unexpected error {} error happened when reading cached data", .0)]
-    CacheError(CacheError),
+    CacheError(#[from] CacheError),
 }
 
 pub trait Client {
@@ -164,21 +164,19 @@ impl Client for WebClient {
             year
         );
 
-        // Check the cache to see if this answer can be checked locally without
-        // having to hit the server.
-        //
-        // TODO: Warn if the input isn't available because it's likely something
-        //       went wrong if we're submitting an answer without having cached
-        //       the input.
-        let mut answers = self
-            .puzzle_cache
-            .load_answers(part, day, year)
-            .unwrap_or_default();
+        // Check the cache to see if this answer can be checked locally without having to hit the
+        // server. If the cache is not set then create a new answers dataset.
+        let mut answers = match self.puzzle_cache.load_answers(part, day, year)? {
+            Some(cached_answers) => {
+                if let Some(check_result) = cached_answers.check(&answer) {
+                    tracing::debug!("answer check result was found in the cache {check_result:?}");
+                    return Ok(check_result);
+                }
 
-        if let Some(check_result) = answers.check(&answer) {
-            tracing::debug!("answer check result was found in the cache {check_result:?}");
-            return Ok(check_result);
-        }
+                cached_answers
+            }
+            _ => Answers::new(),
+        };
 
         // Check if there is an active time out on new submissions prior to
         // submitting to the advent of code service.

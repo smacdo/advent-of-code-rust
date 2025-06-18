@@ -1,6 +1,7 @@
 use advent_of_code_data::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache},
-    Day, Year,
+    data::{Answers, CheckResult},
+    Answer, Day, Part, Year,
 };
 use tempfile::tempdir;
 
@@ -182,4 +183,92 @@ fn load_input_err_if_password_provided_but_input_not_encrypted() {
         read_cached_input(Day(19), Year(2000)),
         Err(CacheError::EncryptionTokenNotNeeded)
     ));
+}
+
+#[test]
+fn load_answers_cache_exists() {
+    let cache_dir = tempdir().unwrap();
+
+    // Save answers for part one to cache.
+    {
+        let encryption_token: Option<String> = None;
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let mut answers = Answers::new();
+
+        answers.set_correct_answer(Answer::Int(42));
+        answers.add_wrong_answer(Answer::from("nope"));
+
+        puzzle_cache
+            .save_answers(&answers, Part::One, Day(19), Year(2000))
+            .expect("no errors expected when saving answers to cache")
+    }
+
+    // Save answers for part two to cache.
+    {
+        let encryption_token: Option<String> = None;
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let mut answers = Answers::new();
+
+        answers.set_correct_answer(Answer::from("hello world"));
+        answers.set_high_bounds(Answer::Int(100000));
+        answers.add_wrong_answer(Answer::Int(12345));
+
+        puzzle_cache
+            .save_answers(&answers, Part::Two, Day(19), Year(2000))
+            .expect("no errors expected when saving answers to cache")
+    }
+
+    // Load answers back from cache.
+    let read_cached_input = |part: Part, day: Day, year: Year| {
+        let encryption_token = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        puzzle_cache
+            .load_answers(part, day, year)
+            .expect("errors not expected when loading answers from cache")
+    };
+
+    let answers_part_one = read_cached_input(Part::One, Day(19), Year(2000))
+        .expect("answers for part one is expected to be in the cache");
+
+    assert_eq!(
+        answers_part_one.check(&Answer::Int(42)),
+        Some(CheckResult::Correct)
+    );
+    assert_eq!(
+        answers_part_one.check(&Answer::from("nope")),
+        Some(CheckResult::Wrong)
+    );
+
+    let answers_part_two = read_cached_input(Part::Two, Day(19), Year(2000))
+        .expect("answers for part two is expected to be in the cache");
+
+    assert_eq!(
+        answers_part_two.check(&Answer::from("hello world")),
+        Some(CheckResult::Correct)
+    );
+    assert_eq!(
+        answers_part_two.check(&Answer::Int(100000)),
+        Some(CheckResult::TooHigh)
+    );
+    assert_eq!(
+        answers_part_two.check(&Answer::Int(12345)),
+        Some(CheckResult::Wrong)
+    );
+}
+
+#[test]
+fn load_answers_returns_none_if_cache_missing() {
+    let cache_dir = tempdir().unwrap();
+
+    // Load answers back from cache.
+    let read_cached_input = |part: Part, day: Day, year: Year| {
+        let encryption_token = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        puzzle_cache
+            .load_answers(part, day, year)
+            .expect("errors not expected when loading answers from cache")
+    };
+
+    assert!(read_cached_input(Part::One, Day(19), Year(2000)).is_none());
+    assert!(read_cached_input(Part::Two, Day(19), Year(2000)).is_none());
 }

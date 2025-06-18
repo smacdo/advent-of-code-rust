@@ -31,13 +31,15 @@ pub enum CacheError {
     JsonSerde(#[from] serde_json::Error),
     #[error("a file i/o error occured while reading/writing the cache: {}", .0)]
     Io(#[from] std::io::Error),
+    #[error("an error occurred while parsing a cached answer dataset: {}", .0)]
+    AnswerParsing(#[from] crate::data::AnswerDeserializationError),
 }
 
 pub trait PuzzleCache: Debug {
     fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError>;
 
-    // TODO: Option<Answers>
-    fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError>;
+    fn load_answers(&self, part: Part, day: Day, year: Year)
+        -> Result<Option<Answers>, CacheError>;
 
     // TODO: Option<Puzzle>
     fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError>;
@@ -167,22 +169,34 @@ impl PuzzleCache for PuzzleFsCache {
         }
     }
 
-    fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError> {
-        Ok(Answers::deserialize_from_str(&std::fs::read_to_string(
-            Self::answers_file_path(&self.cache_dir, part, day, year),
-        )?))
+    fn load_answers(
+        &self,
+        part: Part,
+        day: Day,
+        year: Year,
+    ) -> Result<Option<Answers>, CacheError> {
+        match std::fs::read_to_string(Self::answers_file_path(&self.cache_dir, part, day, year)) {
+            Ok(answers_data) => Ok(Some(Answers::deserialize_from_str(&answers_data)?)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(CacheError::Io(e)),
+        }
     }
 
     fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError> {
-        // TODO: Create default input or answers if the files don't exist.
+        // TODO: Set individual fields to `None` when cache missing, or return `None` if all fields
+        // mising.
         Ok(Puzzle {
             day,
             year,
             input: self
                 .load_input(day, year)?
                 .expect("TODO: handle when input was not cached"),
-            part_one_answers: self.load_answers(Part::One, day, year)?,
-            part_two_answers: self.load_answers(Part::Two, day, year)?,
+            part_one_answers: self
+                .load_answers(Part::One, day, year)?
+                .expect("TODO: handle when answer not cached"),
+            part_two_answers: self
+                .load_answers(Part::Two, day, year)?
+                .expect("TODO: handle when answer not cached"),
         })
     }
 
