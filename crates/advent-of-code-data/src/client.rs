@@ -43,7 +43,7 @@ pub trait Client {
         day: Day,
         year: Year,
     ) -> Result<CheckResult, ClientError>;
-    fn get_puzzle(&self, day: Day, year: Year) -> Puzzle;
+    fn get_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, ClientError>;
 }
 
 #[derive(Debug)]
@@ -237,8 +237,20 @@ impl Client for WebClient {
         Ok(check_result)
     }
 
-    fn get_puzzle(&self, day: Day, year: Year) -> Puzzle {
-        self.puzzle_cache.load_puzzle(day, year).unwrap()
+    fn get_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, ClientError> {
+        Ok(Puzzle {
+            day,
+            year,
+            input: self.get_input(day, year)?,
+            part_one_answers: self
+                .puzzle_cache
+                .load_answers(Part::One, day, year)?
+                .unwrap_or_default(),
+            part_two_answers: self
+                .puzzle_cache
+                .load_answers(Part::Two, day, year)?
+                .unwrap_or_default(),
+        })
     }
 
     // TODO: personal leaderboard

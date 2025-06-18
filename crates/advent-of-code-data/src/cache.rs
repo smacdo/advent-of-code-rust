@@ -41,9 +41,6 @@ pub trait PuzzleCache: Debug {
     fn load_answers(&self, part: Part, day: Day, year: Year)
         -> Result<Option<Answers>, CacheError>;
 
-    // TODO: Option<Puzzle>
-    fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError>;
-
     fn save(&self, puzzle: Puzzle) -> Result<(), CacheError> {
         self.save_input(&puzzle.input, puzzle.day, puzzle.year)?;
         self.save_answers(&puzzle.part_one_answers, Part::One, puzzle.day, puzzle.year)?;
@@ -180,24 +177,6 @@ impl PuzzleCache for PuzzleFsCache {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(e) => Err(CacheError::Io(e)),
         }
-    }
-
-    fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError> {
-        // TODO: Set individual fields to `None` when cache missing, or return `None` if all fields
-        // mising.
-        Ok(Puzzle {
-            day,
-            year,
-            input: self
-                .load_input(day, year)?
-                .expect("TODO: handle when input was not cached"),
-            part_one_answers: self
-                .load_answers(Part::One, day, year)?
-                .expect("TODO: handle when answer not cached"),
-            part_two_answers: self
-                .load_answers(Part::Two, day, year)?
-                .expect("TODO: handle when answer not cached"),
-        })
     }
 
     fn save(&self, puzzle: Puzzle) -> Result<(), CacheError> {
