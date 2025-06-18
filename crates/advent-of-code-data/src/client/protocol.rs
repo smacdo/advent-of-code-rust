@@ -215,25 +215,3 @@ impl AdventOfCodeHttpProtocol {
         })
     }
 }
-
-#[derive(Debug)]
-pub struct MockAdventOfCodeProtocol {
-    input_response: Option<Result<String, ClientError>>,
-    submit_response: Option<Result<(CheckResult, Option<Duration>), ClientError>>,
-}
-
-impl AdventOfCodeProtocol for MockAdventOfCodeProtocol {
-    fn get_input(&self, _day: Day, _year: Year) -> Result<String, ClientError> {
-        self.input_response.clone().unwrap()
-    }
-
-    fn submit_answer(
-        &self,
-        _answer: &Answer,
-        _part: Part,
-        _day: Day,
-        _year: Year,
-    ) -> Result<(CheckResult, Option<Duration>), ClientError> {
-        self.submit_response.clone().unwrap()
-    }
-}

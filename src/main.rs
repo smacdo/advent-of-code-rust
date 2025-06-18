@@ -74,7 +74,7 @@ enum Commands {
 
 // TODO: Merge all of the no puzzle errors into one, and then provided a better
 // custom formatter to print descriptive errors.
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Error)]
 pub enum AppError {
     #[error("no puzzle solver found for year {} day {}", .0, .1)]
     SolverNotFound(Year, Day),

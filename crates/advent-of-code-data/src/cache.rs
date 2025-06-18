@@ -34,12 +34,12 @@ pub enum CacheError {
 }
 
 pub trait PuzzleCache: Debug {
-    fn try_load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError>;
+    fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError>;
 
-    fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError>;
-
+    // TODO: Option<Answers>
     fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError>;
 
+    // TODO: Option<Puzzle>
     fn load_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, CacheError>;
 
     fn save(&self, puzzle: Puzzle) -> Result<(), CacheError> {
@@ -110,15 +110,7 @@ impl PuzzleFsCache {
 }
 
 impl PuzzleCache for PuzzleFsCache {
-    fn try_load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
-        match self.load_input(day, year) {
-            Ok(input) => Ok(Some(input)),
-            Err(CacheError::Io(error)) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn load_input(&self, day: Day, year: Year) -> Result<String, CacheError> {
+    fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
         // Load the cached input file from disk.
         let using_encryption = self.encryption_token.is_some();
         let input_path = Self::input_file_path(&self.cache_dir, day, year, using_encryption);
@@ -141,21 +133,31 @@ impl PuzzleCache for PuzzleFsCache {
 
         // Read the input file.
         tracing::debug!("loading input for day {day} year {year} from {input_path:?}");
-        let mut input_text = std::fs::read_to_string(input_path)?;
+        match std::fs::read_to_string(input_path) {
+            Ok(input_text) => {
+                // Check if the input file needs to be decrypted or if it can simply be returned as
+                // is.
+                if let Some(encryption_token) = &self.encryption_token {
+                    // Input needs decryption.
+                    let encrypted_bytes = BASE64_STANDARD
+                        .decode(input_text.as_bytes())
+                        .map_err(CacheError::DecodeBase64)?;
+                    let input_bytes = decrypt(&encrypted_bytes, encryption_token.as_bytes())
+                        .map_err(CacheError::Decryption)?;
+                    let decrypted_input_text =
+                        String::from_utf8(input_bytes).map_err(CacheError::DecodeUtf8)?;
 
-        // Decrypt the input data.
-        if let Some(encryption_token) = &self.encryption_token {
-            let encrypted_bytes = BASE64_STANDARD
-                .decode(input_text.as_bytes())
-                .map_err(CacheError::DecodeBase64)?;
-            let input_bytes = decrypt(&encrypted_bytes, encryption_token.as_bytes())
-                .map_err(CacheError::Decryption)?;
-            input_text = String::from_utf8(input_bytes).map_err(CacheError::DecodeUtf8)?;
+                    tracing::debug!("succesfully decrypted input for puzzle day {day} year {year}");
 
-            tracing::debug!("succesfully decrypted input for puzzle day {day} year {year}")
+                    Ok(Some(decrypted_input_text))
+                } else {
+                    // Input does not need decryption.
+                    Ok(Some(input_text))
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(CacheError::Io(e)),
         }
-
-        Ok(input_text)
     }
 
     fn load_answers(&self, part: Part, day: Day, year: Year) -> Result<Answers, CacheError> {
@@ -169,7 +171,9 @@ impl PuzzleCache for PuzzleFsCache {
         Ok(Puzzle {
             day,
             year,
-            input: self.load_input(day, year)?,
+            input: self
+                .load_input(day, year)?
+                .expect("TODO: handle when input was not cached"),
             part_one_answers: self.load_answers(Part::One, day, year)?,
             part_two_answers: self.load_answers(Part::Two, day, year)?,
         })

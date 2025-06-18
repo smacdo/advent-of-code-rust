@@ -7,14 +7,14 @@ use protocol::{AdventOfCodeHttpProtocol, AdventOfCodeProtocol};
 use thiserror::Error;
 
 use crate::{
-    cache::{PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
+    cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
     data::{CheckResult, Puzzle},
     settings::ClientOptions,
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
 };
 
-#[derive(Debug, Clone, Error)]
+#[derive(Debug, Error)]
 pub enum ClientError {
     #[error("the answer was submitted too soon, please wait until {} trying again", .0)]
     TooSoon(chrono::DateTime<chrono::Utc>),
@@ -28,6 +28,8 @@ pub enum ClientError {
     AlreadySubmittedAnswer(Day, Year),
     #[error("an unexpected HTTP {} error was returned by the Advent of Code service", .0)]
     Http(reqwest::StatusCode),
+    #[error("an unexpected error {} error happened when reading cached data", .0)]
+    CacheError(CacheError),
 }
 
 pub trait Client {
@@ -129,7 +131,11 @@ impl Client for WebClient {
 
         // Check if the input for this puzzle is cached locally before fetching
         // it from the Advent of Code service.
-        if let Ok(input) = self.puzzle_cache.load_input(day, year) {
+        if let Some(input) = self
+            .puzzle_cache
+            .load_input(day, year)
+            .map_err(ClientError::CacheError)?
+        {
             return Ok(input);
         }
 

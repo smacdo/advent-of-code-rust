@@ -16,7 +16,11 @@
 # Bugs
 - No warning for overwriting same day
 - Should not fetch input before succesfully running examples
-- No error when the encryption password is incorrect
+- AOC session should not be required until input or answer submission invoked
+
+# Missing Tests
+- Client returns encryption error if cached input is encrypted with different password
+- Client returns encryption error if cached input is (un)encrypted and password is (un)set
 
 # Solution Improvements
 - Day 10
