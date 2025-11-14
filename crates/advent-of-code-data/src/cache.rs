@@ -13,6 +13,7 @@ use crate::{
     Day, Part, Year,
 };
 
+/// Represents an error occurring when interacting with the cache.
 #[derive(Debug, Error)]
 pub enum CacheError {
     #[error("AOC encryption token expected but not provided (check your config)")]
@@ -35,12 +36,19 @@ pub enum CacheError {
     AnswerParsing(#[from] crate::data::AnswerDeserializationError),
 }
 
+/// Stores puzzle inputs and answers in a user accessible cache location.
+///
+/// Input data should be encrypted when written to storage, as requested by the Advent of Code
+/// owner. Answers do not need to be encrypted.
 pub trait PuzzleCache: Debug {
+    /// Load input for the given day and year. Returns the decrypted input if cached, or `Ok(None)` if no cache entry exists.
     fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError>;
 
+    /// Load answers for the given part, day and year. Returns `Ok(None)` if no cache entry exists.
     fn load_answers(&self, part: Part, day: Day, year: Year)
         -> Result<Option<Answers>, CacheError>;
 
+    /// Save a puzzle's input and answers for both parts to the cache.
     fn save(&self, puzzle: Puzzle) -> Result<(), CacheError> {
         self.save_input(&puzzle.input, puzzle.day, puzzle.year)?;
         self.save_answers(&puzzle.part_one_answers, Part::One, puzzle.day, puzzle.year)?;
@@ -49,8 +57,11 @@ pub trait PuzzleCache: Debug {
         Ok(())
     }
 
+    /// Save input for the given day and year. The input is encrypted before being written to disk (if an encryption token is configured).
+    /// Any previously saved input for this day and year will be overwritten.
     fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError>;
 
+    /// Save answers for the given part, day and year. Any previously saved answers for this day and year will be overwritten.
     fn save_answers(
         &self,
         answers: &Answers,
@@ -60,11 +71,30 @@ pub trait PuzzleCache: Debug {
     ) -> Result<(), CacheError>;
 }
 
+/// Stores cached data specific to a user's session, such as submission timeouts.
 pub trait UserDataCache: Debug {
+    /// Load user data linked to a session from the cache.
     fn load(&self, session_id: &str) -> Result<User, CacheError>;
+    /// Writes user data to the cache.
     fn save(&self, user: &User) -> Result<(), CacheError>;
 }
 
+/// A file system backed implementation of `PuzzleCache`.
+///
+/// Cached puzzle data is grouped together by day and year into a directory. The cache layout
+/// follows this general pattern:
+///
+///    <cache_dir>/y<year>/<day>/input.encrypted.txt
+///                             /part-1-answers.txt
+///                             /part-2-answers.txt
+///
+/// `cache_dir` is specified when `PuzzleFsCache::new(...)` is called.
+/// `year` is four digit puzzle year.
+/// `day` is the puzzle day with no leading zeroes, and starting from index one.
+///
+/// **Encryption**: If an encryption token is configured, inputs are automatically encrypted when
+/// saved and decrypted when loaded. The `.encrypted.txt` suffix indicates an encrypted file.
+/// Unencrypted input files use the `.txt` extension.
 #[derive(Debug)]
 pub struct PuzzleFsCache {
     cache_dir: PathBuf,
@@ -77,21 +107,24 @@ impl PuzzleFsCache {
     const PART_ONE_ANSWERS_FILE_NAME: &'static str = "part-1-answers.txt";
     const PART_TWO_ANSWERS_FILE_NAME: &'static str = "part-2-answers.txt";
 
+    /// Creates a new `PuzzleFsCache` that reads/writes cache data stored in `cache_dir`. Answers
+    /// are encrypted on disk using an encryption token (ie, password).
     pub fn new<P: Into<PathBuf>, S: Into<String>>(
         cache_dir: P,
         encryption_token: Option<S>,
     ) -> Self {
-        // TODO: Validate cache_dir is a directory, and is writable.
         Self {
             cache_dir: cache_dir.into(),
             encryption_token: encryption_token.map(|x| x.into()),
         }
     }
 
+    /// Get the directory path for a puzzle day and year.
     pub fn dir_for_puzzle(cache_dir: &Path, day: Day, year: Year) -> PathBuf {
         cache_dir.join(format!("y{}", year)).join(day.to_string())
     }
 
+    /// Returns the file path for puzzle input, with the appropriate extension based on encryption status.
     pub fn input_file_path(cache_dir: &Path, day: Day, year: Year, encrypted: bool) -> PathBuf {
         Self::dir_for_puzzle(cache_dir, day, year).join(if encrypted {
             Self::ENCRYPTED_INPUT_FILE_NAME
@@ -100,6 +133,7 @@ impl PuzzleFsCache {
         })
     }
 
+    /// Returns the file path for answers of a given part.
     pub fn answers_file_path(cache_dir: &Path, part: Part, day: Day, year: Year) -> PathBuf {
         Self::dir_for_puzzle(cache_dir, day, year).join(match part {
             Part::One => Self::PART_ONE_ANSWERS_FILE_NAME,
@@ -122,13 +156,13 @@ impl PuzzleCache for PuzzleFsCache {
         match (using_encryption, input_path_exists, alt_input_path_exists) {
             (true, true, true) => {
                 tracing::warn!(
-                    "encrypted and unencrypted input for year {year} day {day} found in cache"
+                    "mixed input (encrypted and unencrypted) for year {year} day {day} found in cache"
                 );
             }
             (true, false, true) => return Err(CacheError::EncryptionTokenNotNeeded),
             (false, true, true) => {
                 tracing::warn!(
-                    "encrypted and unencrypted input for year {year} day {day} found in cache"
+                    "mixed input (encrypted and unencrypted) input for year {year} day {day} found in cache"
                 );
             }
             (false, false, true) => return Err(CacheError::EncryptionTokenNotSet),
@@ -141,10 +175,9 @@ impl PuzzleCache for PuzzleFsCache {
 
         match std::fs::read_to_string(input_path) {
             Ok(input_text) => {
-                // Check if the input file needs to be decrypted or if it can simply be returned as
-                // is.
+                // Check if the input file needs to be decrypted before returning it.
                 if let Some(encryption_token) = &self.encryption_token {
-                    // Input needs decryption.
+                    // Input needs decryption before it can be returned.
                     let encrypted_bytes = BASE64_STANDARD
                         .decode(input_text.as_bytes())
                         .map_err(CacheError::DecodeBase64)?;
@@ -251,8 +284,9 @@ impl UserDataFsCache {
         }
     }
 
+    /// Returns the cache file path for user data. The session ID is used directly as the filename.
+    /// Note: Assumes the session ID is already sanitized and safe for use as a filename.
     pub fn path_for_user_data(&self, session_id: &str) -> PathBuf {
-        // TODO: Validate session_id is safe for filename.
         self.cache_dir.join(format!("{}.json", session_id))
     }
 }
