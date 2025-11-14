@@ -14,28 +14,72 @@ use crate::{
     Answer, Day, Part, Year,
 };
 
+/// Errors that can occur when interacting with the Advent of Code service.
 #[derive(Debug, Error)]
 pub enum ClientError {
+    /// The answer was submitted too soon. The `DateTime` indicates when submission will be allowed.
     #[error("the answer was submitted too soon, please wait until {} trying again", .0)]
     TooSoon(chrono::DateTime<chrono::Utc>),
+    /// The session ID is invalid or has expired.
     #[error("the session id `{}` is invalid or has expired", .0)]
     BadSessionId(String),
+    /// The puzzle for the given day and year could not be found.
     #[error("a puzzle could not be found for day {} year {}", .0, .1)]
     PuzzleNotFound(Day, Year),
+    /// A submission timeout is active; the `Duration` indicates how long to wait before retrying.
     #[error("please wait {} before submitting another answer to the Advent of Code service", .0)]
     SubmitTimeOut(chrono::Duration),
+    /// A correct answer has already been submitted for this puzzle.
     #[error("a correct answer has already been submitted for day {} year {}", .0, .1)]
     AlreadySubmittedAnswer(Day, Year),
+    /// An unexpected HTTP error was returned by the Advent of Code service.
     #[error("an unexpected HTTP {} error was returned by the Advent of Code service", .0)]
     Http(reqwest::StatusCode),
+    /// An error occurred while reading cached data.
     #[error("an unexpected error {} error happened when reading cached data", .0)]
     CacheError(#[from] CacheError),
 }
 
+/// Primary abstraction for interacting with the Advent of Code service.
+///
+/// This trait provides methods to fetch puzzle inputs, submit answers, and retrieve cached puzzle
+/// data. Implementors of this trait must cache inputs and answers to minimize requests to the AoC
+/// service.
+///
+/// # Caching Behavior
+///
+/// - **Inputs** are cached with encryption (configured at client creation). `get_input()` returns
+///   cached data if possible.
+/// - **Answers** are cached unencrypted. `submit_answer()` checks the cache first before submitting
+///   to the service.
+/// - **Submission timeouts** are persisted and enforced by the client. If a submission fails with a
+///   retry timeout, the client will refuse further submissions until the timeout expires.
+///
+/// # Timezone Handling
+///
+/// The client uses **Eastern Time (UTC-5/-4)** for determining puzzle availability, matching the
+/// Advent of Code event timezone. Internally, times are stored in UTC. Puzzle availability is based
+/// on the Eastern Time date/time.
+///
+/// # Submission Constraints
+///
+/// The Advent of Code service enforces rate limiting on answer submissions:
+/// - You can submit one answer per puzzle part per minute.
+/// - After submitting an incorrect answer, you must wait an increasing duration before the next
+///   attempt.
+/// - After submitting a correct answer, that part is locked and cannot be resubmitted.
 pub trait Client {
+    /// Returns the list of available puzzle years starting at 2015. The current year is included
+    /// when the current month is December.
     fn years(&self) -> Vec<Year>;
+    /// Returns the list of available puzzle days for a given year. `None` is returned when `year`
+    /// is the current year, and the current month is not December.
     fn days(&self, year: Year) -> Option<Vec<Day>>;
+    /// Fetches the puzzle input for a given day and year. Cached inputs are returned without
+    /// fetching from the service.
     fn get_input(&self, day: Day, year: Year) -> Result<String, ClientError>;
+    /// Submits an answer for a puzzle part. Cached answers are returned immediately without
+    /// submitting to the service.
     fn submit_answer(
         &mut self,
         answer: Answer,
@@ -43,28 +87,62 @@ pub trait Client {
         day: Day,
         year: Year,
     ) -> Result<CheckResult, ClientError>;
+    /// Fetches the complete puzzle data (input and cached answers) for a given day and year.
     fn get_puzzle(&self, day: Day, year: Year) -> Result<Puzzle, ClientError>;
 }
 
+/// HTTP-based implementation of the `Client` trait that talks with the Advent of Code website.
+///
+/// # Initialization Patterns
+///
+/// 1. **`new()`** - Creates a client with default configuration. Requires a valid user config, a
+///    config in the local directory, or the `AOC_SESSION_ID` and `AOC_ENCRYPTION_TOKEN` environment
+///    variables to be set.
+///
+/// 2. **`with_options(ClientOptions)`** - Creates a client with custom configuration options
+///    (directories, encryption token, etc.). This is the standard path for most use cases.
+///
+/// 3. **`with_custom_impl(ClientConfig, Box<dyn AdventOfCodeProtocol>)`** - For testing usage.
+///    Allows callers to inject a mock HTTP implementation. Caches are still created automatically
+///    from the config.
+///
+/// # Dependencies
+///
+/// - **Session ID**: Required for authentication. Must be a valid Advent of Code session cookie.
+/// - **Network Access**: Required for fetching new puzzles and submitting answers.
+/// - **Encryption Token**: Used to encrypt cached puzzle inputs on disk (as requested by AoC maintainer).
+/// - **Cache Directories**: Created automatically if missing.
 #[derive(Debug)]
 pub struct WebClient {
+    /// The client configuration (session ID, directories, encryption key, current time)
     pub config: ClientConfig,
     protocol: Box<dyn AdventOfCodeProtocol>,
+    /// Stores encrypted puzzle inputs and answer data.
     pub puzzle_cache: Box<dyn PuzzleCache>,
+    /// Stores submission timeout state.
     pub user_cache: Box<dyn UserDataCache>,
 }
 
 impl WebClient {
+    /// Creates a client with default configuration from environment variables.
     pub fn new() -> Self {
         Self::with_options(Default::default())
     }
 
+    /// Creates a client with custom configuration options.
+    ///
+    /// This is the standard initialization method. Use this to specify custom cache directories,
+    /// encryption tokens, and other options.
     pub fn with_options(options: ClientOptions) -> Self {
         let config = ClientConfig::new(options);
         let advent_protocol = Box::new(AdventOfCodeHttpProtocol::new(&config));
         Self::with_custom_impl(config, advent_protocol)
     }
 
+    /// Creates a client with a custom HTTP protocol implementation.
+    ///
+    /// Useful for testing or using an alternative HTTP backend. Caches are automatically created
+    /// from the provided config.
     pub fn with_custom_impl(
         config: ClientConfig,
         advent_protocol: Box<dyn AdventOfCodeProtocol>,
@@ -258,16 +336,29 @@ impl Default for WebClient {
     }
 }
 
+/// Configuration for the Advent of Code client.
+///
+/// Created from `ClientOptions` and used internally by `WebClient`. All fields are public to allow
+/// inspection and advanced use cases, but typically you should not modify these directly after
+/// client creation.
 #[derive(Default, Debug)]
 pub struct ClientConfig {
+    /// Your Advent of Code session cookie (from the browser's cookies).
     pub session_id: String,
+    /// Directory where puzzle inputs and answers are stored.
     pub puzzle_dir: PathBuf,
+    /// Directory where user state (submission timeouts) is cached.
     pub user_cache_dir: PathBuf,
+    /// Passphrase used to encrypt puzzle inputs on disk.
     pub encryption_token: String,
+    /// Current time (usually UTC now, but can be overridden for testing).
     pub start_time: chrono::DateTime<chrono::Utc>,
 }
 
 impl ClientConfig {
+    /// Creates a config from `ClientOptions`.
+    ///
+    /// Requires `session_id` and `encryption_token` to be set in options.
     pub fn new(options: ClientOptions) -> Self {
         // TODO: convert panics into Errors
         // TODO: verify directory exists
