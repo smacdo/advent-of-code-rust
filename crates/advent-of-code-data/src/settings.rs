@@ -15,9 +15,9 @@ const DIRS_QUALIFIER: &str = "com";
 const DIRS_ORG: &str = "smacdo";
 const DIRS_APP: &str = "advent_of_code_data";
 
-const SETTINGS_FILENAME: &str = "aoc_settings.toml";
-const EXAMPLE_SETTINGS_FILENAME: &str = "aoc_settings.example.toml";
-const HOME_DIR_SETTINGS_FILENAME: &str = ".aoc.toml";
+const CONFIG_FILENAME: &str = "aoc_settings.toml";
+const EXAMPLE_CONFIG_FILENAME: &str = "aoc_settings.example.toml";
+const HOME_DIR_CONFIG_FILENAME: &str = ".aoc.toml";
 
 const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 # session_id = "REPLACE_ME"
@@ -26,15 +26,15 @@ const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 
 /// Errors that can occur when configuring client settings.
 #[derive(Debug, Error)]
-pub enum SettingsError {
+pub enum ConfigError {
     #[error("{}", .0)]
     IoError(#[from] std::io::Error),
     #[error("{}", .0)]
     TomlError(#[from] toml::de::Error),
 }
 
-// TODO: Rename to Settings or ClientSettings.
-pub struct ClientOptions {
+//
+pub struct ConfigBuilder {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
     pub user_cache_dir: Option<PathBuf>,
@@ -42,7 +42,7 @@ pub struct ClientOptions {
     pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-impl ClientOptions {
+impl ConfigBuilder {
     pub fn new() -> Self {
         // TODO: new should set these to empty, and then there should be a check at the end to
         //       validate cache dirs were provided.
@@ -60,7 +60,7 @@ impl ClientOptions {
 
     /// Loads configuration values from string containing TOML formatted text. Configuration values
     /// loaded here will overwrite previously loaded values.
-    pub fn use_toml(mut self, config_text: &str) -> Result<Self, SettingsError> {
+    pub fn use_toml(mut self, config_text: &str) -> Result<Self, ConfigError> {
         const CLIENT_TABLE_NAME: &str = "client";
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
@@ -133,7 +133,7 @@ impl ClientOptions {
     }
 }
 
-impl Default for ClientOptions {
+impl Default for ConfigBuilder {
     fn default() -> Self {
         Self::new()
     }
@@ -143,40 +143,40 @@ impl Default for ClientOptions {
 ///   1. User's shared configuration directory (ie, XDG_CONFIG_HOME or %LOCALAPPDATA%).
 ///   2. Current directory.
 ///   3. Environment variables.
-pub fn load_settings() -> Result<ClientOptions, SettingsError> {
-    let mut settings: ClientOptions = Default::default();
+pub fn load_config() -> Result<ConfigBuilder, ConfigError> {
+    let mut config: ConfigBuilder = Default::default();
 
-    settings = read_settings_from_user_config_dirs(Some(settings))?;
-    settings = read_settings_from_current_dir(Some(settings))?;
-    settings = read_settings_from_env_vars(Some(settings));
+    config = read_config_from_user_config_dirs(Some(config))?;
+    config = read_config_from_current_dir(Some(config))?;
+    config = read_config_from_env_vars(Some(config));
 
-    Ok(settings)
+    Ok(config)
 }
 
 /// Loads configuration values from a TOML file.
-pub fn read_settings_from_file<P: AsRef<Path>>(
-    settings: Option<ClientOptions>,
+pub fn read_config_from_file<P: AsRef<Path>>(
+    config: Option<ConfigBuilder>,
     path: P,
-) -> Result<ClientOptions, SettingsError> {
-    let settings = settings.unwrap_or_default();
+) -> Result<ConfigBuilder, ConfigError> {
+    let config = config.unwrap_or_default();
     let config_text = fs::read_to_string(&path)?;
 
-    settings.use_toml(&config_text)
+    config.use_toml(&config_text)
 }
 
 /// Loads configuration values from a TOML file in the working directory.
-pub fn read_settings_from_current_dir(
-    settings: Option<ClientOptions>,
-) -> Result<ClientOptions, SettingsError> {
-    let mut settings = settings.unwrap_or_default();
+pub fn read_config_from_current_dir(
+    config: Option<ConfigBuilder>,
+) -> Result<ConfigBuilder, ConfigError> {
+    let mut config = config.unwrap_or_default();
 
     match std::env::current_dir() {
         Ok(current_dir) => {
-            let local_config_path = current_dir.join(SETTINGS_FILENAME);
+            let local_config_path = current_dir.join(CONFIG_FILENAME);
             tracing::debug!("loading current directory config values from: {local_config_path:?}");
 
             if local_config_path.exists() {
-                settings = read_settings_from_file(Some(settings), local_config_path)?;
+                config = read_config_from_file(Some(config), local_config_path)?;
             } else {
                 tracing::warn!("loading config from current directory will be skipped because {local_config_path:?} does not exist")
             }
@@ -186,15 +186,15 @@ pub fn read_settings_from_current_dir(
         }
     }
 
-    Ok(settings)
+    Ok(config)
 }
 
-/// Loads configuration data from a user's settings directory relative to their home directory.
+/// Loads configuration data from a user's config directory relative to their home directory.
 /// Any option values loaded here will overwrite values loaded previously.
-pub fn read_settings_from_user_config_dirs(
-    settings: Option<ClientOptions>,
-) -> Result<ClientOptions, SettingsError> {
-    let mut settings = settings.unwrap_or_default();
+pub fn read_config_from_user_config_dirs(
+    config: Option<ConfigBuilder>,
+) -> Result<ConfigBuilder, ConfigError> {
+    let mut config = config.unwrap_or_default();
 
     // Read custom configuration path from `AOC_CONFIG_PATH` if it is set. Do not continue
     // looking for user config if this was set.
@@ -203,12 +203,12 @@ pub fn read_settings_from_user_config_dirs(
     if let Ok(custom_config_path) = std::env::var(CUSTOM_CONFIG_ENV_KEY) {
         if std::fs::exists(&custom_config_path).unwrap_or(false) {
             tracing::debug!("loading user config at: {custom_config_path:?}");
-            settings = read_settings_from_file(Some(settings), custom_config_path)?;
+            config = read_config_from_file(Some(config), custom_config_path)?;
         } else {
             tracing::debug!("no user config found at: {custom_config_path:?}");
         }
 
-        return Ok(settings);
+        return Ok(config);
     } else {
         tracing::debug!(
             "skipping custom user config because env var `{CUSTOM_CONFIG_ENV_KEY}` is not set"
@@ -218,7 +218,7 @@ pub fn read_settings_from_user_config_dirs(
     // Try reading from the $XDG_CONFIG_HOME / %LOCALAPPDATA%.
     if let Some(project_dir) = directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP) {
         let config_dir = project_dir.config_dir();
-        let example_config_path = config_dir.join(EXAMPLE_SETTINGS_FILENAME);
+        let example_config_path = config_dir.join(EXAMPLE_CONFIG_FILENAME);
 
         // Create the application's config dir if its missing.
         if !std::fs::exists(config_dir).unwrap_or(false) {
@@ -238,11 +238,11 @@ pub fn read_settings_from_user_config_dirs(
         }
 
         // Load the user config if it exists.
-        let config_path = config_dir.join(SETTINGS_FILENAME);
+        let config_path = config_dir.join(CONFIG_FILENAME);
 
         if std::fs::exists(&config_path).unwrap_or(false) {
             tracing::debug!("loading user config at: {config_path:?}");
-            return read_settings_from_file(Some(settings), config_path);
+            return read_config_from_file(Some(config), config_path);
         } else {
             tracing::debug!("no user config found at: {config_path:?}");
         }
@@ -252,22 +252,22 @@ pub fn read_settings_from_user_config_dirs(
 
     // Try reading from the home directory.
     if let Some(base_dirs) = directories::BaseDirs::new() {
-        let home_config_path = base_dirs.home_dir().join(HOME_DIR_SETTINGS_FILENAME);
+        let home_config_path = base_dirs.home_dir().join(HOME_DIR_CONFIG_FILENAME);
 
         if std::fs::exists(&home_config_path).unwrap_or(false) {
             tracing::debug!("loading user config at: {home_config_path:?}");
-            settings = read_settings_from_file(Some(settings), home_config_path)?;
+            config = read_config_from_file(Some(config), home_config_path)?;
         } else {
             tracing::debug!("no user config found at: {home_config_path:?}");
         }
     }
 
-    Ok(settings)
+    Ok(config)
 }
 
 /// TODO: document me!
-pub fn read_settings_from_env_vars(settings: Option<ClientOptions>) -> ClientOptions {
-    let mut settings = settings.unwrap_or_default();
+pub fn read_config_from_env_vars(config: Option<ConfigBuilder>) -> ConfigBuilder {
+    let mut config = config.unwrap_or_default();
 
     const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
     const PASSWORD_ENV_KEY: &str = "AOC_PASSWORD";
@@ -280,17 +280,17 @@ pub fn read_settings_from_env_vars(settings: Option<ClientOptions>) -> ClientOpt
     }
 
     try_read_env_var(SESSION_ID_ENV_KEY, |v| {
-        settings.session_id = Some(v);
+        config.session_id = Some(v);
     });
 
     try_read_env_var(PASSWORD_ENV_KEY, |v| {
-        settings.encryption_token = Some(v);
+        config.encryption_token = Some(v);
     });
 
     // TODO: user cache env variable.
     // TODO: puzzle cache env variable.
 
-    settings
+    config
 }
 
 #[cfg(test)]
@@ -299,7 +299,7 @@ mod tests {
 
     #[test]
     fn client_options_are_none_by_default() {
-        let options = ClientOptions::new();
+        let options = ConfigBuilder::new();
         assert!(options.session_id.is_none());
         assert!(options.puzzle_dir.is_none());
         assert!(options.encryption_token.is_none());
@@ -307,7 +307,7 @@ mod tests {
 
     #[test]
     fn client_can_overwrite_options() {
-        let options = ClientOptions::new()
+        let options = ConfigBuilder::new()
             .with_encryption_token("12345")
             .with_encryption_token("54321");
 
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn set_client_options_with_builder_funcs() {
-        let options = ClientOptions::new()
+        let options = ConfigBuilder::new()
             .with_session_id("MY_SESSION_ID")
             .with_puzzle_dir("MY_CACHE_DIR")
             .with_encryption_token("MY_PASSWORD");
@@ -340,7 +340,7 @@ mod tests {
         encryption_token = "foobar"
         "#;
 
-        let options = ClientOptions::new().use_toml(config_text).unwrap();
+        let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert_eq!(
@@ -358,7 +358,7 @@ mod tests {
         encryption_token_XXXX = "foobar"
         "#;
 
-        let options = ClientOptions::new().use_toml(config_text).unwrap();
+        let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert!(options.puzzle_dir.is_none());
@@ -374,7 +374,7 @@ mod tests {
         encryption_token = "REPLACE_ME"
         "#;
 
-        let options = ClientOptions::new().use_toml(config_text).unwrap();
+        let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert!(options.session_id.is_none());
         assert!(options.encryption_token.is_none());

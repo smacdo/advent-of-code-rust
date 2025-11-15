@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
     data::{Answers, CheckResult, Puzzle},
-    settings::{load_settings, ClientOptions, SettingsError},
+    settings::{load_config, ConfigBuilder, ConfigError},
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
 };
@@ -40,7 +40,7 @@ pub enum ClientError {
     CacheError(#[from] CacheError),
     /// An error occured while loading configuration values.
     #[error("an unexpected error {} happened when reading configuration values", .0)]
-    SettingsError(#[from] SettingsError),
+    SettingsError(#[from] ConfigError),
 }
 
 /// Primary abstraction for interacting with the Advent of Code service.
@@ -129,14 +129,14 @@ pub struct WebClient {
 impl WebClient {
     /// Creates a client with default configuration from environment variables.
     pub fn new() -> Result<Self, ClientError> {
-        Ok(Self::with_options(load_settings()?))
+        Ok(Self::with_options(load_config()?))
     }
 
     /// Creates a client with custom configuration options.
     ///
     /// This is the standard initialization method. Use this to specify custom cache directories,
     /// encryption tokens, and other options.
-    pub fn with_options(options: ClientOptions) -> Self {
+    pub fn with_options(options: ConfigBuilder) -> Self {
         let config = ClientConfig::new(options);
         let advent_protocol = Box::new(AdventOfCodeHttpProtocol::new(&config));
         Self::with_custom_impl(config, advent_protocol)
@@ -356,7 +356,7 @@ impl ClientConfig {
     /// Creates a config from `ClientOptions`.
     ///
     /// Requires `session_id` and `encryption_token` to be set in options.
-    pub fn new(options: ClientOptions) -> Self {
+    pub fn new(options: ConfigBuilder) -> Self {
         // TODO: convert panics into Errors
         // TODO: verify directory exists
         Self {
@@ -391,7 +391,7 @@ mod tests {
         sec: u32,
     ) -> WebClient {
         WebClient::with_options(
-            ClientOptions::new()
+            ConfigBuilder::new()
                 .with_session_id("UNIT_TEST_SESSION_ID")
                 .with_encryption_token("UNIT_TEST_PASSWORD")
                 .with_puzzle_dir("DO_NOT_USE")
