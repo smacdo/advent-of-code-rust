@@ -5,8 +5,8 @@ use data::CheckResult;
 
 pub mod cache;
 pub mod client;
+pub mod config;
 pub mod data;
-pub mod settings;
 
 mod utils;
 

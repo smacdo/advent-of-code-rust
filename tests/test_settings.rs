@@ -1,4 +1,4 @@
-use advent_of_code_data::settings::read_config_from_env_vars;
+use advent_of_code_data::config::read_config_from_env_vars;
 
 #[test]
 fn config_with_env_vars() {

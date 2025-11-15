@@ -8,8 +8,8 @@ use thiserror::Error;
 
 use crate::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
+    config::{load_config, ConfigBuilder, ConfigError},
     data::{Answers, CheckResult, Puzzle},
-    settings::{load_config, ConfigBuilder, ConfigError},
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
 };
