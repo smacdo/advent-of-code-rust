@@ -33,6 +33,48 @@ pub enum ConfigError {
     TomlError(#[from] toml::de::Error),
 }
 
+/// Configuration for the Advent of Code client.
+///
+/// Created from `ClientOptions` and used internally by `WebClient`. All fields are public to allow
+/// inspection and advanced use cases, but typically you should not modify these directly after
+/// client creation.
+#[derive(Default, Debug)]
+pub struct Config {
+    /// Your Advent of Code session cookie (from the browser's cookies).
+    pub session_id: String,
+    /// Directory where puzzle inputs and answers are stored.
+    pub puzzle_dir: PathBuf,
+    /// Directory where user state (submission timeouts) is cached.
+    pub user_cache_dir: PathBuf,
+    /// Passphrase used to encrypt puzzle inputs on disk.
+    pub encryption_token: String,
+    /// Current time (usually UTC now, but can be overridden for testing).
+    pub start_time: chrono::DateTime<chrono::Utc>,
+}
+
+impl Config {
+    /// Creates a config from `ClientOptions`.
+    ///
+    /// Requires `session_id` and `encryption_token` to be set in options.
+    pub fn new(options: ConfigBuilder) -> Self {
+        // TODO: convert panics into Errors
+        // TODO: verify directory exists
+        Self {
+            session_id: options.session_id.expect("session id must be set"),
+            puzzle_dir: options
+                .puzzle_dir
+                .unwrap_or(PathBuf::from_str(".puzzles").unwrap()),
+            user_cache_dir: options
+                .user_cache_dir
+                .unwrap_or(PathBuf::from_str(".advent-of-code-data-cache").unwrap()),
+            encryption_token: options
+                .encryption_token
+                .expect("encryption token must be set"),
+            start_time: options.fake_time.unwrap_or(chrono::Utc::now()),
+        }
+    }
+}
+
 //
 pub struct ConfigBuilder {
     pub session_id: Option<String>,

@@ -1,14 +1,12 @@
 mod protocol;
 
-use std::{path::PathBuf, str::FromStr};
-
 use chrono::Datelike;
 use protocol::{AdventOfCodeHttpProtocol, AdventOfCodeProtocol};
 use thiserror::Error;
 
 use crate::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
-    config::{load_config, ConfigBuilder, ConfigError},
+    config::{load_config, Config, ConfigBuilder, ConfigError},
     data::{Answers, CheckResult, Puzzle},
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
@@ -118,7 +116,7 @@ pub trait Client {
 #[derive(Debug)]
 pub struct WebClient {
     /// The client configuration (session ID, directories, encryption key, current time)
-    pub config: ClientConfig,
+    pub config: Config,
     protocol: Box<dyn AdventOfCodeProtocol>,
     /// Stores encrypted puzzle inputs and answer data.
     pub puzzle_cache: Box<dyn PuzzleCache>,
@@ -137,7 +135,7 @@ impl WebClient {
     /// This is the standard initialization method. Use this to specify custom cache directories,
     /// encryption tokens, and other options.
     pub fn with_options(options: ConfigBuilder) -> Self {
-        let config = ClientConfig::new(options);
+        let config = Config::new(options);
         let advent_protocol = Box::new(AdventOfCodeHttpProtocol::new(&config));
         Self::with_custom_impl(config, advent_protocol)
     }
@@ -147,7 +145,7 @@ impl WebClient {
     /// Useful for testing or using an alternative HTTP backend. Caches are automatically created
     /// from the provided config.
     pub fn with_custom_impl(
-        config: ClientConfig,
+        config: Config,
         advent_protocol: Box<dyn AdventOfCodeProtocol>,
     ) -> Self {
         // Convert client options into a actual configuration values.
@@ -331,48 +329,6 @@ impl Client for WebClient {
     // TODO: personal leaderboard
     // TODO: list of private leaderboards
     // TODO: show private leaderboard
-}
-
-/// Configuration for the Advent of Code client.
-///
-/// Created from `ClientOptions` and used internally by `WebClient`. All fields are public to allow
-/// inspection and advanced use cases, but typically you should not modify these directly after
-/// client creation.
-#[derive(Default, Debug)]
-pub struct ClientConfig {
-    /// Your Advent of Code session cookie (from the browser's cookies).
-    pub session_id: String,
-    /// Directory where puzzle inputs and answers are stored.
-    pub puzzle_dir: PathBuf,
-    /// Directory where user state (submission timeouts) is cached.
-    pub user_cache_dir: PathBuf,
-    /// Passphrase used to encrypt puzzle inputs on disk.
-    pub encryption_token: String,
-    /// Current time (usually UTC now, but can be overridden for testing).
-    pub start_time: chrono::DateTime<chrono::Utc>,
-}
-
-impl ClientConfig {
-    /// Creates a config from `ClientOptions`.
-    ///
-    /// Requires `session_id` and `encryption_token` to be set in options.
-    pub fn new(options: ConfigBuilder) -> Self {
-        // TODO: convert panics into Errors
-        // TODO: verify directory exists
-        Self {
-            session_id: options.session_id.expect("session id must be set"),
-            puzzle_dir: options
-                .puzzle_dir
-                .unwrap_or(PathBuf::from_str(".puzzles").unwrap()),
-            user_cache_dir: options
-                .user_cache_dir
-                .unwrap_or(PathBuf::from_str(".advent-of-code-data-cache").unwrap()),
-            encryption_token: options
-                .encryption_token
-                .expect("encryption token must be set"),
-            start_time: options.fake_time.unwrap_or(chrono::Utc::now()),
-        }
-    }
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@ use regex::Regex;
 
 use crate::{data::CheckResult, Answer, Day, Part, Year};
 
-use super::{ClientConfig, ClientError};
+use super::{ClientError, Config};
 
 /// Abstraction of the communication protocol used to communicate with the
 /// Advent of Code backend web service enabling test mocks.
@@ -28,7 +28,7 @@ impl AdventOfCodeHttpProtocol {
     const ADVENT_OF_CODE_DOMAIN: &'static str = "adventofcode.com";
     const ADVENT_OF_CODE_URL: &'static str = "https://adventofcode.com";
 
-    pub fn new(config: &ClientConfig) -> Self {
+    pub fn new(config: &Config) -> Self {
         // Create an HTTP client for interacting with the Advent of Code website.
         // TODO: verify dev@smacdo.com email OK
         let cookies: reqwest::cookie::Jar = Default::default();
