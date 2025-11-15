@@ -9,7 +9,7 @@ use simple_crypt::{decrypt, encrypt};
 use thiserror::Error;
 
 use crate::{
-    data::{Answers, Puzzle, User},
+    data::{Answers, Puzzle, Session},
     Day, Part, Year,
 };
 
@@ -36,7 +36,8 @@ pub enum CacheError {
     AnswerParsing(#[from] crate::data::AnswerDeserializationError),
 }
 
-/// Stores puzzle inputs and answers in a user accessible cache location.
+/// Caches puzzle inputs and answers to allow retrieval without having to request data from the
+/// Advent of Code service.
 ///
 /// Input data should be encrypted when written to storage, as requested by the Advent of Code
 /// owner. Answers do not need to be encrypted.
@@ -74,12 +75,12 @@ pub trait PuzzleCache: Debug {
     ) -> Result<(), CacheError>;
 }
 
-/// Stores cached data specific to a user's session, such as submission timeouts.
-pub trait UserDataCache: Debug {
-    /// Load user data linked to a session from the cache.
-    fn load(&self, session_id: &str) -> Result<User, CacheError>;
-    /// Writes user data to the cache.
-    fn save(&self, user: &User) -> Result<(), CacheError>;
+/// Stores cached data specific to a session, such as submission timeouts.
+pub trait SessionCache: Debug {
+    /// Load session data linked to a session from the cache.
+    fn load(&self, session_id: &str) -> Result<Session, CacheError>;
+    /// Writes session data to the cache.
+    fn save(&self, session: &Session) -> Result<(), CacheError>;
 }
 
 /// A file system backed implementation of `PuzzleCache`.
@@ -276,55 +277,55 @@ impl PuzzleCache for PuzzleFsCache {
 }
 
 #[derive(Debug)]
-pub struct UserDataFsCache {
+pub struct SessionFsCache {
     cache_dir: PathBuf,
 }
 
-impl UserDataFsCache {
+impl SessionFsCache {
     pub fn new<P: Into<PathBuf>>(cache_dir: P) -> Self {
         Self {
             cache_dir: cache_dir.into(),
         }
     }
 
-    /// Returns the cache file path for user data. The session ID is used directly as the filename.
+    /// Returns the cache file path for session data. The session ID is used directly as the filename.
     /// Note: Assumes the session ID is already sanitized and safe for use as a filename.
-    pub fn path_for_user_data(&self, session_id: &str) -> PathBuf {
+    pub fn session_data_filepath(&self, session_id: &str) -> PathBuf {
         self.cache_dir.join(format!("{}.json", session_id))
     }
 }
 
-impl UserDataCache for UserDataFsCache {
-    fn load(&self, session_id: &str) -> Result<User, CacheError> {
-        let user_file_path = self.path_for_user_data(session_id);
+impl SessionCache for SessionFsCache {
+    fn load(&self, session_id: &str) -> Result<Session, CacheError> {
+        let session_filepath = self.session_data_filepath(session_id);
 
-        if user_file_path.is_file() {
-            tracing::debug!("cached user data for {session_id} at `{user_file_path:?}`");
+        if session_filepath.is_file() {
+            tracing::debug!("cached session data for {session_id} is at `{session_filepath:?}`");
 
-            let json_text = std::fs::read_to_string(user_file_path)?;
-            let user: User = serde_json::from_str(&json_text)?;
+            let json_text = std::fs::read_to_string(session_filepath)?;
+            let session: Session = serde_json::from_str(&json_text)?;
 
-            Ok(user)
+            Ok(session)
         } else {
-            tracing::debug!("no cached user data for {session_id} at `{user_file_path:?}`, returning new User object");
-            Ok(User::new(session_id))
+            tracing::debug!("no cached session data for {session_id} at `{session_filepath:?}`, returning new Session object");
+            Ok(Session::new(session_id))
         }
     }
 
-    fn save(&self, user: &User) -> Result<(), CacheError> {
-        let user_file_path = self.path_for_user_data(&user.session_id);
+    fn save(&self, session: &Session) -> Result<(), CacheError> {
+        let session_filepath = self.session_data_filepath(&session.session_id);
 
         // Create puzzle directory if it does not already exist.
-        let mut user_file_dir = user_file_path.clone();
-        user_file_dir.pop();
+        let mut session_dir = session_filepath.clone();
+        session_dir.pop();
 
-        std::fs::create_dir_all(user_file_dir)?;
+        std::fs::create_dir_all(session_dir)?;
 
-        // Write the serialized user data to disk.
-        let json_text = serde_json::to_string(&user)?;
-        tracing::debug!("saving user data `{user_file_path:?}`");
+        // Write the serialized session data to disk.
+        let json_text = serde_json::to_string(&session)?;
+        tracing::debug!("saving session data to `{session_filepath:?}`");
 
-        std::fs::write(user_file_path, json_text)?;
+        std::fs::write(session_filepath, json_text)?;
         Ok(())
     }
 }

@@ -5,7 +5,7 @@ use protocol::{AdventOfCodeHttpProtocol, AdventOfCodeProtocol};
 use thiserror::Error;
 
 use crate::{
-    cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
+    cache::{CacheError, PuzzleCache, PuzzleFsCache, SessionCache, SessionFsCache},
     config::{load_config, Config, ConfigError},
     data::{Answers, CheckResult, Puzzle},
     utils::get_puzzle_unlock_time,
@@ -121,7 +121,7 @@ pub struct WebClient {
     /// Stores encrypted puzzle inputs and answer data.
     pub puzzle_cache: Box<dyn PuzzleCache>,
     /// Stores submission timeout state.
-    pub user_cache: Box<dyn UserDataCache>,
+    pub session_cache: Box<dyn SessionCache>,
 }
 
 impl WebClient {
@@ -150,21 +150,19 @@ impl WebClient {
         // Convert client options into a actual configuration values.
         // TODO: validate config settings are sane.
         let puzzle_dir = config.puzzle_dir.clone();
-        let user_data_dir = config.user_cache_dir.clone();
+        let session_cache_dir = config.session_cache_dir.clone();
         let encryption_token = config.encryption_token.clone();
 
         // Print configuration settings to debug log.
-        tracing::debug!("client puzzle dir: {puzzle_dir:?}");
-        tracing::debug!("client user data dir: {user_data_dir:?}");
-        tracing::debug!("client puzzles using encryption: {}", true);
+        tracing::debug!("puzzle cache dir: {puzzle_dir:?}");
+        tracing::debug!("session cache dir: {session_cache_dir:?}");
+        tracing::debug!("puzzle cache using encryption: {}", true);
 
-        // TODO: lets callers specify the user data cache.
-        // TODO: create a default user data cache.
         Self {
             config,
             protocol: advent_protocol,
             puzzle_cache: Box::new(PuzzleFsCache::new(puzzle_dir, Some(encryption_token))),
-            user_cache: Box::new(UserDataFsCache::new(user_data_dir)),
+            session_cache: Box::new(SessionFsCache::new(session_cache_dir)),
         }
     }
 }
@@ -255,17 +253,17 @@ impl Client for WebClient {
 
         // Check if there is an active time out on new submissions prior to
         // submitting to the advent of code service.
-        let mut user = self.user_cache.load(&self.config.session_id)?;
+        let mut session = self.session_cache.load(&self.config.session_id)?;
 
-        if let Some(submit_wait_until) = user.submit_wait_until {
+        if let Some(submit_wait_until) = session.submit_wait_until {
             if self.config.start_time <= submit_wait_until {
-                tracing::warn!("user cannot submit an answer until {submit_wait_until}");
+                tracing::warn!("you cannot submit an answer until {submit_wait_until}");
                 return Err(ClientError::SubmitTimeOut(
                     submit_wait_until - self.config.start_time,
                 ));
             } else {
                 // TODO: remove the timeout and save.
-                tracing::debug!("user submission timeout has expired, ignoring");
+                tracing::debug!("the submission timeout has expired, ignoring");
             }
         }
 
@@ -278,8 +276,8 @@ impl Client for WebClient {
             let wait_until = chrono::Utc::now() + time_to_wait;
             tracing::debug!("setting time to wait ({time_to_wait}) to be {wait_until}");
 
-            user.submit_wait_until = Some(wait_until);
-            self.user_cache.save(&user)?;
+            session.submit_wait_until = Some(wait_until);
+            self.session_cache.save(&session)?;
         }
 
         // Write the response to the answers database and then save it back to

@@ -6,7 +6,6 @@
 
 # SDK Improvements
 - Rename encryption "token" and "password" to "passphrase" (consistency).
-- Rename user cache and data cache to session cache (consistency).
 - Logging all the things
 - Reject submissions for future dates automatically unless forced
 

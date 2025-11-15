@@ -322,12 +322,12 @@ pub enum AnswerDeserializationError {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct User {
+pub struct Session {
     pub session_id: String,
     pub submit_wait_until: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-impl User {
+impl Session {
     pub fn new<S: Into<String>>(session_id: S) -> Self {
         Self {
             session_id: session_id.into(),
