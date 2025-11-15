@@ -27,6 +27,16 @@ const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 /// Errors that can occur when configuring client settings.
 #[derive(Debug, Error)]
 pub enum ConfigError {
+    #[error(
+        "session cookie required; use the advent-of-code-data README to learn how to obtain this"
+    )]
+    SessionIdRequired,
+    #[error("an encryption passphrase is required")]
+    EncryptionTokenRequired,
+    #[error("a puzzle cache directory is required")]
+    PuzzleCacheDirRequired,
+    #[error("a session cache directory is required")]
+    SessionCacheDirRequired,
     #[error("{}", .0)]
     IoError(#[from] std::io::Error),
     #[error("{}", .0)]
@@ -50,29 +60,6 @@ pub struct Config {
     pub encryption_token: String,
     /// Current time (usually UTC now, but can be overridden for testing).
     pub start_time: chrono::DateTime<chrono::Utc>,
-}
-
-impl Config {
-    /// Creates a config from `ClientOptions`.
-    ///
-    /// Requires `session_id` and `encryption_token` to be set in options.
-    pub fn new(options: ConfigBuilder) -> Self {
-        // TODO: convert panics into Errors
-        // TODO: verify directory exists
-        Self {
-            session_id: options.session_id.expect("session id must be set"),
-            puzzle_dir: options
-                .puzzle_dir
-                .unwrap_or(PathBuf::from_str(".puzzles").unwrap()),
-            user_cache_dir: options
-                .user_cache_dir
-                .unwrap_or(PathBuf::from_str(".advent-of-code-data-cache").unwrap()),
-            encryption_token: options
-                .encryption_token
-                .expect("encryption token must be set"),
-            start_time: options.fake_time.unwrap_or(chrono::Utc::now()),
-        }
-    }
 }
 
 //
@@ -172,6 +159,20 @@ impl ConfigBuilder {
     pub fn with_fake_time(mut self, fake_time: chrono::DateTime<chrono::Utc>) -> Self {
         self.fake_time = Some(fake_time);
         self
+    }
+
+    pub fn build(self) -> Result<Config, ConfigError> {
+        Ok(Config {
+            session_id: self.session_id.ok_or(ConfigError::SessionIdRequired)?,
+            puzzle_dir: self.puzzle_dir.ok_or(ConfigError::PuzzleCacheDirRequired)?,
+            user_cache_dir: self
+                .user_cache_dir
+                .ok_or(ConfigError::SessionCacheDirRequired)?,
+            encryption_token: self
+                .encryption_token
+                .ok_or(ConfigError::EncryptionTokenRequired)?,
+            start_time: self.fake_time.unwrap_or(chrono::Utc::now()),
+        })
     }
 }
 

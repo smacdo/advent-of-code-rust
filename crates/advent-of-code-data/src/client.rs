@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
-    config::{load_config, Config, ConfigBuilder, ConfigError},
+    config::{load_config, Config, ConfigError},
     data::{Answers, CheckResult, Puzzle},
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
@@ -127,15 +127,14 @@ pub struct WebClient {
 impl WebClient {
     /// Creates a client with default configuration from environment variables.
     pub fn new() -> Result<Self, ClientError> {
-        Ok(Self::with_options(load_config()?))
+        Ok(Self::with_config(load_config()?.build()?))
     }
 
     /// Creates a client with custom configuration options.
     ///
     /// This is the standard initialization method. Use this to specify custom cache directories,
     /// encryption tokens, and other options.
-    pub fn with_options(options: ConfigBuilder) -> Self {
-        let config = Config::new(options);
+    pub fn with_config(config: Config) -> Self {
         let advent_protocol = Box::new(AdventOfCodeHttpProtocol::new(&config));
         Self::with_custom_impl(config, advent_protocol)
     }
@@ -336,6 +335,8 @@ mod tests {
     use chrono::{NaiveDate, NaiveTime, TimeZone};
     use chrono_tz::US::Eastern;
 
+    use crate::config::ConfigBuilder;
+
     use super::*;
 
     fn web_client_with_time(
@@ -346,7 +347,7 @@ mod tests {
         min: u32,
         sec: u32,
     ) -> WebClient {
-        WebClient::with_options(
+        WebClient::with_config(
             ConfigBuilder::new()
                 .with_session_id("UNIT_TEST_SESSION_ID")
                 .with_encryption_token("UNIT_TEST_PASSWORD")
@@ -360,7 +361,9 @@ mod tests {
                         )
                         .unwrap()
                         .with_timezone(&chrono::Utc),
-                ),
+                )
+                .build()
+                .unwrap(),
         )
     }
 
