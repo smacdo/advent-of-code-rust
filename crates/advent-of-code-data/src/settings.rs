@@ -3,20 +3,37 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+use thiserror::Error;
 
-// TODO: Switch local directory config name to .advent_of_code_data.toml
-// TODO: Also switch the example file.
 // TODO: User config option for custom user/session cache dir.
+// TODO: document cache behavior.
+// TODO: in the documentation for ClientOptions, explain the builder pattern used.
+// TODO: in the documentation for ClientOptions, explain that with_* calls overwrite previous values.
+// TODO: need to write tests.
 
 const DIRS_QUALIFIER: &str = "com";
 const DIRS_ORG: &str = "smacdo";
 const DIRS_APP: &str = "advent_of_code_data";
+
+const SETTINGS_FILENAME: &str = "aoc_settings.toml";
+const EXAMPLE_SETTINGS_FILENAME: &str = "aoc_settings.example.toml";
+const HOME_DIR_SETTINGS_FILENAME: &str = ".aoc.toml";
 
 const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 # session_id = "REPLACE_ME"
 # encryption_token = "REPLACE_ME"
 "#;
 
+/// Errors that can occur when configuring client settings.
+#[derive(Debug, Error)]
+pub enum SettingsError {
+    #[error("{}", .0)]
+    IoError(#[from] std::io::Error),
+    #[error("{}", .0)]
+    TomlError(#[from] toml::de::Error),
+}
+
+// TODO: Rename to Settings or ClientSettings.
 pub struct ClientOptions {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
@@ -27,162 +44,23 @@ pub struct ClientOptions {
 
 impl ClientOptions {
     pub fn new() -> Self {
+        // TODO: new should set these to empty, and then there should be a check at the end to
+        //       validate cache dirs were provided.
+        let project_dir = directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP)
+            .expect("TODO: implement default fallback cache directories if this fails");
+
         Self {
             session_id: None,
-            puzzle_dir: None,
-            user_cache_dir: None,
+            puzzle_dir: Some(project_dir.cache_dir().join("puzzles").to_path_buf()),
+            user_cache_dir: Some(project_dir.cache_dir().join("sessions").to_path_buf()),
             encryption_token: None,
             fake_time: None,
         }
     }
 
-    pub fn with_config_file<P: AsRef<Path>>(self, path: P) -> Self {
-        // TODO: return errors instead of panicing
-        // TODO: add tests
-        let config_text = fs::read_to_string(&path).expect("config file should exist");
-        self.with_toml_config(&config_text)
-            .expect("toml parsing failed")
-    }
-
-    pub fn with_local_dir_config(mut self) -> Self {
-        // TODO: add tests
-        let local_config_path = std::env::current_dir()
-            .expect("current_dir is expected to work")
-            .join("aoc_settings.toml");
-
-        if local_config_path.exists() {
-            tracing::debug!("loading config values from: {local_config_path:?}");
-            self = self.with_config_file(local_config_path);
-        } else {
-            tracing::debug!("local dir config not found: {local_config_path:?}")
-        }
-
-        self
-    }
-
-    pub fn with_user_config(mut self) -> Self {
-        // TODO: add tests
-
-        // Read local application configuration.
-        if let Some(project_dir) =
-            directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP)
-        {
-            const EXAMPLE_FILE_NAME: &str = "config.example.toml";
-            const CONFIG_FILE_NAME: &str = "config.toml";
-
-            let config_dir = project_dir.config_dir();
-            let example_config_path = config_dir.join(EXAMPLE_FILE_NAME);
-
-            // Create the application's config dir if its missing.
-            if !std::fs::exists(config_dir).unwrap_or(false) {
-                std::fs::create_dir_all(config_dir).unwrap_or_else(|e| {
-                    tracing::debug!("failed to create app config dir: {e:?}");
-                });
-            }
-
-            // Create an example config file in the user config dir to help
-            // users get started.
-            if !std::fs::exists(&example_config_path).unwrap_or(false) {
-                tracing::debug!("created example config at {example_config_path:?}");
-
-                std::fs::write(example_config_path, EXAMPLE_CONFIG_TEXT).unwrap_or_else(|e| {
-                    tracing::debug!("failed to create example config: {e:?}");
-                });
-            }
-
-            // Load the user config if it exists.
-            let config_path = config_dir.join(CONFIG_FILE_NAME);
-
-            if std::fs::exists(&config_path).unwrap_or(false) {
-                tracing::debug!("loading user config at: {config_path:?}");
-                self = self.with_config_file(config_path);
-            } else {
-                tracing::debug!("no user config found at: {config_path:?}");
-            }
-        } else {
-            tracing::debug!("could not calculate user config dir on this machine");
-        }
-
-        // Read home directory.
-        if let Some(base_dirs) = directories::BaseDirs::new() {
-            const HOME_CONFIG_NAME: &str = ".advent_of_code_data.toml";
-            let home_config_path = base_dirs.home_dir().join(HOME_CONFIG_NAME);
-
-            if std::fs::exists(&home_config_path).unwrap_or(false) {
-                tracing::debug!("loading user config at: {home_config_path:?}");
-                self = self.with_config_file(home_config_path);
-            } else {
-                tracing::debug!("no user config found at: {home_config_path:?}");
-            }
-        }
-
-        // Read custom configuration path from `AOC_CONFIG_PATH`.
-        const CUSTOM_CONFIG_ENV_KEY: &str = "AOC_CONFIG_PATH";
-
-        if let Ok(custom_config_path) = std::env::var(CUSTOM_CONFIG_ENV_KEY) {
-            if std::fs::exists(&custom_config_path).unwrap_or(false) {
-                tracing::debug!("loading user config at: {custom_config_path:?}");
-                self = self.with_config_file(custom_config_path);
-            } else {
-                tracing::debug!("no user config found at: {custom_config_path:?}");
-            }
-        } else {
-            tracing::debug!(
-                "skipping custom user config because env var `{CUSTOM_CONFIG_ENV_KEY}` is not set"
-            );
-        }
-
-        self
-    }
-
-    /// Use the local user's cache directory as the storage location for user
-    /// data caching.
-    pub fn with_cache(mut self) -> Self {
-        // TODO: user cache env variable.
-        // TODO: puzzle cache env variable.
-        // TODO: document cache behavior.
-
-        // TODO: add tests
-
-        // Configure default locations for puzzle and user data caching.
-        if let Some(project_dir) =
-            directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP)
-        {
-            let user_cache_dir = project_dir.cache_dir().join("sessions");
-            self.user_cache_dir = Some(user_cache_dir.to_path_buf());
-
-            let puzzle_cache_dir = project_dir.cache_dir().join("puzzles");
-            self.puzzle_dir = Some(puzzle_cache_dir.to_path_buf());
-        } else {
-            tracing::error!("could not calculate cache directories");
-        }
-
-        self
-    }
-
-    pub fn with_env_vars(mut self) -> Self {
-        const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
-        const PASSWORD_ENV_KEY: &str = "AOC_PASSWORD";
-
-        fn try_read_env_var<F: FnOnce(String)>(name: &str, setter: F) {
-            if let Ok(v) = std::env::var(name) {
-                tracing::debug!("found env var `{name}` with value `{v}`");
-                setter(v)
-            }
-        }
-
-        try_read_env_var(SESSION_ID_ENV_KEY, |v| {
-            self.session_id = Some(v);
-        });
-
-        try_read_env_var(PASSWORD_ENV_KEY, |v| {
-            self.encryption_token = Some(v);
-        });
-
-        self
-    }
-
-    pub fn with_toml_config(mut self, config_text: &str) -> Result<Self, toml::de::Error> {
+    /// Loads configuration values from string containing TOML formatted text. Configuration values
+    /// loaded here will overwrite previously loaded values.
+    pub fn use_toml(mut self, config_text: &str) -> Result<Self, SettingsError> {
         const CLIENT_TABLE_NAME: &str = "client";
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
@@ -225,8 +103,8 @@ impl ClientOptions {
                 });
             }
             _ => {
-                tracing::debug!(
-                    "TOML table {CLIENT_TABLE_NAME} not found, no config keys will be loaded"
+                tracing::warn!(
+                    "TOML table {CLIENT_TABLE_NAME} was missing; this config will be skipped!"
                 );
             }
         }
@@ -258,11 +136,161 @@ impl ClientOptions {
 impl Default for ClientOptions {
     fn default() -> Self {
         Self::new()
-            .with_user_config()
-            .with_cache()
-            .with_local_dir_config()
-            .with_env_vars()
     }
+}
+
+/// Loads client options in the following order:
+///   1. User's shared configuration directory (ie, XDG_CONFIG_HOME or %LOCALAPPDATA%).
+///   2. Current directory.
+///   3. Environment variables.
+pub fn load_settings() -> Result<ClientOptions, SettingsError> {
+    let mut settings: ClientOptions = Default::default();
+
+    settings = read_settings_from_user_config_dirs(Some(settings))?;
+    settings = read_settings_from_current_dir(Some(settings))?;
+    settings = read_settings_from_env_vars(Some(settings));
+
+    Ok(settings)
+}
+
+/// Loads configuration values from a TOML file.
+pub fn read_settings_from_file<P: AsRef<Path>>(
+    settings: Option<ClientOptions>,
+    path: P,
+) -> Result<ClientOptions, SettingsError> {
+    let settings = settings.unwrap_or_default();
+    let config_text = fs::read_to_string(&path)?;
+
+    settings.use_toml(&config_text)
+}
+
+/// Loads configuration values from a TOML file in the working directory.
+pub fn read_settings_from_current_dir(
+    settings: Option<ClientOptions>,
+) -> Result<ClientOptions, SettingsError> {
+    let mut settings = settings.unwrap_or_default();
+
+    match std::env::current_dir() {
+        Ok(current_dir) => {
+            let local_config_path = current_dir.join(SETTINGS_FILENAME);
+            tracing::debug!("loading current directory config values from: {local_config_path:?}");
+
+            if local_config_path.exists() {
+                settings = read_settings_from_file(Some(settings), local_config_path)?;
+            } else {
+                tracing::warn!("loading config from current directory will be skipped because {local_config_path:?} does not exist")
+            }
+        }
+        Err(e) => {
+            tracing::error!("loading config from current directory will be skipped because {e}")
+        }
+    }
+
+    Ok(settings)
+}
+
+/// Loads configuration data from a user's settings directory relative to their home directory.
+/// Any option values loaded here will overwrite values loaded previously.
+pub fn read_settings_from_user_config_dirs(
+    settings: Option<ClientOptions>,
+) -> Result<ClientOptions, SettingsError> {
+    let mut settings = settings.unwrap_or_default();
+
+    // Read custom configuration path from `AOC_CONFIG_PATH` if it is set. Do not continue
+    // looking for user config if this was set.
+    const CUSTOM_CONFIG_ENV_KEY: &str = "AOC_CONFIG_PATH";
+
+    if let Ok(custom_config_path) = std::env::var(CUSTOM_CONFIG_ENV_KEY) {
+        if std::fs::exists(&custom_config_path).unwrap_or(false) {
+            tracing::debug!("loading user config at: {custom_config_path:?}");
+            settings = read_settings_from_file(Some(settings), custom_config_path)?;
+        } else {
+            tracing::debug!("no user config found at: {custom_config_path:?}");
+        }
+
+        return Ok(settings);
+    } else {
+        tracing::debug!(
+            "skipping custom user config because env var `{CUSTOM_CONFIG_ENV_KEY}` is not set"
+        );
+    }
+
+    // Try reading from the $XDG_CONFIG_HOME / %LOCALAPPDATA%.
+    if let Some(project_dir) = directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP) {
+        let config_dir = project_dir.config_dir();
+        let example_config_path = config_dir.join(EXAMPLE_SETTINGS_FILENAME);
+
+        // Create the application's config dir if its missing.
+        if !std::fs::exists(config_dir).unwrap_or(false) {
+            std::fs::create_dir_all(config_dir).unwrap_or_else(|e| {
+                tracing::debug!("failed to create app config dir: {e:?}");
+            });
+        }
+
+        // Create an example config file in the user config dir to illustrate some of the
+        // configuration options users can set.
+        if !std::fs::exists(&example_config_path).unwrap_or(false) {
+            tracing::debug!("created example config at {example_config_path:?}");
+
+            std::fs::write(example_config_path, EXAMPLE_CONFIG_TEXT).unwrap_or_else(|e| {
+                tracing::debug!("failed to create example config: {e:?}");
+            });
+        }
+
+        // Load the user config if it exists.
+        let config_path = config_dir.join(SETTINGS_FILENAME);
+
+        if std::fs::exists(&config_path).unwrap_or(false) {
+            tracing::debug!("loading user config at: {config_path:?}");
+            return read_settings_from_file(Some(settings), config_path);
+        } else {
+            tracing::debug!("no user config found at: {config_path:?}");
+        }
+    } else {
+        tracing::debug!("could not calculate user config dir on this machine");
+    }
+
+    // Try reading from the home directory.
+    if let Some(base_dirs) = directories::BaseDirs::new() {
+        let home_config_path = base_dirs.home_dir().join(HOME_DIR_SETTINGS_FILENAME);
+
+        if std::fs::exists(&home_config_path).unwrap_or(false) {
+            tracing::debug!("loading user config at: {home_config_path:?}");
+            settings = read_settings_from_file(Some(settings), home_config_path)?;
+        } else {
+            tracing::debug!("no user config found at: {home_config_path:?}");
+        }
+    }
+
+    Ok(settings)
+}
+
+/// TODO: document me!
+pub fn read_settings_from_env_vars(settings: Option<ClientOptions>) -> ClientOptions {
+    let mut settings = settings.unwrap_or_default();
+
+    const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
+    const PASSWORD_ENV_KEY: &str = "AOC_PASSWORD";
+
+    fn try_read_env_var<F: FnOnce(String)>(name: &str, setter: F) {
+        if let Ok(v) = std::env::var(name) {
+            tracing::debug!("found env var `{name}` with value `{v}`");
+            setter(v)
+        }
+    }
+
+    try_read_env_var(SESSION_ID_ENV_KEY, |v| {
+        settings.session_id = Some(v);
+    });
+
+    try_read_env_var(PASSWORD_ENV_KEY, |v| {
+        settings.encryption_token = Some(v);
+    });
+
+    // TODO: user cache env variable.
+    // TODO: puzzle cache env variable.
+
+    settings
 }
 
 #[cfg(test)]
@@ -312,7 +340,7 @@ mod tests {
         encryption_token = "foobar"
         "#;
 
-        let options = ClientOptions::new().with_toml_config(config_text).unwrap();
+        let options = ClientOptions::new().use_toml(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert_eq!(
@@ -330,7 +358,7 @@ mod tests {
         encryption_token_XXXX = "foobar"
         "#;
 
-        let options = ClientOptions::new().with_toml_config(config_text).unwrap();
+        let options = ClientOptions::new().use_toml(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
         assert!(options.puzzle_dir.is_none());
@@ -346,7 +374,7 @@ mod tests {
         encryption_token = "REPLACE_ME"
         "#;
 
-        let options = ClientOptions::new().with_toml_config(config_text).unwrap();
+        let options = ClientOptions::new().use_toml(config_text).unwrap();
 
         assert!(options.session_id.is_none());
         assert!(options.encryption_token.is_none());

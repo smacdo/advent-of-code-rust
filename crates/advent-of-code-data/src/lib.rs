@@ -223,7 +223,7 @@ impl From<usize> for Answer {
 
 /// TODO: Good documentation.
 pub fn get_input(day: Day, year: Year) -> Result<String, ClientError> {
-    let client: WebClient = Default::default();
+    let client = WebClient::new()?;
     client.get_input(day, year)
 }
 
@@ -234,7 +234,7 @@ pub fn submit_answer(
     day: Day,
     year: Year,
 ) -> Result<CheckResult, ClientError> {
-    let mut client: WebClient = Default::default();
+    let mut client: WebClient = WebClient::new()?;
     client.submit_answer(answer, part, day, year)
 }
 

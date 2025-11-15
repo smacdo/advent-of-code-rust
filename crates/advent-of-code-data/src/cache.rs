@@ -41,7 +41,8 @@ pub enum CacheError {
 /// Input data should be encrypted when written to storage, as requested by the Advent of Code
 /// owner. Answers do not need to be encrypted.
 pub trait PuzzleCache: Debug {
-    /// Load input for the given day and year. Returns the decrypted input if cached, or `Ok(None)` if no cache entry exists.
+    /// Load input for the given day and year. Returns the decrypted input if cached, or `Ok(None)`
+    /// if no cache entry exists.
     fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError>;
 
     /// Load answers for the given part, day and year. Returns `Ok(None)` if no cache entry exists.
@@ -57,11 +58,13 @@ pub trait PuzzleCache: Debug {
         Ok(())
     }
 
-    /// Save input for the given day and year. The input is encrypted before being written to disk (if an encryption token is configured).
-    /// Any previously saved input for this day and year will be overwritten.
+    /// Save input for the given day and year. The input is encrypted before being written to disk
+    /// (if an encryption token is configured). Any previously saved input for this day and year
+    /// will be overwritten.
     fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError>;
 
-    /// Save answers for the given part, day and year. Any previously saved answers for this day and year will be overwritten.
+    /// Save answers for the given part, day and year. Any previously saved answers for this day and
+    /// year will be overwritten.
     fn save_answers(
         &self,
         answers: &Answers,

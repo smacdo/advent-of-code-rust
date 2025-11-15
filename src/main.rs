@@ -2,7 +2,6 @@ mod y2024;
 
 use advent_of_code_data::{
     client::{Client, WebClient},
-    settings::ClientOptions,
     Day, Part, Year,
 };
 use clap::{Parser, Subcommand};
@@ -82,7 +81,7 @@ pub enum AppError {
     NoSolversForYear(Year),
     #[error("no puzzle solvers were found")]
     NoSolversFound,
-    #[error("an error happened while communicating with the Advent of Code service: {}", .0)]
+    #[error("{}", .0)]
     ClientError(#[from] advent_of_code_data::client::ClientError),
 }
 
@@ -102,13 +101,7 @@ fn main() -> Result<(), AppError> {
     let solver_registry = SolverRegistry::compiled_from(&SOLVERS);
 
     // Create the Advent of Code client.
-    let client = WebClient::with_options(
-        ClientOptions::new()
-            .with_cache()
-            .with_user_config()
-            .with_local_dir_config()
-            .with_env_vars(),
-    );
+    let client = WebClient::new()?;
 
     match &cli.command {
         Some(Commands::Run { days, year }) => {

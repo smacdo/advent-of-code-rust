@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{
     cache::{CacheError, PuzzleCache, PuzzleFsCache, UserDataCache, UserDataFsCache},
     data::{Answers, CheckResult, Puzzle},
-    settings::ClientOptions,
+    settings::{load_settings, ClientOptions, SettingsError},
     utils::get_puzzle_unlock_time,
     Answer, Day, Part, Year,
 };
@@ -38,6 +38,9 @@ pub enum ClientError {
     /// An error occurred while reading cached data.
     #[error("an unexpected error {} error happened when reading cached data", .0)]
     CacheError(#[from] CacheError),
+    /// An error occured while loading configuration values.
+    #[error("an unexpected error {} happened when reading configuration values", .0)]
+    SettingsError(#[from] SettingsError),
 }
 
 /// Primary abstraction for interacting with the Advent of Code service.
@@ -125,8 +128,8 @@ pub struct WebClient {
 
 impl WebClient {
     /// Creates a client with default configuration from environment variables.
-    pub fn new() -> Self {
-        Self::with_options(Default::default())
+    pub fn new() -> Result<Self, ClientError> {
+        Ok(Self::with_options(load_settings()?))
     }
 
     /// Creates a client with custom configuration options.
@@ -328,12 +331,6 @@ impl Client for WebClient {
     // TODO: personal leaderboard
     // TODO: list of private leaderboards
     // TODO: show private leaderboard
-}
-
-impl Default for WebClient {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 /// Configuration for the Advent of Code client.
