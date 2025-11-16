@@ -91,6 +91,7 @@ impl ConfigBuilder {
     /// loaded here will overwrite previously loaded values.
     pub fn use_toml(mut self, config_text: &str) -> Result<Self, ConfigError> {
         const CLIENT_TABLE_NAME: &str = "client";
+        const SESSIONS_DIR_KEY: &str = "sessions_dir";
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
         const PASSPHRASE_KEY: &str = "passphrase";
@@ -119,16 +120,20 @@ impl ConfigBuilder {
 
         match toml.get(CLIENT_TABLE_NAME) {
             Some(toml::Value::Table(client_config)) => {
+                try_read_key(client_config, PASSPHRASE_KEY, |v| {
+                    self.passphrase = Some(v.to_string())
+                });
+
                 try_read_key(client_config, SESSION_ID_KEY, |v| {
                     self.session_id = Some(v.to_string())
                 });
 
                 try_read_key(client_config, PUZZLE_DIR_KEY, |v| {
-                    self.puzzle_dir = Some(PathBuf::from_str(v).unwrap())
+                    self.puzzle_dir = Some(PathBuf::from(v))
                 });
 
-                try_read_key(client_config, PASSPHRASE_KEY, |v| {
-                    self.passphrase = Some(v.to_string())
+                try_read_key(client_config, SESSIONS_DIR_KEY, |v| {
+                    self.sessions_dir = Some(PathBuf::from(v))
                 });
             }
             _ => {
@@ -377,6 +382,7 @@ mod tests {
         [client]
         session_id = "12345"
         puzzle_dir = "path/to/puzzle/dir"
+        sessions_dir = "another/path/to/blah"
         passphrase = "foobar"
         "#;
 
@@ -386,6 +392,10 @@ mod tests {
         assert_eq!(
             options.puzzle_dir,
             Some(PathBuf::from_str("path/to/puzzle/dir").unwrap())
+        );
+        assert_eq!(
+            options.sessions_dir,
+            Some(PathBuf::from_str("another/path/to/blah").unwrap())
         );
         assert_eq!(options.passphrase, Some("foobar".to_string()));
     }
