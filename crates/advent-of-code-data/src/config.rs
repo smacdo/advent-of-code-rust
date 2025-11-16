@@ -80,7 +80,7 @@ impl ConfigBuilder {
             session_id: None,
             puzzle_dir: Some(project_dir.cache_dir().join("puzzles").to_path_buf()),
             sessions_dir: Some(project_dir.cache_dir().join("sessions").to_path_buf()),
-            passphrase: None,
+            passphrase: Some(gethostname::gethostname().to_string_lossy().to_string()),
             fake_time: None,
         }
     }
@@ -355,6 +355,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn config_uses_hostname_default_passphrase() {
+        let options = ConfigBuilder::new();
+        assert_eq!(
+            options.passphrase,
+            Some(gethostname::gethostname().into_string().unwrap())
+        );
+    }
+
+    #[test]
     fn client_can_overwrite_options() {
         let mut options = ConfigBuilder::new().with_passphrase("12345");
         assert_eq!(options.passphrase, Some("12345".to_string()));
@@ -406,14 +415,12 @@ mod tests {
     fn set_client_options_from_toml_ignores_missing_fields() {
         let config_text = r#"
         [client]
-        session_id = "12345"
-        passphrase_XXXX = "foobar"
+        session_idX = "12345"
         "#;
 
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
-        assert_eq!(options.session_id, Some("12345".to_string()));
-        assert!(options.passphrase.is_none());
+        assert!(options.session_id.is_none());
     }
 
     #[test]
@@ -422,13 +429,11 @@ mod tests {
         [client]
         session_id = "REPLACE_ME"
         puzzle_dir = "path/to/puzzle/dir"
-        passphrase = "REPLACE_ME"
         "#;
 
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert!(options.session_id.is_none());
-        assert!(options.passphrase.is_none());
         assert_eq!(
             options.puzzle_dir,
             Some(PathBuf::from_str("path/to/puzzle/dir").unwrap())
