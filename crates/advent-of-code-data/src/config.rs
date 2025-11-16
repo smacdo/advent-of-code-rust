@@ -5,11 +5,11 @@ use std::{
 };
 use thiserror::Error;
 
-// TODO: User config option for custom user/session cache dir.
 // TODO: document cache behavior.
 // TODO: in the documentation for ClientOptions, explain the builder pattern used.
 // TODO: in the documentation for ClientOptions, explain that with_* calls overwrite previous values.
 // TODO: need to write tests.
+// TODO: config for custom http endpoint.
 
 const DIRS_QUALIFIER: &str = "com";
 const DIRS_ORG: &str = "smacdo";
@@ -17,7 +17,7 @@ const DIRS_APP: &str = "advent_of_code_data";
 
 const CONFIG_FILENAME: &str = "aoc_settings.toml";
 const EXAMPLE_CONFIG_FILENAME: &str = "aoc_settings.example.toml";
-const HOME_DIR_CONFIG_FILENAME: &str = ".aoc.toml";
+const HOME_DIR_CONFIG_FILENAME: &str = ".aoc_settings.toml";
 
 const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 # session_id = "REPLACE_ME"
@@ -306,12 +306,16 @@ pub fn read_config_from_user_config_dirs(
     Ok(config)
 }
 
-/// TODO: document me!
+/// Returns a copy of `config` with settings that match any non-empty Advent of Code environment
+/// variables.
 pub fn read_config_from_env_vars(config: Option<ConfigBuilder>) -> ConfigBuilder {
-    let mut config = config.unwrap_or_default();
-
+    /// NOTE: Keep these environment variable names in sync with the README and other documentation!
     const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
     const PASSPHRASE_ENV_KEY: &str = "AOC_PASSPHRASE";
+    const PUZZLE_DIR_KEY: &str = "AOC_PUZZLE_DIR";
+    const SESSIONS_DIR_KEY: &str = "AOC_SESSIONS_DIR";
+
+    let mut config = config.unwrap_or_default();
 
     fn try_read_env_var<F: FnOnce(String)>(name: &str, setter: F) {
         if let Ok(v) = std::env::var(name) {
@@ -328,8 +332,13 @@ pub fn read_config_from_env_vars(config: Option<ConfigBuilder>) -> ConfigBuilder
         config.passphrase = Some(v);
     });
 
-    // TODO: user cache env variable.
-    // TODO: puzzle cache env variable.
+    try_read_env_var(PUZZLE_DIR_KEY, |v| {
+        config.puzzle_dir = Some(PathBuf::from(v));
+    });
+
+    try_read_env_var(SESSIONS_DIR_KEY, |v| {
+        config.sessions_dir = Some(PathBuf::from(v));
+    });
 
     config
 }
