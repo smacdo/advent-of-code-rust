@@ -150,19 +150,19 @@ impl WebClient {
         // Convert client options into a actual configuration values.
         // TODO: validate config settings are sane.
         let puzzle_dir = config.puzzle_dir.clone();
-        let session_cache_dir = config.session_cache_dir.clone();
+        let sessions_dir = config.sessions_dir.clone();
         let encryption_token = config.encryption_token.clone();
 
         // Print configuration settings to debug log.
         tracing::debug!("puzzle cache dir: {puzzle_dir:?}");
-        tracing::debug!("session cache dir: {session_cache_dir:?}");
+        tracing::debug!("sessions dir: {sessions_dir:?}");
         tracing::debug!("puzzle cache using encryption: {}", true);
 
         Self {
             config,
             protocol: advent_protocol,
             puzzle_cache: Box::new(PuzzleFsCache::new(puzzle_dir, Some(encryption_token))),
-            session_cache: Box::new(SessionFsCache::new(session_cache_dir)),
+            session_cache: Box::new(SessionFsCache::new(sessions_dir)),
         }
     }
 }

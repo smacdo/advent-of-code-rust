@@ -55,7 +55,7 @@ pub struct Config {
     /// Directory where puzzle inputs and answers are stored.
     pub puzzle_dir: PathBuf,
     /// Directory where per-session state (e.g., submission timeouts) is cached.
-    pub session_cache_dir: PathBuf,
+    pub sessions_dir: PathBuf,
     /// Passphrase used to encrypt puzzle inputs on disk.
     pub encryption_token: String,
     /// Current time (usually UTC now, but can be overridden for testing).
@@ -66,7 +66,7 @@ pub struct Config {
 pub struct ConfigBuilder {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
-    pub session_cache_dir: Option<PathBuf>,
+    pub sessions_dir: Option<PathBuf>,
     pub encryption_token: Option<String>,
     pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
 }
@@ -81,7 +81,7 @@ impl ConfigBuilder {
         Self {
             session_id: None,
             puzzle_dir: Some(project_dir.cache_dir().join("puzzles").to_path_buf()),
-            session_cache_dir: Some(project_dir.cache_dir().join("sessions").to_path_buf()),
+            sessions_dir: Some(project_dir.cache_dir().join("sessions").to_path_buf()),
             encryption_token: None,
             fake_time: None,
         }
@@ -165,8 +165,8 @@ impl ConfigBuilder {
         Ok(Config {
             session_id: self.session_id.ok_or(ConfigError::SessionIdRequired)?,
             puzzle_dir: self.puzzle_dir.ok_or(ConfigError::PuzzleCacheDirRequired)?,
-            session_cache_dir: self
-                .session_cache_dir
+            sessions_dir: self
+                .sessions_dir
                 .ok_or(ConfigError::SessionCacheDirRequired)?,
             encryption_token: self
                 .encryption_token
