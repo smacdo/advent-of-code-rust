@@ -64,7 +64,7 @@ Other environment variables are available for advanced use:
 - `AOC_PASSPHRASE`: Custom passphrase for encryption (uses hostname by default)
 - `AOC_PUZZLE_DIR`: Custom directory for caching puzzles
 - `AOC_SESSIONS_DIR`: Custom directory for session data
-- `AOC_CONFIG_FILE`: Path to a specific config file
+- `AOC_CONFIG_PATH`: Path to a specific config file (disables all other config locations)
 
 ### Using a Configuration File
 
@@ -92,7 +92,13 @@ Example configuration file:
 session_id = "your_session_cookie_here"
 ```
 
-Configuration files are loaded in order, with later values overriding earlier ones. This lets you keep global settings in your user directory and override them with project-specific settings in `.aoc_settings.toml`.
+Configuration is loaded in this order, with later sources overriding earlier ones:
+
+1. User configuration directory or the user's home directory
+2. Current directory (`.aoc_settings.toml`)
+3. Environment variables (highest priority)
+
+This lets you keep global settings in your user directory, override them with project-specific settings, and override those with environment variables.
 
 ### Storing Puzzles in Your Project
 

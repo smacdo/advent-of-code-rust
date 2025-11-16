@@ -1,19 +1,41 @@
 # advent-of-code-rust
-Advent of Code solutions written in Rust
 
-## Running
-```
+Advent of Code solutions written in Rust.
+
+## Quick Start
+
+Run the solutions:
+
+```shell
 cargo run
 ```
 
-## Project Setup
-1. Copy `aoc_settings.example.json` to `aoc_settings.json`
-2. Modify the following keys in `aoc_settings.json`:
-    - `session_id` should be set to your Advent of Code session cookie.
-    - `passphrase` is a custom password to encrypt your cached input data.
+## Configuration
 
-### Alternative project set up
-1. Set env var `AOC_SESSION` to your Advent of Code session cookie.
-2. Set env var `AOC_PASSPHRASE` to encrypt your cached input data.
+To fetch puzzle inputs, you need to provide your AoC session cookie. Choose one:
 
+**Option 1: Environment variables (fastest)**
+```shell
+export AOC_SESSION=your_session_cookie_here
+export AOC_PASSPHRASE=your_encryption_passphrase  # Required if using custom puzzle_dir
+cargo run
+```
 
+**Option 2: Configuration file**
+1. Create `.aoc_settings.toml` in the project root
+2. Add your session and passphrase:
+```toml
+[client]
+session_id = "your_session_cookie_here"
+passphrase = "your_encryption_passphrase"
+```
+
+See the [advent-of-code-data](./crates/advent-of-code-data) crate documentation for more configuration options.
+
+## Crates
+
+This project contains multiple crates:
+
+- **[advent-of-code-data](./crates/advent-of-code-data)**: Library for fetching puzzle inputs and submitting answers to AoC
+- **[noclip](./crates/noclip)**: Data structures, algorithms, and utilities
+- **[yuletide](./crates/yuletide)**: Framework for writing and managing AoC solutions 

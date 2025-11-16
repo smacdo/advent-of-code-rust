@@ -17,6 +17,8 @@
 - No warning for overwriting same day
 - Should not fetch input before succesfully running examples
 - AOC session should not be required until input or answer submission invoked
+- README documents wrong environment variable name: `AOC_CONFIG_FILE` should be `AOC_CONFIG_PATH`
+- README incorrectly claims passphrase uses hostname as default; passphrase is actually required
 
 # Missing Tests
 - Client returns encryption error if cached input is encrypted with different password
