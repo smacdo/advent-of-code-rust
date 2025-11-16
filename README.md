@@ -53,7 +53,7 @@ file, an environment variable or via the command line.
 
 ```
 [client]
-passphrase = ""   # Use to encrypt/decrypt the puzzle cache.
+passphrase = ""   # Used to encrypt/decrypt the puzzle cache.
 session_id = ""   # See "Finding your Advent of Code session cookie" in the README for help.
 puzzle_dir = ""   # Directory where cached puzzle inputs and answers are stored.
 sessions_dir = "" # Directory where user session data is cached.

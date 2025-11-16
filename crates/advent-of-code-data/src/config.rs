@@ -1,11 +1,9 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 use thiserror::Error;
 
-// TODO: document cache behavior.
 // TODO: in the documentation for ClientOptions, explain the builder pattern used.
 // TODO: in the documentation for ClientOptions, explain that with_* calls overwrite previous values.
 // TODO: need to write tests.
@@ -20,8 +18,8 @@ const EXAMPLE_CONFIG_FILENAME: &str = "aoc_settings.example.toml";
 const HOME_DIR_CONFIG_FILENAME: &str = ".aoc_settings.toml";
 
 const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
-# session_id = "REPLACE_ME"
-# passphrase = "REPLACE_ME"
+# passphrase = "REPLACE_ME"  # Used to encrypt/decrypt the puzzle cache.
+# session_id = "REPLACE_ME"  # See "Finding your Advent of Code session cookie" in the README for help.
 "#;
 
 /// Errors that can occur when configuring client settings.
@@ -350,6 +348,8 @@ pub fn read_config_from_env_vars(config: Option<ConfigBuilder>) -> ConfigBuilder
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
 
     #[test]
