@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 use std::str::FromStr;
 
 use client::{Client, ClientError, WebClient};
