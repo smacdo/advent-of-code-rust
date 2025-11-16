@@ -240,9 +240,11 @@ pub fn read_config_from_user_config_dirs(
 ) -> Result<ConfigBuilder, ConfigError> {
     let mut config = config.unwrap_or_default();
 
-    // Read custom configuration path from `AOC_CONFIG_PATH` if it is set. Do not continue
-    // looking for user config if this was set.
-    const CUSTOM_CONFIG_ENV_KEY: &str = "AOC_CONFIG_PATH";
+    // Read custom configuration path from `AOC_CONFIG_FILE` if it is set. Skip searching other
+    // config paths if this environment variable is set.
+    //
+    // NOTE: Please keep this name consistent with README.md!
+    const CUSTOM_CONFIG_ENV_KEY: &str = "AOC_CONFIG_FILE";
 
     if let Ok(custom_config_path) = std::env::var(CUSTOM_CONFIG_ENV_KEY) {
         if std::fs::exists(&custom_config_path).unwrap_or(false) {
