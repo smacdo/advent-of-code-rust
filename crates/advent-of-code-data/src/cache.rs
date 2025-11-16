@@ -16,10 +16,11 @@ use crate::{
 /// Represents an error occurring when interacting with the cache.
 #[derive(Debug, Error)]
 pub enum CacheError {
-    #[error("AOC encryption token expected but not provided (check your config)")]
-    EncryptionTokenNotSet,
-    #[error("Cached input file is not encrypted but encryption token was provided")]
-    EncryptionTokenNotNeeded,
+    #[error("passphrase expected but not provided (check your config)")]
+    PassphraseRequired,
+    #[error("Cached input file is not encrypted but encryption passphrase was provided")]
+    // TODO: Should this be a warning and not an error?
+    PassphraseNotNeeded,
     #[error("base 64 decoding failed: {}", .0)]
     DecodeBase64(#[from] base64::DecodeError),
     #[error("decryption failed: {}", .0)]
@@ -60,8 +61,8 @@ pub trait PuzzleCache: Debug {
     }
 
     /// Save input for the given day and year. The input is encrypted before being written to disk
-    /// (if an encryption token is configured). Any previously saved input for this day and year
-    /// will be overwritten.
+    /// if a passphrase is provided. Any previously saved input for this day and year will be
+    /// overwritten.
     fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError>;
 
     /// Save answers for the given part, day and year. Any previously saved answers for this day and
@@ -96,13 +97,13 @@ pub trait SessionCache: Debug {
 /// `year` is four digit puzzle year.
 /// `day` is the puzzle day with no leading zeroes, and starting from index one.
 ///
-/// **Encryption**: If an encryption token is configured, inputs are automatically encrypted when
-/// saved and decrypted when loaded. The `.encrypted.txt` suffix indicates an encrypted file.
-/// Unencrypted input files use the `.txt` extension.
+/// **Encryption**: If a passphrase is configured, inputs are automatically encrypted when saved and
+/// decrypted when loaded. The `.encrypted.txt` suffix indicates an encrypted file. Unencrypted
+/// input files use the `.txt` extension.
 #[derive(Debug)]
 pub struct PuzzleFsCache {
     cache_dir: PathBuf,
-    encryption_token: Option<String>,
+    passphrase: Option<String>,
 }
 
 impl PuzzleFsCache {
@@ -111,15 +112,12 @@ impl PuzzleFsCache {
     const PART_ONE_ANSWERS_FILE_NAME: &'static str = "part-1-answers.txt";
     const PART_TWO_ANSWERS_FILE_NAME: &'static str = "part-2-answers.txt";
 
-    /// Creates a new `PuzzleFsCache` that reads/writes cache data stored in `cache_dir`. Answers
-    /// are encrypted on disk using an encryption token (ie, password).
-    pub fn new<P: Into<PathBuf>, S: Into<String>>(
-        cache_dir: P,
-        encryption_token: Option<S>,
-    ) -> Self {
+    /// Creates a new `PuzzleFsCache` that reads/writes cache data stored in `cache_dir`. Inputs are
+    /// are encrypted on disk using the provided passphrase.
+    pub fn new<P: Into<PathBuf>, S: Into<String>>(cache_dir: P, passphrase: Option<S>) -> Self {
         Self {
             cache_dir: cache_dir.into(),
-            encryption_token: encryption_token.map(|x| x.into()),
+            passphrase: passphrase.map(|x| x.into()),
         }
     }
 
@@ -150,7 +148,7 @@ impl PuzzleCache for PuzzleFsCache {
     fn load_input(&self, day: Day, year: Year) -> Result<Option<String>, CacheError> {
         // Check for common encryption misconfiguration scenarios and warn or return an error
         // depending on severity.
-        let using_encryption = self.encryption_token.is_some();
+        let using_encryption = self.passphrase.is_some();
         let input_path = Self::input_file_path(&self.cache_dir, day, year, using_encryption);
         let input_path_exists = std::fs::exists(&input_path).unwrap_or(false);
 
@@ -163,13 +161,13 @@ impl PuzzleCache for PuzzleFsCache {
                     "mixed input (encrypted and unencrypted) for year {year} day {day} found in cache"
                 );
             }
-            (true, false, true) => return Err(CacheError::EncryptionTokenNotNeeded),
+            (true, false, true) => return Err(CacheError::PassphraseNotNeeded),
             (false, true, true) => {
                 tracing::warn!(
                     "mixed input (encrypted and unencrypted) input for year {year} day {day} found in cache"
                 );
             }
-            (false, false, true) => return Err(CacheError::EncryptionTokenNotSet),
+            (false, false, true) => return Err(CacheError::PassphraseRequired),
             (_, false, _) => return Ok(None),
             _ => {}
         }
@@ -180,12 +178,12 @@ impl PuzzleCache for PuzzleFsCache {
         match std::fs::read_to_string(input_path) {
             Ok(input_text) => {
                 // Check if the input file needs to be decrypted before returning it.
-                if let Some(encryption_token) = &self.encryption_token {
+                if let Some(passphrase) = &self.passphrase {
                     // Input needs decryption before it can be returned.
                     let encrypted_bytes = BASE64_STANDARD
                         .decode(input_text.as_bytes())
                         .map_err(CacheError::DecodeBase64)?;
-                    let input_bytes = decrypt(&encrypted_bytes, encryption_token.as_bytes())
+                    let input_bytes = decrypt(&encrypted_bytes, passphrase.as_bytes())
                         .map_err(CacheError::Decryption)?;
                     let decrypted_input_text =
                         String::from_utf8(input_bytes).map_err(CacheError::DecodeUtf8)?;
@@ -231,7 +229,7 @@ impl PuzzleCache for PuzzleFsCache {
     fn save_input(&self, input: &str, day: Day, year: Year) -> Result<(), CacheError> {
         // Calculate the path to the puzzle's input file.
         let input_path =
-            Self::input_file_path(&self.cache_dir, day, year, self.encryption_token.is_some());
+            Self::input_file_path(&self.cache_dir, day, year, self.passphrase.is_some());
 
         // Create puzzle directory if it does not already exist.
         let mut puzzle_dir = input_path.clone();
@@ -239,12 +237,11 @@ impl PuzzleCache for PuzzleFsCache {
 
         std::fs::create_dir_all(puzzle_dir)?;
 
-        // Write the input to disk, and optionally encrypt the input file when
-        // stored on disk.
-        if let Some(encryption_token) = &self.encryption_token {
+        // Write the input to disk and encrypt the input file when stored on disk.
+        if let Some(passphrase) = &self.passphrase {
             // Encrypt then base64 encode for better version control handling.
-            let encrypted_data = encrypt(input.as_bytes(), encryption_token.as_bytes())
-                .map_err(CacheError::Encryption)?;
+            let encrypted_data =
+                encrypt(input.as_bytes(), passphrase.as_bytes()).map_err(CacheError::Encryption)?;
             let b64_encrypted_text = BASE64_STANDARD.encode(encrypted_data);
 
             tracing::debug!("saving encrypted input for day {day} year {year} to {input_path:?}");

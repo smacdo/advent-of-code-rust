@@ -97,11 +97,11 @@ pub trait Client {
 /// # Initialization Patterns
 ///
 /// 1. **`new()`** - Creates a client with default configuration. Requires a valid user config, a
-///    config in the local directory, or the `AOC_SESSION_ID` and `AOC_ENCRYPTION_TOKEN` environment
+///    config in the local directory, or the `AOC_SESSION_ID` and `AOC_PASSPHRASE` environment
 ///    variables to be set.
 ///
 /// 2. **`with_options(ClientOptions)`** - Creates a client with custom configuration options
-///    (directories, encryption token, etc.). This is the standard path for most use cases.
+///    (directories, passphrase, etc.). This is the standard path for most use cases.
 ///
 /// 3. **`with_custom_impl(ClientConfig, Box<dyn AdventOfCodeProtocol>)`** - For testing usage.
 ///    Allows callers to inject a mock HTTP implementation. Caches are still created automatically
@@ -111,11 +111,11 @@ pub trait Client {
 ///
 /// - **Session ID**: Required for authentication. Must be a valid Advent of Code session cookie.
 /// - **Network Access**: Required for fetching new puzzles and submitting answers.
-/// - **Encryption Token**: Used to encrypt cached puzzle inputs on disk (as requested by AoC maintainer).
+/// - **Passphrase**: Used to encrypt cached puzzle inputs on disk (as requested by AoC maintainer).
 /// - **Cache Directories**: Created automatically if missing.
 #[derive(Debug)]
 pub struct WebClient {
-    /// The client configuration (session ID, directories, encryption key, current time)
+    /// The client configuration (session ID, cache directories, passphrase, etc)
     pub config: Config,
     protocol: Box<dyn AdventOfCodeProtocol>,
     /// Stores encrypted puzzle inputs and answer data.
@@ -131,9 +131,6 @@ impl WebClient {
     }
 
     /// Creates a client with custom configuration options.
-    ///
-    /// This is the standard initialization method. Use this to specify custom cache directories,
-    /// encryption tokens, and other options.
     pub fn with_config(config: Config) -> Self {
         let advent_protocol = Box::new(AdventOfCodeHttpProtocol::new(&config));
         Self::with_custom_impl(config, advent_protocol)
@@ -151,17 +148,17 @@ impl WebClient {
         // TODO: validate config settings are sane.
         let puzzle_dir = config.puzzle_dir.clone();
         let sessions_dir = config.sessions_dir.clone();
-        let encryption_token = config.encryption_token.clone();
+        let passphrase = config.passphrase.clone();
 
         // Print configuration settings to debug log.
         tracing::debug!("puzzle cache dir: {puzzle_dir:?}");
         tracing::debug!("sessions dir: {sessions_dir:?}");
-        tracing::debug!("puzzle cache using encryption: {}", true);
+        tracing::debug!("using encryption: {}", !passphrase.is_empty());
 
         Self {
             config,
             protocol: advent_protocol,
-            puzzle_cache: Box::new(PuzzleFsCache::new(puzzle_dir, Some(encryption_token))),
+            puzzle_cache: Box::new(PuzzleFsCache::new(puzzle_dir, Some(passphrase))),
             session_cache: Box::new(SessionFsCache::new(sessions_dir)),
         }
     }
@@ -348,7 +345,7 @@ mod tests {
         WebClient::with_config(
             ConfigBuilder::new()
                 .with_session_id("UNIT_TEST_SESSION_ID")
-                .with_encryption_token("UNIT_TEST_PASSWORD")
+                .with_passphrase("UNIT_TEST_PASSWORD")
                 .with_puzzle_dir("DO_NOT_USE")
                 .with_fake_time(
                     Eastern

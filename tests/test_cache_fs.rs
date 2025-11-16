@@ -8,11 +8,11 @@ use tempfile::tempdir;
 #[test]
 fn load_encrypted_input() {
     let cache_dir = tempdir().unwrap();
-    let encryption_token = Some("TEST".to_string());
+    let passphrase = Some("TEST".to_string());
 
     // Write input data with a temporary client.
     {
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
         puzzle_cache
             .save_input("testing\n-123+=", Day(1), Year(1987))
             .unwrap();
@@ -28,7 +28,7 @@ fn load_encrypted_input() {
 
     // Read input data with the same password.
     let read_cached_input = |day: Day, year: Year| {
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
         puzzle_cache
             .load_input(day, year)
             .expect("no errors from load_input are expected")
@@ -43,11 +43,11 @@ fn load_encrypted_input() {
 #[test]
 fn load_unencrypted_input() {
     let cache_dir = tempdir().unwrap();
-    let encryption_token: Option<String> = None;
+    let passphrase: Option<String> = None;
 
     // Write input data without a password.
     {
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
         puzzle_cache
             .save_input("foobar", Day(19), Year(2000))
             .unwrap();
@@ -55,7 +55,7 @@ fn load_unencrypted_input() {
 
     // Read input data without a password.
     let read_cached_input = |day: Day, year: Year| {
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
         puzzle_cache
             .load_input(day, year)
             .expect("no errors from load_input are expected")
@@ -70,11 +70,11 @@ fn load_unencrypted_input() {
 #[test]
 fn load_input_returns_some_if_cache_exists() {
     let cache_dir = tempdir().unwrap();
-    let encryption_token = Some("TEST".to_string());
+    let passphrase = Some("TEST".to_string());
 
     // Write input data with a temporary client.
     {
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
         puzzle_cache
             .save_input("foobar", Day(19), Year(2000))
             .unwrap();
@@ -82,7 +82,7 @@ fn load_input_returns_some_if_cache_exists() {
 
     // Read input data back with another temporary client.
     let read_cached_input = |day: Day, year: Year| {
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
         puzzle_cache
             .load_input(day, year)
             .expect("no errors from load_input are expected")
@@ -97,9 +97,9 @@ fn load_input_returns_some_if_cache_exists() {
 #[test]
 fn load_input_returns_none_if_cache_not_found() {
     let cache_dir = tempdir().unwrap();
-    let encryption_token = Some("TEST".to_string());
+    let passphrase = Some("TEST".to_string());
 
-    let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token.clone());
+    let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase.clone());
     let result = puzzle_cache
         .load_input(Day(1), Year(2023))
         .expect("no errors from load_input are expected");
@@ -113,8 +113,8 @@ fn load_input_err_if_wrong_password() {
 
     // Write encrypted input data with a temporary client.
     {
-        let encryption_token = Some("TEST".to_string());
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache
             .save_input("foobar", Day(19), Year(2000))
             .unwrap();
@@ -122,8 +122,8 @@ fn load_input_err_if_wrong_password() {
 
     // Read input data with the wrong encryption password.
     let read_cached_input = |day: Day, year: Year| {
-        let encryption_token = Some("wrong password".to_string());
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase = Some("wrong password".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache.load_input(day, year)
     };
 
@@ -139,8 +139,8 @@ fn load_input_err_if_password_missing() {
 
     // Write encrypted input data with a temporary client.
     {
-        let encryption_token = Some("TEST".to_string());
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache
             .save_input("foobar", Day(19), Year(2000))
             .unwrap();
@@ -148,14 +148,14 @@ fn load_input_err_if_password_missing() {
 
     // Read input data without an encryption password.
     let read_cached_input = |day: Day, year: Year| {
-        let encryption_token: Option<String> = None;
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase: Option<String> = None;
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache.load_input(day, year)
     };
 
     assert!(matches!(
         read_cached_input(Day(19), Year(2000)),
-        Err(CacheError::EncryptionTokenNotSet)
+        Err(CacheError::PassphraseRequired)
     ));
 }
 
@@ -165,8 +165,8 @@ fn load_input_err_if_password_provided_but_input_not_encrypted() {
 
     // Write unencrypted input data with a temporary client.
     {
-        let encryption_token: Option<String> = None;
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase: Option<String> = None;
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache
             .save_input("foobar", Day(19), Year(2000))
             .unwrap();
@@ -174,14 +174,14 @@ fn load_input_err_if_password_provided_but_input_not_encrypted() {
 
     // Read input data with an encryption password.
     let read_cached_input = |day: Day, year: Year| {
-        let encryption_token = Some("TEST".to_string());
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache.load_input(day, year)
     };
 
     assert!(matches!(
         read_cached_input(Day(19), Year(2000)),
-        Err(CacheError::EncryptionTokenNotNeeded)
+        Err(CacheError::PassphraseNotNeeded)
     ));
 }
 
@@ -191,8 +191,8 @@ fn load_answers_cache_exists() {
 
     // Save answers for part one to cache.
     {
-        let encryption_token: Option<String> = None;
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase: Option<String> = None;
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         let mut answers = Answers::new();
 
         answers.set_correct_answer(Answer::Int(42));
@@ -205,8 +205,8 @@ fn load_answers_cache_exists() {
 
     // Save answers for part two to cache.
     {
-        let encryption_token: Option<String> = None;
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase: Option<String> = None;
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         let mut answers = Answers::new();
 
         answers.set_correct_answer(Answer::from("hello world"));
@@ -220,8 +220,8 @@ fn load_answers_cache_exists() {
 
     // Load answers back from cache.
     let read_cached_input = |part: Part, day: Day, year: Year| {
-        let encryption_token = Some("TEST".to_string());
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache
             .load_answers(part, day, year)
             .expect("errors not expected when loading answers from cache")
@@ -262,8 +262,8 @@ fn load_answers_returns_none_if_cache_missing() {
 
     // Load answers back from cache.
     let read_cached_input = |part: Part, day: Day, year: Year| {
-        let encryption_token = Some("TEST".to_string());
-        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), encryption_token);
+        let passphrase = Some("TEST".to_string());
+        let puzzle_cache = PuzzleFsCache::new(cache_dir.path(), passphrase);
         puzzle_cache
             .load_answers(part, day, year)
             .expect("errors not expected when loading answers from cache")

@@ -21,7 +21,7 @@ const HOME_DIR_CONFIG_FILENAME: &str = ".aoc.toml";
 
 const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 # session_id = "REPLACE_ME"
-# encryption_token = "REPLACE_ME"
+# passphrase = "REPLACE_ME"
 "#;
 
 /// Errors that can occur when configuring client settings.
@@ -31,8 +31,8 @@ pub enum ConfigError {
         "session cookie required; use the advent-of-code-data README to learn how to obtain this"
     )]
     SessionIdRequired,
-    #[error("an encryption passphrase is required")]
-    EncryptionTokenRequired,
+    #[error("an passphrase for encrypting puzzle inputs is required")]
+    PassphraseRequired,
     #[error("a puzzle cache directory is required")]
     PuzzleCacheDirRequired,
     #[error("a session cache directory is required")]
@@ -57,7 +57,7 @@ pub struct Config {
     /// Directory where per-session state (e.g., submission timeouts) is cached.
     pub sessions_dir: PathBuf,
     /// Passphrase used to encrypt puzzle inputs on disk.
-    pub encryption_token: String,
+    pub passphrase: String,
     /// Current time (usually UTC now, but can be overridden for testing).
     pub start_time: chrono::DateTime<chrono::Utc>,
 }
@@ -67,7 +67,7 @@ pub struct ConfigBuilder {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
     pub sessions_dir: Option<PathBuf>,
-    pub encryption_token: Option<String>,
+    pub passphrase: Option<String>,
     pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
 }
 
@@ -82,7 +82,7 @@ impl ConfigBuilder {
             session_id: None,
             puzzle_dir: Some(project_dir.cache_dir().join("puzzles").to_path_buf()),
             sessions_dir: Some(project_dir.cache_dir().join("sessions").to_path_buf()),
-            encryption_token: None,
+            passphrase: None,
             fake_time: None,
         }
     }
@@ -93,7 +93,7 @@ impl ConfigBuilder {
         const CLIENT_TABLE_NAME: &str = "client";
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
-        const ENCRYPTION_TOKEN_KEY: &str = "encryption_token";
+        const PASSPHRASE_KEY: &str = "passphrase";
         const REPLACE_ME: &str = "REPLACE_ME";
 
         fn try_read_key<F: FnOnce(&str)>(table: &toml::Table, key: &str, setter: F) {
@@ -127,8 +127,8 @@ impl ConfigBuilder {
                     self.puzzle_dir = Some(PathBuf::from_str(v).unwrap())
                 });
 
-                try_read_key(client_config, ENCRYPTION_TOKEN_KEY, |v| {
-                    self.encryption_token = Some(v.to_string())
+                try_read_key(client_config, PASSPHRASE_KEY, |v| {
+                    self.passphrase = Some(v.to_string())
                 });
             }
             _ => {
@@ -151,8 +151,8 @@ impl ConfigBuilder {
         self
     }
 
-    pub fn with_encryption_token<S: Into<String>>(mut self, encryption_token: S) -> Self {
-        self.encryption_token = Some(encryption_token.into());
+    pub fn with_passphrase<S: Into<String>>(mut self, passphrase: S) -> Self {
+        self.passphrase = Some(passphrase.into());
         self
     }
 
@@ -168,9 +168,7 @@ impl ConfigBuilder {
             sessions_dir: self
                 .sessions_dir
                 .ok_or(ConfigError::SessionCacheDirRequired)?,
-            encryption_token: self
-                .encryption_token
-                .ok_or(ConfigError::EncryptionTokenRequired)?,
+            passphrase: self.passphrase.ok_or(ConfigError::PassphraseRequired)?,
             start_time: self.fake_time.unwrap_or(chrono::Utc::now()),
         })
     }
@@ -313,7 +311,7 @@ pub fn read_config_from_env_vars(config: Option<ConfigBuilder>) -> ConfigBuilder
     let mut config = config.unwrap_or_default();
 
     const SESSION_ID_ENV_KEY: &str = "AOC_SESSION";
-    const PASSWORD_ENV_KEY: &str = "AOC_PASSWORD";
+    const PASSPHRASE_ENV_KEY: &str = "AOC_PASSPHRASE";
 
     fn try_read_env_var<F: FnOnce(String)>(name: &str, setter: F) {
         if let Ok(v) = std::env::var(name) {
@@ -326,8 +324,8 @@ pub fn read_config_from_env_vars(config: Option<ConfigBuilder>) -> ConfigBuilder
         config.session_id = Some(v);
     });
 
-    try_read_env_var(PASSWORD_ENV_KEY, |v| {
-        config.encryption_token = Some(v);
+    try_read_env_var(PASSPHRASE_ENV_KEY, |v| {
+        config.passphrase = Some(v);
     });
 
     // TODO: user cache env variable.
@@ -342,11 +340,11 @@ mod tests {
 
     #[test]
     fn client_can_overwrite_options() {
-        let mut options = ConfigBuilder::new().with_encryption_token("12345");
-        assert_eq!(options.encryption_token, Some("12345".to_string()));
+        let mut options = ConfigBuilder::new().with_passphrase("12345");
+        assert_eq!(options.passphrase, Some("12345".to_string()));
 
-        options = options.with_encryption_token("54321");
-        assert_eq!(options.encryption_token, Some("54321".to_string()));
+        options = options.with_passphrase("54321");
+        assert_eq!(options.passphrase, Some("54321".to_string()));
     }
 
     #[test]
@@ -354,14 +352,14 @@ mod tests {
         let options = ConfigBuilder::new()
             .with_session_id("MY_SESSION_ID")
             .with_puzzle_dir("MY_CACHE_DIR")
-            .with_encryption_token("MY_PASSWORD");
+            .with_passphrase("MY_PASSWORD");
 
         assert_eq!(options.session_id, Some("MY_SESSION_ID".to_string()));
         assert_eq!(
             options.puzzle_dir,
             Some(PathBuf::from_str("MY_CACHE_DIR").unwrap())
         );
-        assert_eq!(options.encryption_token, Some("MY_PASSWORD".to_string()));
+        assert_eq!(options.passphrase, Some("MY_PASSWORD".to_string()));
     }
 
     #[test]
@@ -370,7 +368,7 @@ mod tests {
         [client]
         session_id = "12345"
         puzzle_dir = "path/to/puzzle/dir"
-        encryption_token = "foobar"
+        passphrase = "foobar"
         "#;
 
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
@@ -380,7 +378,7 @@ mod tests {
             options.puzzle_dir,
             Some(PathBuf::from_str("path/to/puzzle/dir").unwrap())
         );
-        assert_eq!(options.encryption_token, Some("foobar".to_string()));
+        assert_eq!(options.passphrase, Some("foobar".to_string()));
     }
 
     #[test]
@@ -388,13 +386,13 @@ mod tests {
         let config_text = r#"
         [client]
         session_id = "12345"
-        encryption_token_XXXX = "foobar"
+        passphrase_XXXX = "foobar"
         "#;
 
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
-        assert!(options.encryption_token.is_none());
+        assert!(options.passphrase.is_none());
     }
 
     #[test]
@@ -403,13 +401,13 @@ mod tests {
         [client]
         session_id = "REPLACE_ME"
         puzzle_dir = "path/to/puzzle/dir"
-        encryption_token = "REPLACE_ME"
+        passphrase = "REPLACE_ME"
         "#;
 
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert!(options.session_id.is_none());
-        assert!(options.encryption_token.is_none());
+        assert!(options.passphrase.is_none());
         assert_eq!(
             options.puzzle_dir,
             Some(PathBuf::from_str("path/to/puzzle/dir").unwrap())

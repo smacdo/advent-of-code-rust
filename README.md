@@ -8,11 +8,11 @@ cargo run
 1. Copy `aoc_settings.example.json` to `aoc_settings.json`
 2. Modify the following keys in `aoc_settings.json`:
     - `session_id` should be set to your Advent of Code session cookie.
-    - `encryption_token` is a custom password to encrypt your cached input data.
+    - `passphrase` is a custom password to encrypt your cached input data.
 
 ## Alternative project set up
 1. Set env var `AOC_SESSION` to your Advent of Code session cookie.
-2. Set env var `AOC_PASSWORD` to encrypt your cached input data.
+2. Set env var `AOC_PASSPHRASE` to encrypt your cached input data.
 
 # Configuration
 This library supports custom configuration via environment variables and config
@@ -34,7 +34,7 @@ skipped. Files are loaded in the following order:
 The following environment variables are read, after loading configuration files:
 
     - `AOC_SESSION`: The Advent of Code session cookie.
-    - `AOC_PASSWORD`: An encryption password for locally stored puzzle inputs.
+    - `AOC_PASSPHRASE`: An encryption password for locally stored puzzle inputs.
     - `AOC_CONFIG_PATH`: Sets a custom configuration file path.
     - `PUZZLE_DIR`: Directory path where puzzle inputs and answers are stored.
 
