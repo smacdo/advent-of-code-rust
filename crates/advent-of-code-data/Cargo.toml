@@ -1,6 +1,6 @@
 [package]
 name = "advent-of-code-data"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Scott MacDonald"]
 description = "Advent of Code API for submitting answers and getting inputs"
 edition.workspace = true
