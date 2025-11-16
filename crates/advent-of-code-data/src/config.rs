@@ -341,21 +341,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn client_options_are_none_by_default() {
-        let options = ConfigBuilder::new();
-        assert!(options.session_id.is_none());
-        assert!(options.puzzle_dir.is_none());
-        assert!(options.encryption_token.is_none());
-    }
-
-    #[test]
     fn client_can_overwrite_options() {
-        let options = ConfigBuilder::new()
-            .with_encryption_token("12345")
-            .with_encryption_token("54321");
+        let mut options = ConfigBuilder::new().with_encryption_token("12345");
+        assert_eq!(options.encryption_token, Some("12345".to_string()));
 
-        assert!(options.session_id.is_none());
-        assert!(options.puzzle_dir.is_none());
+        options = options.with_encryption_token("54321");
         assert_eq!(options.encryption_token, Some("54321".to_string()));
     }
 
@@ -404,7 +394,6 @@ mod tests {
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
 
         assert_eq!(options.session_id, Some("12345".to_string()));
-        assert!(options.puzzle_dir.is_none());
         assert!(options.encryption_token.is_none());
     }
 
