@@ -11,7 +11,7 @@ static RE_CELL_FIND_INTS: OnceLock<Regex> = OnceLock::new();
 /// values.
 ///
 /// ```
-/// use workshop::utils::find_ints;
+/// use noclip::utils::find_ints;
 ///
 /// assert_eq!(find_ints("123   -57 \n  2321"), vec![123, -57, 2321]);
 /// assert_eq!(find_ints("123, -57xxx2321"), vec![123, -57, 2321]);
@@ -29,7 +29,7 @@ pub fn find_ints(text: &str) -> Vec<i64> {
 /// out repetition.
 ///
 /// ```
-/// use workshop::utils::pairwise_combinations;
+/// use noclip::utils::pairwise_combinations;
 ///
 /// // (abc) -> [(ab), (ac), (bc)]
 /// assert_eq!(

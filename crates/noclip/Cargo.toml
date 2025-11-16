@@ -1,8 +1,8 @@
 [package]
-name = "workshop"
-version = "0.0.0"
+name = "noclip"
+version = "0.0.1"
 authors = ["Scott MacDonald"]
-description = "A collection of utilities and other helpers for solving coding challenges"
+description = "A collection of data structures, algorithms and utilities that can be used for an assortment of purposes"
 edition.workspace = true
 license.workspace = true
 homepage.workspace = true

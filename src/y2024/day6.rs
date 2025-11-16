@@ -6,7 +6,7 @@ use yuletide as yt;
 
 use linkme::distributed_slice;
 use thiserror::Error;
-use workshop::spatial::{Direction4, Grid, Point2};
+use noclip::spatial::{Direction4, Grid, Point2};
 
 use crate::SOLVERS;
 

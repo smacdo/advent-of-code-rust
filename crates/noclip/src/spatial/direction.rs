@@ -27,7 +27,7 @@ impl Direction4 {
     /// direction.
     ///
     /// ```
-    /// use workshop::spatial::Direction4;
+    /// use noclip::spatial::Direction4;
     ///
     /// assert_eq!(Direction4::North.rotated_90_cw(), Direction4::East);
     /// assert_eq!(Direction4::South.rotated_90_cw(), Direction4::West);
@@ -44,7 +44,7 @@ impl Direction4 {
     /// Return an iterator over directions clockwise starting from East.
     ///
     /// ```
-    /// use workshop::spatial::Direction4;
+    /// use noclip::spatial::Direction4;
     ///
     /// for dir in Direction4::all() {
     ///   println!("{dir}");
@@ -151,7 +151,7 @@ impl Direction8 {
     /// Return an iterator over directions clockwise starting from East.
     ///
     /// ```
-    /// use workshop::spatial::Direction8;
+    /// use noclip::spatial::Direction8;
     ///
     /// for dir in Direction8::all() {
     ///   println!("{dir}");

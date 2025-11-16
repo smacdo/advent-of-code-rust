@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 mod registry;
 pub mod runner;
 pub mod terminal_output;

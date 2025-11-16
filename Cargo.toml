@@ -28,7 +28,7 @@ edition = "2021"
 
 [dependencies]
 advent-of-code-data = { path = "./crates/advent-of-code-data" }
-workshop = { path = "./crates/workshop" }
+noclip = { path = "./crates/noclip" }
 yuletide = { path = "./crates/yuletide" }
 regex.workspace = true
 tempfile.workspace = true

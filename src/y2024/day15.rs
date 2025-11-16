@@ -2,7 +2,7 @@ use advent_of_code_data as aoc;
 use yuletide as yt;
 
 use linkme::distributed_slice;
-use workshop::spatial::{Direction4, Grid};
+use noclip::spatial::{Direction4, Grid};
 
 use crate::SOLVERS;
 

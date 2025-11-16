@@ -5,7 +5,7 @@ use yuletide as yt;
 
 use linkme::distributed_slice;
 use regex::Regex;
-use workshop::spatial::Point2;
+use noclip::spatial::Point2;
 
 // TODO: Consider using Grid rather than Hashmap
 

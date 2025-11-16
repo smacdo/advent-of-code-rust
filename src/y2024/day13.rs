@@ -4,8 +4,8 @@ use advent_of_code_data as aoc;
 use yuletide as yt;
 
 use linkme::distributed_slice;
+use noclip::spatial::Point2;
 use regex::Regex;
-use workshop::spatial::Point2;
 
 use crate::SOLVERS;
 
