@@ -31,10 +31,10 @@ pub enum ConfigError {
     SessionIdRequired,
     #[error("an passphrase for encrypting puzzle inputs is required")]
     PassphraseRequired,
-    #[error("a puzzle cache directory is required")]
-    PuzzleCacheDirRequired,
-    #[error("a session cache directory is required")]
-    SessionCacheDirRequired,
+    #[error("failed to get the default cache directory for puzzles - this OS is not supported by the `directories` crate")]
+    DefaultPuzzleDirError,
+    #[error("failed to get the default cache directory for sessions - this OS is not supported by the `directories` crate")]
+    DefaultSessonsDirError,
     #[error("{}", .0)]
     IoError(#[from] std::io::Error),
     #[error("{}", .0)]
@@ -43,12 +43,12 @@ pub enum ConfigError {
 
 /// Configuration for the Advent of Code client.
 ///
-/// Created from `ClientOptions` and used internally by `WebClient`. All fields are public to allow
-/// inspection and advanced use cases, but typically you should not modify these directly after
-/// client creation.
+/// Most users of this crate do not need to worry about how to initialize `Config`, or how to use
+/// `ConfigBuilder` to create new `Config`s. Just use the `load_config()` function in this module to
+/// get the behavior that is detailed in this crate's README.md.
 #[derive(Default, Debug)]
 pub struct Config {
-    /// Your Advent of Code session cookie (from the browser's cookies).
+    /// Your Advent of Code session id (retrieved from the browser's cookie jar).
     pub session_id: String,
     /// Directory where puzzle inputs and answers are stored.
     pub puzzle_dir: PathBuf,
@@ -60,7 +60,17 @@ pub struct Config {
     pub start_time: chrono::DateTime<chrono::Utc>,
 }
 
-//
+/// A builder interface for specifying configuration settings to the Advent of Client client.
+/// Configuration settings have sensible default values, and should only be changed when the
+/// user wants custom behavior.
+///
+/// # Default Values
+/// - `session_id`: The user's Advent of Code session cookie. **This is required for getting input
+///   and submitting answers.**
+/// - `passphrase`: The hostname of the current machine. **A custom passphrase is required if
+///   `puzzle_dir` is changed.**
+/// - `puzzle_dir`: A directory in the local user's cache dir (e.g., XDG_CACHE_HOME on Linux).
+/// - `sessions_dir`: A directory in the local user's cache dir (e.g., XDG_CACHE_HOME on Linux).
 pub struct ConfigBuilder {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
@@ -70,17 +80,13 @@ pub struct ConfigBuilder {
 }
 
 impl ConfigBuilder {
+    /// Create a new `ConfigBuilder` object with all fields initialized to `None`.`
     pub fn new() -> Self {
-        // TODO: new should set these to empty, and then there should be a check at the end to
-        //       validate cache dirs were provided.
-        let project_dir = directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP)
-            .expect("TODO: implement default fallback cache directories if this fails");
-
         Self {
             session_id: None,
-            puzzle_dir: Some(project_dir.cache_dir().join("puzzles").to_path_buf()),
-            sessions_dir: Some(project_dir.cache_dir().join("sessions").to_path_buf()),
-            passphrase: Some(gethostname::gethostname().to_string_lossy().to_string()),
+            puzzle_dir: None,
+            sessions_dir: None,
+            passphrase: None,
             fake_time: None,
         }
     }
@@ -154,6 +160,11 @@ impl ConfigBuilder {
         self
     }
 
+    pub fn with_sessions_dir<P: Into<PathBuf>>(mut self, sessions_dir: P) -> Self {
+        self.sessions_dir = Some(sessions_dir.into());
+        self
+    }
+
     pub fn with_passphrase<S: Into<String>>(mut self, passphrase: S) -> Self {
         self.passphrase = Some(passphrase.into());
         self
@@ -164,16 +175,42 @@ impl ConfigBuilder {
         self
     }
 
+    /// Generate a `Config` object from the settings in this `ConfigBuilder` object.
     pub fn build(self) -> Result<Config, ConfigError> {
-        Ok(Config {
-            session_id: self.session_id.ok_or(ConfigError::SessionIdRequired)?,
-            puzzle_dir: self.puzzle_dir.ok_or(ConfigError::PuzzleCacheDirRequired)?,
-            sessions_dir: self
-                .sessions_dir
-                .ok_or(ConfigError::SessionCacheDirRequired)?,
-            passphrase: self.passphrase.ok_or(ConfigError::PassphraseRequired)?,
-            start_time: self.fake_time.unwrap_or(chrono::Utc::now()),
-        })
+        // Use a default passphrase if the puzzle directory and the passphrase was not specified.
+        let passphrase = self.passphrase.unwrap_or_else(|| {
+            if self.puzzle_dir.is_none() {
+                gethostname::gethostname().to_string_lossy().to_string()
+            } else {
+                String::new()
+            }
+        });
+
+        // There must be a passphrase given when building the config.
+        if passphrase.is_empty() {
+            Err(ConfigError::PassphraseRequired)
+        } else {
+            let maybe_project_dir =
+                directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP);
+
+            Ok(Config {
+                session_id: self.session_id.ok_or(ConfigError::SessionIdRequired)?,
+                puzzle_dir: self
+                    .puzzle_dir
+                    .or(maybe_project_dir
+                        .as_ref()
+                        .map(|p| p.cache_dir().join("puzzles").to_path_buf()))
+                    .ok_or(ConfigError::DefaultPuzzleDirError)?,
+                sessions_dir: self
+                    .sessions_dir
+                    .or(maybe_project_dir
+                        .as_ref()
+                        .map(|p| p.cache_dir().join("sessions").to_path_buf()))
+                    .ok_or(ConfigError::DefaultPuzzleDirError)?,
+                start_time: self.fake_time.unwrap_or(chrono::Utc::now()),
+                passphrase,
+            })
+        }
     }
 }
 
@@ -183,10 +220,9 @@ impl Default for ConfigBuilder {
     }
 }
 
-/// Loads client options in the following order:
-///   1. User's shared configuration directory (ie, XDG_CONFIG_HOME or %LOCALAPPDATA%).
-///   2. Current directory.
-///   3. Environment variables.
+/// Loads client options from the local machine.
+///
+/// The behavior of this function is covered in the `advent-of-code-data` [README.md](../README.md).
 pub fn load_config() -> Result<ConfigBuilder, ConfigError> {
     let mut config: ConfigBuilder = Default::default();
 
@@ -356,10 +392,51 @@ mod tests {
 
     #[test]
     fn config_uses_hostname_default_passphrase() {
-        let options = ConfigBuilder::new();
+        let config: Config = ConfigBuilder::new()
+            .with_session_id("54321")
+            .build()
+            .unwrap();
         assert_eq!(
-            options.passphrase,
-            Some(gethostname::gethostname().into_string().unwrap())
+            config.passphrase,
+            gethostname::gethostname().into_string().unwrap()
+        );
+    }
+
+    #[test]
+    fn config_must_specify_passphrase_if_puzzle_dir_changed() {
+        let config = ConfigBuilder::new().with_session_id("my_session");
+        assert!(config.build().is_ok());
+
+        let config = ConfigBuilder::new()
+            .with_session_id("my_session")
+            .with_puzzle_dir("/tmp/puzzles");
+        assert!(matches!(
+            config.build(),
+            Err(ConfigError::PassphraseRequired)
+        ));
+    }
+
+    #[test]
+    fn configs_are_built_with_config_builder() {
+        let config: Config = ConfigBuilder::new()
+            .with_session_id("54321")
+            .with_puzzle_dir("/tmp/puzzle/dir")
+            .with_sessions_dir("/tmp/path/to/sessions")
+            .with_passphrase("this is my password")
+            .build()
+            .unwrap();
+
+        assert_eq!(&config.session_id, "54321");
+        assert_eq!(&config.passphrase, "this is my password");
+
+        assert_eq!(
+            config.puzzle_dir,
+            PathBuf::from_str("/tmp/puzzle/dir").unwrap()
+        );
+
+        assert_eq!(
+            config.sessions_dir,
+            PathBuf::from_str("/tmp/path/to/sessions").unwrap()
         );
     }
 
