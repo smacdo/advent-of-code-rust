@@ -25,10 +25,6 @@ const EXAMPLE_CONFIG_TEXT: &str = r#"[client]
 /// Errors that can occur when configuring client settings.
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error(
-        "session cookie required; use the advent-of-code-data README to learn how to obtain this"
-    )]
-    SessionIdRequired,
     #[error("an passphrase for encrypting puzzle inputs is required")]
     PassphraseRequired,
     #[error("failed to get the default cache directory for puzzles - this OS is not supported by the `directories` crate")]
@@ -48,8 +44,8 @@ pub enum ConfigError {
 /// get the behavior that is detailed in this crate's README.md.
 #[derive(Default, Debug)]
 pub struct Config {
-    /// Your Advent of Code session id (retrieved from the browser's cookie jar).
-    pub session_id: String,
+    /// Your Advent of Code session cookie.
+    pub session_id: Option<String>,
     /// Directory where puzzle inputs and answers are stored.
     pub puzzle_dir: PathBuf,
     /// Directory where per-session state (e.g., submission timeouts) is cached.
@@ -194,7 +190,7 @@ impl ConfigBuilder {
                 directories::ProjectDirs::from(DIRS_QUALIFIER, DIRS_ORG, DIRS_APP);
 
             Ok(Config {
-                session_id: self.session_id.ok_or(ConfigError::SessionIdRequired)?,
+                session_id: self.session_id,
                 puzzle_dir: self
                     .puzzle_dir
                     .or(maybe_project_dir
@@ -426,7 +422,7 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_eq!(&config.session_id, "54321");
+        assert_eq!(config.session_id, Some("54321".to_string()));
         assert_eq!(&config.passphrase, "this is my password");
 
         assert_eq!(

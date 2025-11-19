@@ -20,7 +20,7 @@ pub trait AdventOfCodeProtocol: std::fmt::Debug {
 
 #[derive(Debug)]
 pub struct AdventOfCodeHttpProtocol {
-    session_id: String,
+    session_id: Option<String>,
     http_client: reqwest::blocking::Client,
 }
 
@@ -32,21 +32,21 @@ impl AdventOfCodeHttpProtocol {
         // Create an HTTP client for interacting with the Advent of Code website.
         // TODO: verify dev@smacdo.com email OK
         let cookies: reqwest::cookie::Jar = Default::default();
-        let cookie_data = format!(
-            "session={}; Domain={}",
-            config.session_id,
-            Self::ADVENT_OF_CODE_DOMAIN
-        );
 
-        tracing::debug!(
-            "adding session id to cookie jar with value `{}`",
-            cookie_data
-        );
+        if let Some(session_id) = &config.session_id {
+            let cookie_data = format!(
+                "session={}; Domain={}",
+                session_id,
+                Self::ADVENT_OF_CODE_DOMAIN
+            );
 
-        cookies.add_cookie_str(
-            &cookie_data,
-            &Self::ADVENT_OF_CODE_URL.parse::<reqwest::Url>().unwrap(),
-        );
+            tracing::debug!("adding session id `{}` to cookie jar", cookie_data);
+
+            cookies.add_cookie_str(
+                &cookie_data,
+                &Self::ADVENT_OF_CODE_URL.parse::<reqwest::Url>().unwrap(),
+            );
+        }
 
         Self {
             session_id: config.session_id.clone(),
@@ -78,7 +78,11 @@ impl AdventOfCodeProtocol for AdventOfCodeHttpProtocol {
         match response.status() {
             reqwest::StatusCode::OK => Ok(response.text().unwrap()),
             reqwest::StatusCode::BAD_REQUEST => {
-                Err(ClientError::BadSessionId(self.session_id.to_string()))
+                if self.session_id.is_none() {
+                    Err(ClientError::SessionIdRequired)
+                } else {
+                    Err(ClientError::BadSessionId(self.session_id.clone()))
+                }
             }
             reqwest::StatusCode::NOT_FOUND => {
                 // TODO: Return "Not available _yet_" if the requested data in the future.
@@ -130,7 +134,11 @@ impl AdventOfCodeProtocol for AdventOfCodeHttpProtocol {
         if response.status().is_client_error() || response.status().is_server_error() {
             return match response.status() {
                 reqwest::StatusCode::BAD_REQUEST => {
-                    Err(ClientError::BadSessionId(self.session_id.to_string()))
+                    if self.session_id.is_none() {
+                        Err(ClientError::SessionIdRequired)
+                    } else {
+                        Err(ClientError::BadSessionId(self.session_id.clone()))
+                    }
                 }
                 reqwest::StatusCode::NOT_FOUND => {
                     // TODO: Return "Not available _yet_" if the requested data in the future.

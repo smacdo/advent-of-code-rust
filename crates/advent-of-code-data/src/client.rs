@@ -18,9 +18,14 @@ pub enum ClientError {
     /// The answer was submitted too soon. The `DateTime` indicates when submission will be allowed.
     #[error("the answer was submitted too soon, please wait until {} trying again", .0)]
     TooSoon(chrono::DateTime<chrono::Utc>),
+    /// A session id was expected but not provided.
+    #[error(
+        "session cookie required; read the advent-of-code-data README for instructions on setting this"
+    )]
+    SessionIdRequired,
     /// The session ID is invalid or has expired.
-    #[error("the session id `{}` is invalid or has expired", .0)]
-    BadSessionId(String),
+    #[error("the session id `{:?}` is invalid or has expired", .0)]
+    BadSessionId(Option<String>),
     /// The puzzle for the given day and year could not be found.
     #[error("a puzzle could not be found for day {} year {}", .0, .1)]
     PuzzleNotFound(Day, Year),
@@ -250,7 +255,12 @@ impl Client for WebClient {
 
         // Check if there is an active time out on new submissions prior to
         // submitting to the advent of code service.
-        let mut session = self.session_cache.load(&self.config.session_id)?;
+        let mut session = self.session_cache.load(
+            self.config
+                .session_id
+                .as_ref()
+                .ok_or(ClientError::SessionIdRequired)?,
+        )?;
 
         if let Some(submit_wait_until) = session.submit_wait_until {
             if self.config.start_time <= submit_wait_until {
