@@ -44,7 +44,7 @@ pub enum ConfigError {
 /// get the behavior that is detailed in this crate's README.md.
 #[derive(Default, Debug)]
 pub struct Config {
-    /// Your Advent of Code session cookie.
+    /// Your Advent of Code session cookie. TODO: rename all instances to `session`.
     pub session_id: Option<String>,
     /// Directory where puzzle inputs and answers are stored.
     pub puzzle_dir: PathBuf,
