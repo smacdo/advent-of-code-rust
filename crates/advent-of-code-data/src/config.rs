@@ -42,7 +42,7 @@ pub enum ConfigError {
 /// Most users of this crate do not need to worry about how to initialize `Config`, or how to use
 /// `ConfigBuilder` to create new `Config`s. Just use the `load_config()` function in this module to
 /// get the behavior that is detailed in this crate's README.md.
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Config {
     /// Your Advent of Code session cookie. TODO: rename all instances to `session`.
     pub session_id: Option<String>,

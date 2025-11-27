@@ -79,7 +79,19 @@ pub trait PuzzleCache: Debug {
 /// Stores cached data specific to a session, such as submission timeouts.
 pub trait SessionCache: Debug {
     /// Load session data linked to a session from the cache.
-    fn load(&self, session_id: &str) -> Result<Session, CacheError>;
+    fn load(&self, session_id: &str) -> Result<Session, CacheError> {
+        if let Some(session) = self.try_load(session_id)? {
+            Ok(session)
+        } else {
+            tracing::debug!("session {session_id} was not cached; returning new Session object");
+            Ok(Session::new(session_id))
+        }
+    }
+
+    /// Load session data linked to a session from the cache. Returns `Ok(None)` if there is no
+    /// existing cached session linked to `session_id`.
+    fn try_load(&self, session_id: &str) -> Result<Option<Session>, CacheError>;
+
     /// Writes session data to the cache.
     fn save(&self, session: &Session) -> Result<(), CacheError>;
 }
@@ -293,7 +305,7 @@ impl SessionFsCache {
 }
 
 impl SessionCache for SessionFsCache {
-    fn load(&self, session_id: &str) -> Result<Session, CacheError> {
+    fn try_load(&self, session_id: &str) -> Result<Option<Session>, CacheError> {
         let session_filepath = self.session_data_filepath(session_id);
 
         if session_filepath.is_file() {
@@ -302,10 +314,10 @@ impl SessionCache for SessionFsCache {
             let json_text = std::fs::read_to_string(session_filepath)?;
             let session: Session = serde_json::from_str(&json_text)?;
 
-            Ok(session)
+            Ok(Some(session))
         } else {
-            tracing::debug!("no cached session data for {session_id} at `{session_filepath:?}`, returning new Session object");
-            Ok(Session::new(session_id))
+            tracing::debug!("session file `{session_filepath:?}` for {session_id} does not exist");
+            Ok(None)
         }
     }
 
