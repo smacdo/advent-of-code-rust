@@ -286,8 +286,8 @@ impl Client for WebClient {
             _ => Answers::new(),
         };
 
-        // Check if there is an active time out on new submissions prior to
-        // submitting to the advent of code service.
+        // Check if there is an active time out on new submissions prior to submitting to the
+        // advent of code service.
         let mut session = self.session_cache.load(
             self.config
                 .session_id

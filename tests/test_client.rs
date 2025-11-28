@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use advent_of_code_data::{
     cache::{PuzzleCache, PuzzleFsCache, SessionCache, SessionFsCache},
@@ -41,6 +41,24 @@ fn get_cached_answers(config: &Config, part: Part, day: Day, year: Year) -> Opti
     puzzle_cache.load_answers(part, day, year).unwrap()
 }
 
+fn get_cached_input(config: &Config, day: Day, year: Year) -> Option<String> {
+    let puzzle_cache = PuzzleFsCache::new(
+        config.puzzle_dir.clone(),
+        Some(config.passphrase.to_string()),
+    );
+
+    puzzle_cache.load_input(day, year).unwrap()
+}
+
+fn write_input(config: &Config, input: &str, day: Day, year: Year) {
+    PuzzleFsCache::new(
+        config.puzzle_dir.clone(),
+        Some(config.passphrase.to_string()),
+    )
+    .save_input(input, day, year)
+    .unwrap()
+}
+
 fn get_cached_session(config: &Config) -> Option<Session> {
     SessionFsCache::new(config.sessions_dir.clone())
         .try_load(config.session_id.as_ref().unwrap())
@@ -76,6 +94,55 @@ impl ServiceConnector for TestAdventOfCodeService {
 }
 
 #[test]
+fn get_input_calls_endpoint() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("session123"), &temp_dir);
+
+    // Create mock get_input that records parameters.
+    struct MockArgs {
+        day: Day,
+        year: Year,
+        session: String,
+    }
+
+    let mock_args: Rc<RefCell<Option<MockArgs>>> = Rc::new(RefCell::new(None));
+    let mock_args_clone = mock_args.clone();
+
+    let client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(move |day, year, session| -> Result<String, ServiceError> {
+                mock_args_clone.replace(Some(MockArgs {
+                    day,
+                    year,
+                    session: session.to_string(),
+                }));
+                Ok("hello world".to_string())
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    // Get input and validate that the endpoint was called with expected arguments.
+    assert!(client.get_input(Day(1), Year(2000)).is_ok());
+
+    let args = mock_args.take().unwrap();
+
+    assert_eq!(args.day, Day(1));
+    assert_eq!(args.year, Year(2000));
+    assert_eq!(&args.session, &config.session_id.clone().unwrap());
+
+    // Get input with different arguments and check everything is still working as expected.
+    assert!(client.get_input(Day(13), Year(2008)).is_ok());
+
+    let args = mock_args.take().unwrap();
+
+    assert_eq!(args.day, Day(13));
+    assert_eq!(args.year, Year(2008));
+    assert_eq!(&args.session, &config.session_id.unwrap());
+}
+
+#[test]
 fn get_input_ok() {
     let temp_dir = tempdir().unwrap();
     let config = make_test_config(Some("session123"), &temp_dir);
@@ -96,11 +163,61 @@ fn get_input_ok() {
     );
 }
 
-// TODO: test `get_input` service connector called with expected day, year and session.
-// TODO: test `get_input` reads results from the cache and skips service connector.
-// TODO: test `get_input` writes input to the cache.
+#[test]
+fn get_input_skips_cache_if_answer_in_cache() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("session123"), &temp_dir);
+    write_input(&config, "testing 123", Day(12), Year(1812));
 
-// TODO: test `submit_answer` service connector called with expected day, year and session.
+    let client = WebClient::with_custom_impl(
+        config,
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    assert_eq!(
+        &client.get_input(Day(12), Year(1812)).unwrap(),
+        "testing 123"
+    );
+}
+
+#[test]
+fn get_input_writes_to_cache() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("session123"), &temp_dir);
+
+    let client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                Ok("hello world".to_string())
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    // Check that there is no cache prior to calling get_input.
+    assert!(
+        get_cached_input(&config, Day(12), Year(1812)).is_none(),
+        "there should be no cached input before get_input"
+    );
+
+    // Verify that the input is cached after calling get_input.
+    assert_eq!(
+        &client.get_input(Day(12), Year(1812)).unwrap(),
+        "hello world"
+    );
+
+    if let Some(input) = get_cached_input(&config, Day(12), Year(1812)) {
+        assert_eq!(&input, "hello world");
+    } else {
+        panic!("expected answer cache to exist after submit_answer");
+    }
+}
 
 #[test]
 fn get_input_missing_session_error() {
@@ -129,7 +246,7 @@ fn get_input_invalid_session_error() {
     let config = make_test_config(Some("session123"), &temp_dir);
 
     let client = WebClient::with_custom_impl(
-        config,
+        config.clone(),
         Box::new(TestAdventOfCodeService {
             mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
                 Err(ServiceError::HttpStatusError(400))
@@ -138,13 +255,135 @@ fn get_input_invalid_session_error() {
         }),
     );
 
-    assert!(matches!(
-        client.get_input(Day(1), Year(2000)),
-        Err(ClientError::BadSessionId(_))
-    ));
+    match client.get_input(Day(1), Year(2000)) {
+        Err(ClientError::BadSessionId(session)) => {
+            assert_eq!(session, config.session_id.unwrap());
+        }
+        x => {
+            panic!("incorrect result {:?}", x);
+        }
+    }
 }
 
-// TODO: test `get_input` arbitrary HTTP status error returned.
+#[test]
+fn get_input_not_found_err_if_http_404() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("sssion123"), &temp_dir);
+
+    let client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                Err(ServiceError::HttpStatusError(404))
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    match client.get_input(Day(23), Year(1992)) {
+        Err(ClientError::PuzzleNotFound(day, year)) => {
+            assert_eq!(day, Day(23));
+            assert_eq!(year, Year(1992));
+        }
+        x => {
+            panic!("incorrect result {:?}", x);
+        }
+    }
+}
+
+#[test]
+fn get_input_other_http_err() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("sssion123"), &temp_dir);
+
+    let client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                Err(ServiceError::HttpStatusError(418))
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    match client.get_input(Day(23), Year(1992)) {
+        Err(ClientError::ServerHttpError(status_code)) => {
+            assert_eq!(status_code, 418);
+        }
+        x => {
+            panic!("incorrect result {:?}", x);
+        }
+    }
+}
+
+#[test]
+fn submit_answer_calls_endpoint() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("session123"), &temp_dir);
+
+    // Create mock submit_answer that records parameters.
+    struct MockArgs {
+        answer: Answer,
+        part: Part,
+        day: Day,
+        year: Year,
+        session: String,
+    }
+
+    let mock_args: Rc<RefCell<Option<MockArgs>>> = Rc::new(RefCell::new(None));
+    let mock_args_clone = mock_args.clone();
+
+    let mut client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(move |answer, part, day, year, session| {
+                mock_args_clone.replace(Some(MockArgs {
+                    answer: answer.clone(),
+                    part,
+                    day,
+                    year,
+                    session: session.to_string(),
+                }));
+
+                Ok("That's the right answer! You are one star closer".to_string())
+            }),
+        }),
+    );
+
+    // Submit the answer and validate that the endpoint was called with expected arguments.
+    assert!(client
+        .submit_answer(Answer::Int(42), Part::One, Day(1), Year(2000))
+        .is_ok());
+
+    let args = mock_args.take().unwrap();
+
+    assert_eq!(args.answer, Answer::Int(42));
+    assert_eq!(args.part, Part::One);
+    assert_eq!(args.day, Day(1));
+    assert_eq!(args.year, Year(2000));
+    assert_eq!(&args.session, &config.session_id.clone().unwrap());
+
+    // Submit the answer with different arguments and check everything is still working as expected.
+    assert!(client
+        .submit_answer(
+            Answer::String("hello".to_string()),
+            Part::Two,
+            Day(13),
+            Year(2008)
+        )
+        .is_ok());
+
+    let args = mock_args.take().unwrap();
+
+    assert_eq!(args.answer, Answer::String("hello".to_string()));
+    assert_eq!(args.part, Part::Two);
+    assert_eq!(args.day, Day(13));
+    assert_eq!(args.year, Year(2008));
+    assert_eq!(&args.session, &config.session_id.unwrap());
+}
 
 #[test]
 fn submit_correct_answer() {
@@ -310,6 +549,9 @@ fn submit_wrong_answer_too_high() {
         panic!("expected answer cache to exist after submit_answer");
     }
 }
+
+// TODO: submit answer skips backend if the answer is in the cache.
+// TODO: submit answer calls backend if cache exists but answer is not in the cache.
 
 #[test]
 fn submit_answer_does_not_call_backend_if_timeout_set() {
@@ -535,8 +777,109 @@ fn submit_answer_wait_six_m() {
     );
 }
 
-// TODO: test `submit_answer` errors if session id not provided.
-// TODO: test `submit_answer` errors if bad submission id (400).
-// TODO: test `submit_answer` errors if invalid puzzle (404).
-// TODO: test `submit_answer` for part 2 before part 1.
-// TODO: test `submit_answer` arbitrary HTTP status error returned.
+#[test]
+fn submit_answer_err_if_no_session() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(None, &temp_dir);
+
+    let mut client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    // Check submit_answer returns expected response.
+    assert!(matches!(
+        client.submit_answer(Answer::Int(42), Part::One, Day(1), Year(2000)),
+        Err(ClientError::SessionIdRequired)
+    ));
+}
+
+#[test]
+fn submit_answer_bad_session_err_if_http_400() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("sssion123"), &temp_dir);
+
+    let mut client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| {
+                Err(ServiceError::HttpStatusError(400))
+            }),
+        }),
+    );
+
+    // Check submit_answer returns expected response.
+    match client.submit_answer(Answer::Int(42), Part::One, Day(1), Year(2000)) {
+        Err(ClientError::BadSessionId(session)) => {
+            assert_eq!(session, config.session_id.unwrap());
+        }
+        x => {
+            panic!("incorrect result {:?}", x);
+        }
+    }
+}
+
+#[test]
+fn submit_answer_not_found_err_if_http_404() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("sssion123"), &temp_dir);
+
+    let mut client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| {
+                Err(ServiceError::HttpStatusError(404))
+            }),
+        }),
+    );
+
+    // Check submit_answer returns expected response.
+    match client.submit_answer(Answer::Int(42), Part::One, Day(23), Year(1992)) {
+        Err(ClientError::PuzzleNotFound(day, year)) => {
+            assert_eq!(day, Day(23));
+            assert_eq!(year, Year(1992));
+        }
+        x => {
+            panic!("incorrect result {:?}", x);
+        }
+    }
+}
+
+#[test]
+fn submit_answer_other_http_err() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("sssion123"), &temp_dir);
+
+    let mut client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| {
+                Err(ServiceError::HttpStatusError(418))
+            }),
+        }),
+    );
+
+    // Check submit_answer returns expected response.
+    match client.submit_answer(Answer::Int(42), Part::One, Day(23), Year(1992)) {
+        Err(ClientError::ServerHttpError(status_code)) => {
+            assert_eq!(status_code, 418);
+        }
+        x => {
+            panic!("incorrect result {:?}", x);
+        }
+    }
+}
