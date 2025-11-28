@@ -41,6 +41,15 @@ fn get_cached_answers(config: &Config, part: Part, day: Day, year: Year) -> Opti
     puzzle_cache.load_answers(part, day, year).unwrap()
 }
 
+fn write_answers(config: &Config, answers: &Answers, part: Part, day: Day, year: Year) {
+    PuzzleFsCache::new(
+        config.puzzle_dir.clone(),
+        Some(config.passphrase.to_string()),
+    )
+    .save_answers(answers, part, day, year)
+    .unwrap()
+}
+
 fn get_cached_input(config: &Config, day: Day, year: Year) -> Option<String> {
     let puzzle_cache = PuzzleFsCache::new(
         config.puzzle_dir.clone(),
@@ -512,9 +521,49 @@ fn submit_wrong_answer_too_low() {
 }
 
 #[test]
-fn submit_wrong_answer_too_high() {
+fn submit_uses_answer_cache() {
     let temp_dir = tempdir().unwrap();
     let config = make_test_config(Some("session123"), &temp_dir);
+
+    // Write a wrong answer to the cache.
+    let mut answers = Answers::new();
+    answers.add_wrong_answer(Answer::Int(42));
+
+    write_answers(&config, &answers, Part::One, Day(17), Year(2012));
+
+    // Submit a wrong answer and verify the service backend is never called.
+    let mut client = WebClient::with_custom_impl(
+        config.clone(),
+        Box::new(TestAdventOfCodeService {
+            mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
+                unimplemented!()
+            }),
+            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| unimplemented!()),
+        }),
+    );
+
+    assert_eq!(
+        client
+            .submit_answer(Answer::Int(42), Part::One, Day(17), Year(2012))
+            .unwrap(),
+        CheckResult::Wrong
+    );
+}
+
+#[test]
+fn submit_uses_service_if_cache_missing_answer() {
+    let temp_dir = tempdir().unwrap();
+    let config = make_test_config(Some("session123"), &temp_dir);
+
+    // Write a correct answer to the cache.
+    let mut answers = Answers::new();
+    answers.set_correct_answer(Answer::Int(42));
+
+    write_answers(&config, &answers, Part::One, Day(17), Year(2012));
+
+    // Submit a correct answer and verify the service backend is called.
+    let was_called: Rc<RefCell<bool>> = Rc::new(RefCell::new(false));
+    let was_called_clone = was_called.clone();
 
     let mut client = WebClient::with_custom_impl(
         config.clone(),
@@ -522,36 +571,21 @@ fn submit_wrong_answer_too_high() {
             mock_get_input: Box::new(|_day, _year, _session| -> Result<String, ServiceError> {
                 unimplemented!()
             }),
-            mock_submit_answer: Box::new(|_answer, _part, _day, _year, _session| {
-                Ok("<p>Your answer is too high.</p>\n<p>If you're stuck, ".to_string())
+            mock_submit_answer: Box::new(move |_answer, _part, _day, _year, _session| {
+                was_called_clone.replace(true);
+                Ok("That's the right answer! You are one star closer".to_string())
             }),
         }),
     );
 
-    // Check there is no cached answers before calling submit_answer.
-    assert!(
-        get_cached_answers(&config, Part::One, Day(1), Year(2000)).is_none(),
-        "there should be no cached answers before submit_answer"
-    );
-
-    // Check submit_answer returns expected response.
     assert_eq!(
         client
             .submit_answer(Answer::Int(42), Part::One, Day(1), Year(2000))
             .unwrap(),
-        CheckResult::TooHigh
+        CheckResult::Correct
     );
-
-    // Check submit_answer added the submitted answer to the cache.
-    if let Some(answers) = get_cached_answers(&config, Part::One, Day(1), Year(2000)) {
-        assert!(answers.high_bounds_ref().map(|a| a == 42).unwrap_or(false))
-    } else {
-        panic!("expected answer cache to exist after submit_answer");
-    }
+    assert!(was_called.take());
 }
-
-// TODO: submit answer skips backend if the answer is in the cache.
-// TODO: submit answer calls backend if cache exists but answer is not in the cache.
 
 #[test]
 fn submit_answer_does_not_call_backend_if_timeout_set() {

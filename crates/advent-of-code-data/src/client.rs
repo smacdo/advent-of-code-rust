@@ -272,8 +272,7 @@ impl Client for WebClient {
             year
         );
 
-        // Check the cache to see if this answer can be checked locally without having to hit the
-        // server. If the cache is not set then create a new answers dataset.
+        // Can this answer be checked locally using the cache?
         let mut answers = match self.puzzle_cache.load_answers(part, day, year)? {
             Some(cached_answers) => {
                 if let Some(check_result) = cached_answers.check(&answer) {
