@@ -59,45 +59,13 @@ fn is_valid_id(id: usize) -> bool {
     true
 }
 
-struct InvalidIdGenerator {
-    current: usize,
-    last_id: usize,
-}
-
-impl InvalidIdGenerator {
-    fn new(first_id: usize, last_id: usize) -> Self {
-        InvalidIdGenerator {
-            current: first_id,
-            last_id,
-        }
-    }
-}
-
-impl Iterator for InvalidIdGenerator {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        #[allow(clippy::never_loop)]
-        while self.current <= self.last_id {
-            let value = self.current;
-            self.current += 1;
-
-            if !is_valid_id(value) {
-                return Some(value);
-            }
-        }
-
-        None
-    }
-}
-
 pub fn day_2_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut sum: usize = 0;
 
     for (first_id, last_id) in parse_ranges(args.input) {
-        for invalid_id in InvalidIdGenerator::new(first_id, last_id) {
-            sum += invalid_id
-        }
+        sum += (first_id..=last_id)
+            .filter(|i| !is_valid_id(*i))
+            .sum::<usize>();
     }
 
     Ok(sum.into())
@@ -122,35 +90,51 @@ mod tests {
     #[test]
     fn example_bad_ids() {
         assert_eq!(
-            InvalidIdGenerator::new(11, 22).collect::<Vec<usize>>(),
+            (11..=22)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![11, 22]
         );
         assert_eq!(
-            InvalidIdGenerator::new(95, 115).collect::<Vec<usize>>(),
+            (95..=115)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![99]
         );
         assert_eq!(
-            InvalidIdGenerator::new(998, 1012).collect::<Vec<usize>>(),
+            (998..=1012)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![1010]
         );
         assert_eq!(
-            InvalidIdGenerator::new(1188511880, 1188511890).collect::<Vec<usize>>(),
+            (1188511880..=1188511890)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![1188511885]
         );
         assert_eq!(
-            InvalidIdGenerator::new(222220, 222224).collect::<Vec<usize>>(),
+            (222220..=222224)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![222222]
         );
         assert_eq!(
-            InvalidIdGenerator::new(1698522, 1698528).collect::<Vec<usize>>(),
+            (1698522..=1698528)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             Vec::<usize>::new()
         );
         assert_eq!(
-            InvalidIdGenerator::new(446443, 446449).collect::<Vec<usize>>(),
+            (446443..=446449)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![446446]
         );
         assert_eq!(
-            InvalidIdGenerator::new(38593856, 38593862).collect::<Vec<usize>>(),
+            (38593856..=38593862)
+                .filter(|i| !is_valid_id(*i))
+                .collect::<Vec<usize>>(),
             vec![38593859]
         );
     }
