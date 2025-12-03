@@ -35,7 +35,7 @@
 			"    Err(yt::SolverError::NotFinished)",
 			"}",
 			"",
-			"pub fn day_${1}_2(_input: &str) -> yt::Result<aoc::Answer> {",
+			"pub fn day_${1}_2(_args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {",
 			"    Err(yt::SolverError::NotFinished)",
 			"}"
 		]
