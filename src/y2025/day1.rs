@@ -127,8 +127,6 @@ pub fn day_1_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
 
 #[cfg(test)]
 mod tests {
-    use either::Either::Left;
-
     use super::*;
 
     #[test]
