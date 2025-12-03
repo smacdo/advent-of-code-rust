@@ -416,6 +416,8 @@ fn parse_submit_response(
     // TODO: Remove this special casing if possible.
     // TODO: Look into "You don't seem to be solving the right level.  Did you already complete it?"
     //       Is this only returned for errors on solved levels?
+    tracing::debug!("the server responded with: `{response_text}`");
+
     if response_text.contains("gave an answer too recently") {
         return Err(ClientError::SubmitTimeOut(time_to_wait.unwrap()));
     }

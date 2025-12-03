@@ -28,7 +28,6 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
 };
 
 pub fn day_1_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    eprintln!("module name is: {}", std::module_path!());
     // Read input into two lists - left side numbers and right side numbers.
     let mut left = Vec::<i64>::new();
     let mut right = Vec::<i64>::new();

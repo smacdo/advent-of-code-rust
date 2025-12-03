@@ -1,4 +1,5 @@
 mod y2024;
+mod y2025;
 
 use advent_of_code_data::{
     client::{Client, WebClient},
