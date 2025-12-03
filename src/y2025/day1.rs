@@ -55,9 +55,7 @@ impl Dial {
                         self.count_zero_during_rotation -= 1;
                     }
 
-                    self.value = 100 - (i % Self::RANGE).abs();
-
-                    tracing::debug!("L{distance} passes through zero {zero_passes} times");
+                    self.value = i.rem_euclid(Self::RANGE);
                 }
             }
             Rotation::Right(distance) => {
@@ -74,8 +72,6 @@ impl Dial {
                     if self.value == 0 {
                         self.count_zero_during_rotation -= 1;
                     }
-
-                    tracing::debug!("R{distance} passes through zero {zero_passes} times");
                 }
             }
         }
