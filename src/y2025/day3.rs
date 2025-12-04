@@ -17,12 +17,23 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     },
     part_two: yt::SolverPart {
         func: day_3_2,
-        examples: &[/*yt::Example {
-            input: "",
-            expected: aoc::Answer::Int(0),
-        }*/],
+        examples: &[yt::Example {
+            input: "987654321111111\n811111111111119\n234234234234278\n818181911112111\n",
+            expected: aoc::Answer::Int(3121910778619),
+        }],
     },
 };
+
+fn parse_banks(input: &str) -> Vec<Vec<u8>> {
+    input
+        .lines()
+        .map(|line| {
+            line.chars()
+                .map(|c| c.to_digit(10).expect("number") as u8)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>()
+}
 
 struct DigitWithIndex {
     index: usize,
@@ -47,15 +58,16 @@ fn find_largest_digit_from_right(bank: &[u8], start: usize, end: usize) -> Digit
     }
 }
 
-fn parse_banks(input: &str) -> Vec<Vec<u8>> {
-    input
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_digit(10).expect("number") as u8)
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>()
+fn find_largest(bank: &[u8], k: usize, start: usize) -> usize {
+    if k == 0 {
+        return 0;
+    }
+
+    let end = bank.len() - k + 1;
+    let DigitWithIndex { index, digit } = find_largest_digit_from_right(bank, start, end);
+
+    let digit_tens = usize::pow(10, k as u32 - 1);
+    (digit as usize) * digit_tens + find_largest(bank, k - 1, index + 1)
 }
 
 pub fn day_3_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
@@ -75,8 +87,14 @@ pub fn day_3_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     Ok(sum.into())
 }
 
-pub fn day_3_2(_args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    Err(yt::SolverError::NotFinished)
+pub fn day_3_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let mut sum: usize = 0;
+
+    for bank in parse_banks(args.input) {
+        sum += find_largest(&bank, 12, 0);
+    }
+
+    Ok(sum.into())
 }
 
 #[cfg(test)]
@@ -103,5 +121,25 @@ mod tests {
         assert_eq!(find_largest_digit_from_right(&[5, 6, 7], 1, 3).digit, 7);
         assert_eq!(find_largest_digit_from_right(&[9, 8, 7], 1, 3).digit, 8);
         assert_eq!(find_largest_digit_from_right(&[9, 8, 7], 1, 2).digit, 8);
+    }
+
+    #[test]
+    fn find_largest_matches_examples() {
+        assert_eq!(
+            find_largest(&[9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1], 12, 0),
+            987654321111
+        );
+        assert_eq!(
+            find_largest(&[8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9], 12, 0),
+            811111111119
+        );
+        assert_eq!(
+            find_largest(&[2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 7, 8], 12, 0),
+            434234234278
+        );
+        assert_eq!(
+            find_largest(&[8, 1, 8, 1, 8, 1, 9, 1, 1, 1, 1, 2, 1, 1, 1], 12, 0),
+            888911112111
+        );
     }
 }
