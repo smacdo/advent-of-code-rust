@@ -21,7 +21,7 @@
 			"            expected: aoc::Answer::Int(0),",
 			"        }*/],",
 			"    },",
-			"    part_two: SolverPart {",
+			"    part_two: yt::SolverPart {",
 			"        func: day_${1}_2,",
 			"        examples: &[/*yt::Example {",
 			"            input: \"\",",

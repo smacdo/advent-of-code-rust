@@ -320,6 +320,8 @@ impl Client for WebClient {
                 .ok_or(ClientError::SessionIdRequired)?,
         ) {
             Ok(response_text) => {
+                tracing::debug!("{}", response_text);
+
                 assert!(!response_text.is_empty());
                 let (check_result, maybe_time_to_wait) = parse_submit_response(&response_text)?;
 
