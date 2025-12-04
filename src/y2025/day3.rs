@@ -71,30 +71,19 @@ fn find_largest(bank: &[u8], k: usize, start: usize) -> usize {
 }
 
 pub fn day_3_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    let mut sum: u64 = 0;
-
-    for bank in parse_banks(args.input) {
-        // find the largest digit from the left not including the last digit in the bank
-        let a = find_largest_digit_from_right(&bank, 0, bank.len() - 1);
-
-        // find the largest digit to the right of the digit we just found.
-        let b = find_largest_digit_from_right(&bank, a.index + 1, bank.len());
-
-        let joltage = a.digit * 10 + b.digit;
-        sum += joltage as u64;
-    }
-
-    Ok(sum.into())
+    Ok(parse_banks(args.input)
+        .into_iter()
+        .map(|bank| find_largest(&bank, 2, 0))
+        .sum::<usize>()
+        .into())
 }
 
 pub fn day_3_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    let mut sum: usize = 0;
-
-    for bank in parse_banks(args.input) {
-        sum += find_largest(&bank, 12, 0);
-    }
-
-    Ok(sum.into())
+    Ok(parse_banks(args.input)
+        .into_iter()
+        .map(|bank| find_largest(&bank, 12, 0))
+        .sum::<usize>()
+        .into())
 }
 
 #[cfg(test)]
@@ -125,6 +114,23 @@ mod tests {
 
     #[test]
     fn find_largest_matches_examples() {
+        assert_eq!(
+            find_largest(&[9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1], 2, 0),
+            98
+        );
+        assert_eq!(
+            find_largest(&[8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9], 2, 0),
+            89
+        );
+        assert_eq!(
+            find_largest(&[2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 7, 8], 2, 0),
+            78
+        );
+        assert_eq!(
+            find_largest(&[8, 1, 8, 1, 8, 1, 9, 1, 1, 1, 1, 2, 1, 1, 1], 2, 0),
+            92
+        );
+
         assert_eq!(
             find_largest(&[9, 8, 7, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1], 12, 0),
             987654321111
