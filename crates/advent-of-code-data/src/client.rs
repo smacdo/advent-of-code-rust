@@ -143,7 +143,9 @@ impl WebClient {
 
     /// Creates a client with custom configuration options.
     pub fn with_config(config: Config) -> Self {
-        let advent_protocol = Box::new(AdventOfCodeService {});
+        let advent_protocol = Box::new(AdventOfCodeService {
+            log_dir: config.log_server_responses.clone(),
+        });
         Self::with_custom_impl(config, advent_protocol)
     }
 
@@ -321,6 +323,12 @@ impl Client for WebClient {
         ) {
             Ok(response_text) => {
                 assert!(!response_text.is_empty());
+
+                // Check if the the server response should be saved for debugging.
+                if let Some(log_dir) = &self.config.log_server_responses {}
+
+                // Parse the server response into a result (e.g., was the answer correct?)  and a
+                // potential amount of time to wait before trying again.
                 let (check_result, maybe_time_to_wait) = parse_submit_response(&response_text)?;
 
                 // Write back the amount of time to wait to avoid hitting the server
@@ -416,8 +424,6 @@ fn parse_submit_response(
     // TODO: Remove this special casing if possible.
     // TODO: Look into "You don't seem to be solving the right level.  Did you already complete it?"
     //       Is this only returned for errors on solved levels?
-    tracing::debug!("the server responded with: `{response_text}`");
-
     if response_text.contains("gave an answer too recently") {
         return Err(ClientError::SubmitTimeOut(time_to_wait.unwrap()));
     }

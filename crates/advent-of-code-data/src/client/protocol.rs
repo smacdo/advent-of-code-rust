@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+
+use reqwest::blocking::Response;
 use thiserror::Error;
 
 use crate::{Answer, Day, Part, Year};
@@ -27,7 +30,9 @@ pub trait ServiceConnector {
 }
 
 #[derive(Debug)]
-pub struct AdventOfCodeService {}
+pub struct AdventOfCodeService {
+    pub log_dir: Option<PathBuf>,
+}
 
 impl AdventOfCodeService {
     const ADVENT_OF_CODE_DOMAIN: &'static str = "adventofcode.com";
@@ -60,6 +65,31 @@ impl AdventOfCodeService {
             .cookie_provider(cookies.into())
             .user_agent("github.com/smacdo/advent-of-code-rust [email: dev@smacdo.com]")
             .build()?)
+    }
+
+    /// Write a server response to the given directory for debugging purposes.
+    pub fn log_server_response(&self, status: u16, text: &str) {
+        if let Some(log_dir) = &self.log_dir {
+            // Create log directory if it doesn't exist before writing.
+            if !log_dir.exists() {
+                std::fs::create_dir_all(log_dir).unwrap_or_else(|e| {
+                    tracing::error!("error create server response log dir: {e}")
+                });
+            }
+
+            // Write to a file that has a unique name taken from the current time.
+            // Also add the HTTP status code as a suffix to the file name.
+            let now: chrono::DateTime<chrono::Local> = chrono::Local::now();
+            let log_filename = format!("{}_{}.html", now.format("%Y_%m_%d-%H_%M_%S"), status);
+
+            tracing::debug!(
+                "logging server response to: {}",
+                log_dir.join(&log_filename).to_string_lossy()
+            );
+
+            std::fs::write(log_dir.join(log_filename), text)
+                .unwrap_or_else(|e| tracing::error!("error when logging server response: {e}"));
+        }
     }
 }
 
@@ -120,12 +150,19 @@ impl ServiceConnector for AdventOfCodeService {
             ])
             .send()?;
 
-        tracing::debug!("server responed with HTTP {}", response.status());
+        let status = response.status();
+        let text = response.text().unwrap_or_else(|e| {
+            tracing::error!("Error when decoding server response text: {e}");
+            String::new()
+        });
 
-        if response.status() == reqwest::StatusCode::OK {
-            Ok(response.text().unwrap()) // TODO: Handle this!
+        tracing::debug!("server responed with HTTP {}", status);
+        self.log_server_response(status.as_u16(), &text);
+
+        if status == reqwest::StatusCode::OK {
+            Ok(text)
         } else {
-            Err(ServiceError::HttpStatusError(response.status().as_u16()))
+            Err(ServiceError::HttpStatusError(status.as_u16()))
         }
     }
 }

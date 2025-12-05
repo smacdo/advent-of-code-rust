@@ -3,6 +3,7 @@
   detected or incorrect.
 - Print friendly instructions to create a config file or env vars when the session
   id or passphrase isn't set.
+- CLI command that prints out the configuration path
 
 # SDK Improvements
 - Logging all the things

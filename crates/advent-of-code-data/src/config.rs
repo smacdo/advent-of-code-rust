@@ -54,6 +54,8 @@ pub struct Config {
     pub passphrase: String,
     /// Current time (usually UTC now, but can be overridden for testing).
     pub start_time: chrono::DateTime<chrono::Utc>,
+    /// Flag to write server responses to a file path for debugging.
+    pub log_server_responses: Option<PathBuf>,
 }
 
 /// A builder interface for specifying configuration settings to the Advent of Client client.
@@ -67,12 +69,14 @@ pub struct Config {
 ///   `puzzle_dir` is changed.**
 /// - `puzzle_dir`: A directory in the local user's cache dir (e.g., XDG_CACHE_HOME on Linux).
 /// - `sessions_dir`: A directory in the local user's cache dir (e.g., XDG_CACHE_HOME on Linux).
+/// - `log_server_responses`: None.
 pub struct ConfigBuilder {
     pub session_id: Option<String>,
     pub puzzle_dir: Option<PathBuf>,
     pub sessions_dir: Option<PathBuf>,
     pub passphrase: Option<String>,
     pub fake_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub log_server_responses: Option<PathBuf>,
 }
 
 impl ConfigBuilder {
@@ -84,6 +88,7 @@ impl ConfigBuilder {
             sessions_dir: None,
             passphrase: None,
             fake_time: None,
+            log_server_responses: None,
         }
     }
 
@@ -95,6 +100,7 @@ impl ConfigBuilder {
         const SESSION_ID_KEY: &str = "session_id";
         const PUZZLE_DIR_KEY: &str = "puzzle_dir";
         const PASSPHRASE_KEY: &str = "passphrase";
+        const LOG_SERVER_RESPONSES: &str = "log_server_responses";
         const REPLACE_ME: &str = "REPLACE_ME";
 
         fn try_read_key<F: FnOnce(&str)>(table: &toml::Table, key: &str, setter: F) {
@@ -135,6 +141,10 @@ impl ConfigBuilder {
                 try_read_key(client_config, SESSIONS_DIR_KEY, |v| {
                     self.sessions_dir = Some(PathBuf::from(v))
                 });
+
+                try_read_key(client_config, LOG_SERVER_RESPONSES, |v| {
+                    self.log_server_responses = Some(PathBuf::from(v))
+                });
             }
             _ => {
                 tracing::warn!(
@@ -168,6 +178,11 @@ impl ConfigBuilder {
 
     pub fn with_fake_time(mut self, fake_time: chrono::DateTime<chrono::Utc>) -> Self {
         self.fake_time = Some(fake_time);
+        self
+    }
+
+    pub fn with_log_server_response<P: Into<PathBuf>>(mut self, log_dir: P) -> Self {
+        self.log_server_responses = Some(log_dir.into());
         self
     }
 
@@ -205,6 +220,7 @@ impl ConfigBuilder {
                     .ok_or(ConfigError::DefaultPuzzleDirError)?,
                 start_time: self.fake_time.unwrap_or(chrono::Utc::now()),
                 passphrase,
+                log_server_responses: self.log_server_responses,
             })
         }
     }
@@ -419,6 +435,7 @@ mod tests {
             .with_puzzle_dir("/tmp/puzzle/dir")
             .with_sessions_dir("/tmp/path/to/sessions")
             .with_passphrase("this is my password")
+            .with_log_server_response("/foo/bar/logs")
             .build()
             .unwrap();
 
@@ -433,6 +450,11 @@ mod tests {
         assert_eq!(
             config.sessions_dir,
             PathBuf::from_str("/tmp/path/to/sessions").unwrap()
+        );
+
+        assert_eq!(
+            config.log_server_responses,
+            Some(PathBuf::from_str("/foo/bar/logs").unwrap())
         );
     }
 
@@ -468,6 +490,7 @@ mod tests {
         puzzle_dir = "path/to/puzzle/dir"
         sessions_dir = "another/path/to/blah"
         passphrase = "foobar"
+        log_server_responses = "/a/random/dir/path"
         "#;
 
         let options = ConfigBuilder::new().use_toml(config_text).unwrap();
@@ -482,6 +505,10 @@ mod tests {
             Some(PathBuf::from_str("another/path/to/blah").unwrap())
         );
         assert_eq!(options.passphrase, Some("foobar".to_string()));
+        assert_eq!(
+            options.log_server_responses,
+            Some(PathBuf::from_str("/a/random/dir/path").unwrap())
+        );
     }
 
     #[test]
