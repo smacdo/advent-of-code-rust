@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use reqwest::blocking::Response;
 use thiserror::Error;
 
 use crate::{Answer, Day, Part, Year};

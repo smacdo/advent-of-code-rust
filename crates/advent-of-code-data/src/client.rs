@@ -324,9 +324,6 @@ impl Client for WebClient {
             Ok(response_text) => {
                 assert!(!response_text.is_empty());
 
-                // Check if the the server response should be saved for debugging.
-                if let Some(log_dir) = &self.config.log_server_responses {}
-
                 // Parse the server response into a result (e.g., was the answer correct?)  and a
                 // potential amount of time to wait before trying again.
                 let (check_result, maybe_time_to_wait) = parse_submit_response(&response_text)?;
