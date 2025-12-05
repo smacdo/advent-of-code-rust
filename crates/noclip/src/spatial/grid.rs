@@ -8,6 +8,7 @@ use thiserror::Error;
 
 use crate::spatial::Point2;
 
+/// # Overview
 /// A two dimensional grid with each cell storing a single value.
 ///
 /// The origin (0, 0) of the grid is at the top left with the positive X axis
@@ -30,6 +31,20 @@ use crate::spatial::Point2;
 /// +---+---+---+  --> [ 0, 1, 2, 3, 4, 5 ]
 /// | 3 | 4 | 5 |
 /// +---+---+---+
+///
+/// # Grid parsing
+/// A multiline string can be converted into a grid in row major order with each
+/// line of the string being a row in the grid. The lines must have the same
+/// length or an error will be returned.
+///
+/// The following example shows how to load a grid of characters:
+///
+///     use noclip::spatial::{Grid, Point2};
+///
+///     let input = "379\n281";
+///     let grid: Grid<u32> = Grid::parse_str(input, |c| c.to_digit(10).unwrap()).unwrap();
+///
+///     assert_eq!(grid.get(0, 0), &3);    
 #[derive(Clone, Debug, PartialEq)]
 pub struct Grid<T> {
     /// Array of values stored in the grid.
