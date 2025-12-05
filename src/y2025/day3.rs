@@ -1,4 +1,5 @@
 use advent_of_code_data as aoc;
+use noclip::utils::find_digits;
 use yuletide as yt;
 
 use linkme::distributed_slice;
@@ -25,14 +26,7 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
 };
 
 fn parse_banks(input: &str) -> Vec<Vec<u8>> {
-    input
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_digit(10).expect("number") as u8)
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>()
+    input.lines().map(find_digits).collect::<Vec<_>>()
 }
 
 struct DigitWithIndex {

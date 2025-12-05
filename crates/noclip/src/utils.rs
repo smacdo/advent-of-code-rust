@@ -3,6 +3,26 @@ use std::sync::OnceLock;
 
 static RE_CELL_FIND_INTS: OnceLock<Regex> = OnceLock::new();
 
+/// Find all digits (0-9 chars) in `text`, ignoring any values that are not
+/// digit characters.
+///
+/// This utility is helpful for quickly extracting all digits as ints from text.
+/// Digits can be directly adjacent to each other; they will be treated as
+/// separate values. They can also be separated by spaces, commas etc. All non-
+/// digit values are ignored.
+///
+/// ```
+/// use noclip::utils::find_digits;
+///
+/// assert_eq!(find_digits("01859"), vec![0, 1, 8, 5, 9]);
+/// assert_eq!(find_digits("0,1  8.5hi9"), vec![0, 1, 8, 5, 9]);
+/// ```
+pub fn find_digits(text: &str) -> Vec<u8> {
+    text.chars()
+        .filter_map(|c| c.to_digit(10).map(|d| d as u8))
+        .collect::<Vec<_>>()
+}
+
 /// Find all integers present in `text`, ignoring any values that are not digit
 /// characters.
 ///
