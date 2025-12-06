@@ -28,34 +28,26 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
 };
 
 #[derive(Debug, PartialEq)]
-enum MathOp {
-    Add,
-    Mul,
-}
-
-#[derive(Debug, PartialEq)]
-struct MathProblem {
-    numbers: Vec<usize>,
-    operation: MathOp,
+enum MathProblem {
+    Add(Vec<usize>),
+    Mul(Vec<usize>),
 }
 
 impl MathProblem {
     pub fn answer(&self) -> usize {
-        match self.operation {
-            MathOp::Add => self.numbers.iter().sum(),
-            MathOp::Mul => self.numbers.iter().product(),
+        match self {
+            MathProblem::Add(numbers) => numbers.iter().sum(),
+            MathProblem::Mul(numbers) => numbers.iter().product(),
         }
     }
 }
 
-fn parse_math_problems(input: &str) -> Vec<MathProblem> {
+fn parse_math_problems_p1(input: &str) -> Vec<MathProblem> {
     // Convert input into a row major matrix of numbers, where numbers are separated by space.
     let lines: Vec<Vec<&str>> = input
         .lines()
         .map(|line| line.split_whitespace().collect::<Vec<_>>())
         .collect::<Vec<_>>();
-
-    eprintln!("{:?}", lines);
 
     // Count the number of columns, and verify it is consistent across rows.
     let col_count = lines[0].len();
@@ -68,16 +60,15 @@ fn parse_math_problems(input: &str) -> Vec<MathProblem> {
     let mut problems: Vec<MathProblem> = Vec::new();
 
     for j in 0..col_count {
-        problems.push(MathProblem {
-            numbers: lines[0..(lines.len() - 1)]
-                .iter()
-                .map(|line| line[j].parse().unwrap())
-                .collect::<Vec<_>>(),
-            operation: match lines[lines.len() - 1][j] {
-                "+" => MathOp::Add,
-                "*" => MathOp::Mul,
-                _ => panic!("unknown math op"),
-            },
+        let numbers = lines[0..(lines.len() - 1)]
+            .iter()
+            .map(|line| line[j].parse().unwrap())
+            .collect::<Vec<_>>();
+
+        problems.push(match lines[lines.len() - 1][j] {
+            "+" => MathProblem::Add(numbers),
+            "*" => MathProblem::Mul(numbers),
+            _ => panic!("unknown math op"),
         });
     }
 
@@ -85,7 +76,7 @@ fn parse_math_problems(input: &str) -> Vec<MathProblem> {
 }
 
 pub fn day_6_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    Ok(parse_math_problems(args.input)
+    Ok(parse_math_problems_p1(args.input)
         .iter()
         .map(|problem| problem.answer())
         .sum::<usize>()
@@ -103,16 +94,10 @@ mod tests {
     #[test]
     fn parse_problems_input() {
         assert_eq!(
-            parse_math_problems("19  130\n110 3\n+    *"),
+            parse_math_problems_p1("19  130\n110 3\n+    *"),
             vec![
-                MathProblem {
-                    numbers: vec![19, 110],
-                    operation: MathOp::Add
-                },
-                MathProblem {
-                    numbers: vec![130, 3],
-                    operation: MathOp::Mul
-                }
+                MathProblem::Add(vec![19, 110]),
+                MathProblem::Mul(vec![130, 3])
             ]
         );
     }
