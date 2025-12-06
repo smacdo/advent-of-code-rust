@@ -1,4 +1,5 @@
 use advent_of_code_data as aoc;
+use ube::intervals::parse_interval;
 use yuletide as yt;
 
 use linkme::distributed_slice;
@@ -25,21 +26,11 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
 };
 
 fn parse_ranges(input: &str) -> Vec<(usize, usize)> {
-    let mut ranges: Vec<(usize, usize)> = Vec::new();
-
-    for range in input.trim().split(",") {
-        let (first_id, last_id) = range.split_once("-").expect("int-int");
-        ranges.push((
-            first_id
-                .parse()
-                .unwrap_or_else(|_| panic!("invalid int for first id `{first_id}`")),
-            last_id
-                .parse()
-                .unwrap_or_else(|_| panic!("invalid int for last id `{last_id}`")),
-        ));
-    }
-
-    ranges
+    input
+        .trim()
+        .split(",")
+        .map(|range| parse_interval(range).unwrap())
+        .collect::<Vec<_>>()
 }
 
 fn is_valid_id_p1(id: usize) -> bool {
