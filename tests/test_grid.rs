@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use noclip::spatial::{Col, Cols, Grid, IteratorItemCountError, Point2, Row, Rows};
+use ube::spatial::{Col, Cols, Grid, IteratorItemCountError, Point2, Row, Rows};
 
 #[test]
 fn default_value_constructor() {

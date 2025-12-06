@@ -5,8 +5,8 @@ use advent_of_code_data as aoc;
 use yuletide as yt;
 
 use linkme::distributed_slice;
-use noclip::spatial::{Grid, Point2};
-use noclip::utils::pairwise_combinations;
+use ube::spatial::{Grid, Point2};
+use ube::utils::pairwise_combinations;
 
 use crate::SOLVERS;
 

@@ -12,7 +12,7 @@ static RE_CELL_FIND_INTS: OnceLock<Regex> = OnceLock::new();
 /// digit values are ignored.
 ///
 /// ```
-/// use noclip::utils::find_digits;
+/// use ube::utils::find_digits;
 ///
 /// assert_eq!(find_digits("01859"), vec![0, 1, 8, 5, 9]);
 /// assert_eq!(find_digits("0,1  8.5hi9"), vec![0, 1, 8, 5, 9]);
@@ -31,7 +31,7 @@ pub fn find_digits(text: &str) -> Vec<u8> {
 /// values.
 ///
 /// ```
-/// use noclip::utils::find_ints;
+/// use ube::utils::find_ints;
 ///
 /// assert_eq!(find_ints("123   -57 \n  2321"), vec![123, -57, 2321]);
 /// assert_eq!(find_ints("123, -57xxx2321"), vec![123, -57, 2321]);
@@ -49,7 +49,7 @@ pub fn find_ints(text: &str) -> Vec<i64> {
 /// out repetition.
 ///
 /// ```
-/// use noclip::utils::pairwise_combinations;
+/// use ube::utils::pairwise_combinations;
 ///
 /// // (abc) -> [(ab), (ac), (bc)]
 /// assert_eq!(

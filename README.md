@@ -37,5 +37,5 @@ See the [advent-of-code-data](./crates/advent-of-code-data) crate documentation 
 This project contains multiple crates:
 
 - **[advent-of-code-data](./crates/advent-of-code-data)**: Library for fetching puzzle inputs and submitting answers to AoC
-- **[noclip](./crates/noclip)**: Data structures, algorithms, and utilities
+- **[ube](./crates/ube)**: Data structures, algorithms, and utilities
 - **[yuletide](./crates/yuletide)**: Framework for writing and managing AoC solutions 

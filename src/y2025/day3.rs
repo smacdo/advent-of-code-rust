@@ -1,5 +1,5 @@
 use advent_of_code_data as aoc;
-use noclip::utils::find_digits;
+use ube::utils::find_digits;
 use yuletide as yt;
 
 use linkme::distributed_slice;

@@ -1,5 +1,5 @@
 [package]
-name = "noclip"
+name = "ube"
 version = "0.0.1"
 authors = ["Scott MacDonald"]
 description = "A collection of data structures, algorithms and utilities that can be used for an assortment of purposes"

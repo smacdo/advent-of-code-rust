@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use advent_of_code_data as aoc;
-use noclip::spatial::{Direction8, Grid, Point2};
+use ube::spatial::{Direction8, Grid, Point2};
 use yuletide as yt;
 
 use linkme::distributed_slice;

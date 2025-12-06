@@ -4,7 +4,7 @@ use advent_of_code_data as aoc;
 use yuletide as yt;
 
 use linkme::distributed_slice;
-use noclip::utils::find_ints;
+use ube::utils::find_ints;
 
 use crate::SOLVERS;
 
