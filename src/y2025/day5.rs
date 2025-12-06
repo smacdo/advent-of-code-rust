@@ -34,23 +34,19 @@ struct Database {
 }
 
 fn parse_database(input: &str) -> Database {
-    let mut db = Database {
-        fresh_ranges: Vec::new(),
-        ingredients: Vec::new(),
-    };
-
     let (fresh_range_lines, ingredients_lines) = input.split_once("\n\n").unwrap();
 
-    for line in fresh_range_lines.lines() {
-        let (first, last) = parse_interval(line).unwrap();
-        db.fresh_ranges.push(first..=last);
+    Database {
+        fresh_ranges: fresh_range_lines
+            .lines()
+            .map(|line| parse_interval(line).unwrap())
+            .map(|(first, last)| first..=last)
+            .collect::<Vec<_>>(),
+        ingredients: ingredients_lines
+            .lines()
+            .map(|line| line.parse().expect("usize"))
+            .collect::<Vec<_>>(),
     }
-
-    for line in ingredients_lines.lines() {
-        db.ingredients.push(line.parse().expect("usize"));
-    }
-
-    db
 }
 
 pub fn day_5_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
@@ -75,7 +71,6 @@ pub fn day_5_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut sum: usize = 0;
 
     for r in ranges {
-        //eprintln!("{}-{}", r.start(), r.end());
         sum += r.end() - r.start() + 1;
     }
 
