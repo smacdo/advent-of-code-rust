@@ -4,6 +4,7 @@ use std::str::FromStr;
 use client::{Client, ClientError, WebClient};
 use data::CheckResult;
 
+pub mod aoc_service;
 pub mod cache;
 pub mod client;
 pub mod config;

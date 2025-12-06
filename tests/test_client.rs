@@ -1,11 +1,9 @@
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use advent_of_code_data::{
+    aoc_service::{ServiceConnector, ServiceError},
     cache::{PuzzleCache, PuzzleFsCache, SessionCache, SessionFsCache},
-    client::{
-        protocol::{ServiceConnector, ServiceError},
-        Client, ClientError, WebClient,
-    },
+    client::{Client, ClientError, WebClient},
     config::{Config, ConfigBuilder},
     data::{Answers, CheckResult, Session},
     Answer, Day, Part, Year,

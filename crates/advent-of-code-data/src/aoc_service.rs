@@ -4,8 +4,6 @@ use thiserror::Error;
 
 use crate::{Answer, Day, Part, Year};
 
-// TODO: Use "service" rather than protocol.
-
 #[derive(Debug, Error)]
 pub enum ServiceError {
     #[error("HTTP {}", .0)]

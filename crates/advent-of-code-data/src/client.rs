@@ -1,13 +1,10 @@
-pub mod protocol; // TODO: rename to service
-
 use chrono::{Datelike, Duration};
-use protocol::{AdventOfCodeService, ServiceConnector};
 use regex::Regex;
 use thiserror::Error;
 
 use crate::{
+    aoc_service::{AdventOfCodeService, ServiceConnector, ServiceError},
     cache::{CacheError, PuzzleCache, PuzzleFsCache, SessionCache, SessionFsCache},
-    client::protocol::ServiceError,
     config::{load_config, Config, ConfigError},
     data::{Answers, CheckResult, Puzzle},
     utils::get_puzzle_unlock_time,
