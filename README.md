@@ -39,3 +39,15 @@ This project contains multiple crates:
 - **[advent-of-code-data](./crates/advent-of-code-data)**: Library for fetching puzzle inputs and submitting answers to AoC
 - **[ube](./crates/ube)**: Data structures, algorithms, and utilities
 - **[yuletide](./crates/yuletide)**: Framework for writing and managing AoC solutions 
+
+## AI Disclaimer
+I do not use any AI to solve or write code for any Advent of Code puzzles in any way. Figuring those puzzles out and coding them up is a joy. I wouldn't want to rob myself of the fun! The only time I use AI with the puzzle solvers is to perform refactorings, eg if I change how the `yuletide` registration API works.
+
+I use Claude and other AI tools to help with the following non-puzzle bits:
+
+  - Writing/maintaining/modifying CLI scripts in `scripts/`.
+  - Writing _some_ of the unit tests and documentation for functions in `crates/`.
+  - Improving my writing prose after writing the technical details myself.
+  - Using Claude as a code reviewer to catch bugs or other inconsistencies.
+  
+In general, I use AI to provide the extra polish for my crates that I otherwise would not have time to do myself. The vast majority of the code I write is my own creation. I do not vibe code anything outside of simple CLI scripts.
