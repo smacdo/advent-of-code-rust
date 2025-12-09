@@ -17,6 +17,11 @@ pub struct Point2 {
 }
 
 impl Point2 {
+    pub const EAST: Point2 = Point2 { x: 1, y: 0 };
+    pub const NORTH: Point2 = Point2 { x: 0, y: -1 };
+    pub const WEST: Point2 = Point2 { x: -1, y: 0 };
+    pub const SOUTH: Point2 = Point2 { x: 0, y: 1 };
+
     /// Initialize a new point with the given `x` and `y` values.
     #[inline]
     pub fn new(x: isize, y: isize) -> Self {

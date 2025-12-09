@@ -19,6 +19,10 @@
 ### Grid
 - Add cols() and col(c) like the rows() and row(r) methods.
 
+### Point
+- Add tests for EAST/NORTH/WEST/SOUTH constants.
+- Convert zero(), one(), unit_x(), and unit_y() methods to be constants.
+
 # Bugs
 - No warning for overwriting same day
 - Should not fetch input before succesfully running examples
