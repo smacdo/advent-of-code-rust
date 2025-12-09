@@ -1,18 +1,23 @@
-# CLI Improvements
+# Improvements
+## CLI
 - Print friendly error on how to look up the session id value when it is not
   detected or incorrect.
 - Print friendly instructions to create a config file or env vars when the session
   id or passphrase isn't set.
 - CLI command that prints out the configuration path
 
-# SDK Improvements
+## Advent of Code SDK
 - Logging all the things
 - Reject submissions for future dates automatically unless forced
 
-# Runner Improvements
+## Runner
 - Use solver attribute for registration #[PuzzleSolver(day=,year=,part=)]
 - Use example attribute #[Example(part_1="",answer=)]
 - Support a "universal" solver fn (eg, both parts in one function)
+
+## Ube
+### Grid
+- Add cols() and col(c) like the rows() and row(r) methods.
 
 # Bugs
 - No warning for overwriting same day
