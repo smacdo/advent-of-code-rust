@@ -83,13 +83,16 @@ where
     }
 
     /// Merge the sets containing the elements `a` and `b` into a single set.
-    pub fn union(&mut self, a: &T, b: &T) -> SetId {
+    ///
+    /// This method returns the root of the combined set, or `None` if the two elements are already
+    /// in the same set.
+    pub fn union(&mut self, a: &T, b: &T) -> Option<SetId> {
         let ai = self.find(a).value();
         let bi = self.find(b).value();
 
         // Skip the union operation if a and b belong to the same set.
         if ai == bi {
-            return SetId(ai);
+            return None;
         }
 
         // Swap a and b if needed to make sure `a` has the fewest nodes since
@@ -104,7 +107,7 @@ where
         self.nodes[bi].parent = ai;
         self.nodes[ai].size += self.nodes[bi].size;
 
-        SetId(ai)
+        Some(SetId(ai))
     }
 
     /// Check if element `b` and `b` belong to the same set.
