@@ -22,6 +22,17 @@
 ### Point
 - Add tests for EAST/NORTH/WEST/SOUTH constants.
 - Convert zero(), one(), unit_x(), and unit_y() methods to be constants.
+- Complete implementation for Point3.
+
+### Misc
+- Finish counter module. 
+  - Documentation.
+  - Tests
+- Finish union find module.
+  - Documentation.
+  - Tests
+- Replace `unwrap()` and `expect(...)` with `Option<T>` and `Result<T,E>` for union_find.rs.
+- Improve counter and union find implementations with fast hashing.
 
 # Bugs
 - No warning for overwriting same day
