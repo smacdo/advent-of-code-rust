@@ -70,16 +70,19 @@ where
     }
 
     /// Determines the root of the set containing element `v`.
-    pub fn find(&self, v: &T) -> SetId {
-        let mut index = self.index.get(v).expect("value must exist in disjoint set");
-        let mut node = &self.nodes[*index];
+    pub fn find(&self, v: &T) -> Option<SetId> {
+        if let Some(mut index) = self.index.get(v) {
+            let mut node = &self.nodes[*index];
 
-        while node.parent != *index {
-            index = &node.parent;
-            node = &self.nodes[*index]
+            while node.parent != *index {
+                index = &node.parent;
+                node = &self.nodes[*index]
+            }
+
+            Some(SetId(*index))
+        } else {
+            None
         }
-
-        SetId(*index)
     }
 
     /// Merge the sets containing the elements `a` and `b` into a single set.
@@ -87,8 +90,8 @@ where
     /// This method returns the root of the combined set, or `None` if the two elements are already
     /// in the same set.
     pub fn union(&mut self, a: &T, b: &T) -> Option<SetId> {
-        let ai = self.find(a).value();
-        let bi = self.find(b).value();
+        let ai = self.find(a).unwrap().value();
+        let bi = self.find(b).unwrap().value();
 
         // Skip the union operation if a and b belong to the same set.
         if ai == bi {
@@ -126,7 +129,7 @@ where
         let mut c: Counter<SetId> = Counter::new();
 
         for v in self.index.keys() {
-            c.add(self.find(v));
+            c.add(self.find(v).unwrap());
         }
 
         c.most_common()
@@ -190,8 +193,16 @@ mod tests {
 
         assert_ne!(id_1, id_2);
 
-        assert_eq!(s.find(&Point3 { x: 1, y: 2, z: 3 }), id_1);
-        assert_eq!(s.find(&Point3 { x: 5, y: 8, z: 4 }), id_2);
+        assert_eq!(s.find(&Point3 { x: 1, y: 2, z: 3 }), Some(id_1));
+        assert_eq!(s.find(&Point3 { x: 5, y: 8, z: 4 }), Some(id_2));
+    }
+
+    #[test]
+    fn find_returns_none_if_not_exists() {
+        let mut s: UnionFind<Point3> = Default::default();
+        s.add(Point3 { x: 1, y: 2, z: 3 });
+
+        assert!(s.find(&Point3 { x: 1, y: 2, z: -3 }).is_none());
     }
 
     #[test]
@@ -255,14 +266,14 @@ mod tests {
         assert_ne!(s.find(&b), s.find(&c));
 
         // First iteration - union a & b, with c being its own set.
-        let id_u = s.union(&a, &b).unwrap();
+        let id_u = s.union(&a, &b);
 
         assert_eq!(s.find(&a), id_u);
         assert_eq!(s.find(&b), id_u);
         assert_ne!(s.find(&a), s.find(&c));
 
         // Second iteration - union a & c. All points will be in the same set.
-        let id_u = s.union(&a, &c).unwrap();
+        let id_u = s.union(&a, &c);
 
         assert_eq!(s.find(&a), id_u);
         assert_eq!(s.find(&b), id_u);
