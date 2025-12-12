@@ -67,7 +67,7 @@ fn blink(stones: &HashMap<i64, usize>) -> HashMap<i64, usize> {
 fn parse_input(input: &str) -> HashMap<i64, usize> {
     let mut new_stones: HashMap<i64, usize> = HashMap::new();
 
-    for stone in utils::find_ints(input) {
+    for stone in utils::find_ints(input).unwrap() {
         *new_stones.entry(stone).or_default() += 1;
     }
 

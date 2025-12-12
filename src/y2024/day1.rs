@@ -33,7 +33,7 @@ pub fn day_1_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut right = Vec::<i64>::new();
 
     for line in args.input.lines() {
-        let numbers = find_ints(line);
+        let numbers = find_ints(line).unwrap();
 
         left.push(numbers[0]);
         right.push(numbers[1]);
@@ -60,7 +60,7 @@ pub fn day_1_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut right = Vec::<i64>::new();
 
     for line in args.input.lines() {
-        let numbers = find_ints(line);
+        let numbers = find_ints(line).unwrap();
 
         left.push(numbers[0]);
         right.push(numbers[1]);

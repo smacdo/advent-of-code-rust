@@ -1,4 +1,5 @@
 use advent_of_code_data as aoc;
+use ube::utils::find_ints;
 use yuletide as yt;
 
 use linkme::distributed_slice;
@@ -24,33 +25,40 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     },
 };
 
+#[derive(Debug, PartialEq)]
 struct Machine {
     lights: Vec<bool>,
     buttons: Vec<Vec<usize>>,
-    joltage: Vec<usize>,
-}
-
-/// `[...]`
-fn parse_lights(input: &str) -> Vec<bool> {
-    let input = input.trim();
-
-    input[1..(input.len() - 1)]
-        .chars()
-        .map(|c| match c {
-            '.' => false,
-            '#' => true,
-            c => panic!("unrecogonized char {c}"),
-        })
-        .collect::<Vec<_>>()
+    joltages: Vec<usize>,
 }
 
 fn parse_manual(input: &str) -> Vec<Machine> {
     // [.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}
-    for line in input.lines() {
-        let (lights_text, rest) = line.split_at(line.find('(').unwrap());
-        let (buttons_text, joltage_text) = rest.split_at(rest.find('{').unwrap());
-    }
-    todo!()
+    input
+        .lines()
+        .map(|line| {
+            let (lights_text, rest) = line.split_at(line.find('(').unwrap());
+            let (buttons_text, joltage_text) = rest.split_at(rest.find('{').unwrap());
+
+            let lights = lights_text
+                .chars()
+                .filter(|c| *c == '.' || *c == '#')
+                .map(|c| c == '#')
+                .collect::<Vec<_>>();
+            let buttons = buttons_text
+                .split('(')
+                .filter(|s| !s.is_empty())
+                .map(|chunk| find_ints::<usize>(chunk).unwrap())
+                .collect::<Vec<_>>();
+            let joltages = find_ints::<usize>(joltage_text).unwrap();
+
+            Machine {
+                lights,
+                buttons,
+                joltages,
+            }
+        })
+        .collect::<Vec<_>>()
 }
 
 pub fn day_10_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
@@ -66,7 +74,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_lights_str() {
-        assert_eq!(parse_lights("[.##.] "), vec![false, true, true, false]);
+    fn parse_input_examples() {
+        assert_eq!(
+            parse_manual("[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}\n[...#.] (0,2,3,4) (2,13) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}"),
+            vec![Machine {
+                lights: vec![false, true, true, false],
+                buttons: vec![
+                    vec![3],
+                    vec![1, 3],
+                    vec![2],
+                    vec![2, 3],
+                    vec![0, 2],
+                    vec![0, 1]
+                ],
+                joltages: vec![3, 5, 4, 7]
+            },Machine {
+                lights: vec![false, false, false, true, false],
+                buttons: vec![
+                    vec![0, 2, 3, 4],
+                    vec![2, 13],
+                    vec![0, 4],
+                    vec![0, 1, 2],
+                    vec![1, 2, 3, 4],
+                ],
+                joltages: vec![7, 5, 12, 7, 2]
+            }]
+
+            // [...#.] (0,2,3,4) (2,13) (0,4) (0,1,2) (1,2,3,4) {7,5,12,7,2}
+        );
     }
 }
