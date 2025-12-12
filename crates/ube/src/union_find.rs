@@ -255,14 +255,14 @@ mod tests {
         assert_ne!(s.find(&b), s.find(&c));
 
         // First iteration - union a & b, with c being its own set.
-        let id_u = s.union(&a, &b);
+        let id_u = s.union(&a, &b).unwrap();
 
         assert_eq!(s.find(&a), id_u);
         assert_eq!(s.find(&b), id_u);
         assert_ne!(s.find(&a), s.find(&c));
 
         // Second iteration - union a & c. All points will be in the same set.
-        let id_u = s.union(&a, &c);
+        let id_u = s.union(&a, &c).unwrap();
 
         assert_eq!(s.find(&a), id_u);
         assert_eq!(s.find(&b), id_u);
