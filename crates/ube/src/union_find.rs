@@ -279,4 +279,31 @@ mod tests {
         assert_eq!(s.find(&b), id_u);
         assert_eq!(s.find(&c), id_u);
     }
+
+    #[test]
+    fn union_returns_none_if_both_elements_in_same_set() {
+        let mut s: UnionFind<Point3> = Default::default();
+        let a = Point3 {
+            x: 162,
+            y: 817,
+            z: 812,
+        };
+        let b = Point3 {
+            x: 425,
+            y: 690,
+            z: 689,
+        };
+
+        // Union the two elements together.
+        s.add(a);
+        s.add(b);
+
+        let id_u = s.union(&a, &b);
+
+        assert_eq!(s.find(&a), id_u);
+        assert_eq!(s.find(&b), id_u);
+
+        // Both elements are in the same set now so calling should return `None`.
+        assert!(s.union(&a, &b).is_none());
+    }
 }
