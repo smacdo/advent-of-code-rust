@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::sync::OnceLock;
+use std::{str::FromStr, sync::OnceLock};
 
 static RE_CELL_FIND_INTS: OnceLock<Regex> = OnceLock::new();
 
@@ -36,12 +36,12 @@ pub fn find_digits(text: &str) -> Vec<u8> {
 /// assert_eq!(find_ints("123   -57 \n  2321"), vec![123, -57, 2321]);
 /// assert_eq!(find_ints("123, -57xxx2321"), vec![123, -57, 2321]);
 /// ```
-pub fn find_ints(text: &str) -> Vec<i64> {
+pub fn find_ints<F: FromStr>(text: &str) -> Result<Vec<F>, <F as FromStr>::Err> {
     let re = RE_CELL_FIND_INTS
         .get_or_init(|| Regex::new(r"-?[0-9]+").expect("find_ints regex failed to compile"));
 
     re.find_iter(text)
-        .map(|m| str::parse::<i64>(m.as_str()).unwrap())
+        .map(|m| str::parse::<F>(m.as_str()))
         .collect()
 }
 
@@ -103,11 +103,11 @@ mod tests {
 
     #[test]
     fn find_ints_in_string() {
-        assert_eq!(find_ints(""), Vec::<i64>::new());
-        assert_eq!(find_ints("5"), vec![5]);
-        assert_eq!(find_ints("-51 19"), vec![-51, 19]);
+        assert_eq!(find_ints::<i64>("").unwrap(), Vec::<i64>::new());
+        assert_eq!(find_ints::<u32>("5").unwrap(), vec![5]);
+        assert_eq!(find_ints::<i64>("-51 19").unwrap(), vec![-51, 19]);
         assert_eq!(
-            find_ints("-51 19  513123 -9123 +35 zc 5x23"),
+            find_ints::<isize>("-51 19  513123 -9123 +35 zc 5x23").unwrap(),
             vec![-51, 19, 513123, -9123, 35, 5, 23]
         );
     }

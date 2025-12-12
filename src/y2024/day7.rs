@@ -88,7 +88,7 @@ fn parse_input(input: &str) -> Vec<CalibrationEquation> {
         .lines()
         .map(|line| {
             let (test_value_str, numbers_str) = line.split_once(':').unwrap();
-            let numbers = find_ints(numbers_str);
+            let numbers = find_ints(numbers_str).unwrap();
             let operators: Vec<Operator> =
                 std::iter::repeat_n(Operator::Add, numbers.len() - 1).collect();
 

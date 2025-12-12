@@ -61,7 +61,7 @@ pub fn day_2_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut safe_reports_count = 0;
 
     for report in args.input.lines() {
-        let levels = utils::find_ints(report);
+        let levels = utils::find_ints(report).unwrap();
 
         if check_is_safe(&levels) {
             safe_reports_count += 1
@@ -75,7 +75,7 @@ pub fn day_2_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let mut safe_reports_count = 0;
 
     for report in args.input.lines() {
-        let levels = utils::find_ints(report);
+        let levels = utils::find_ints(report).unwrap();
 
         if check_is_safe(&levels) {
             safe_reports_count += 1
