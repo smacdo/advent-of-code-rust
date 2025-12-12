@@ -37,6 +37,10 @@ where
 
         *count
     }
+
+    pub fn count(&self, v: &T) -> usize {
+        *self.counters.get(v).unwrap_or(&0)
+    }
 }
 
 impl<T> Default for Counter<T> {
@@ -50,5 +54,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn name_of_first_test_function() {}
+    fn count_elements() {
+        let mut c: Counter<char> = Default::default();
+        assert_eq!(c.count(&'a'), 0);
+        assert_eq!(c.count(&'b'), 0);
+
+        c.add('a');
+        assert_eq!(c.count(&'a'), 1);
+        assert_eq!(c.count(&'b'), 0);
+
+        c.add('a');
+        assert_eq!(c.count(&'a'), 2);
+        assert_eq!(c.count(&'b'), 0);
+    }
 }
