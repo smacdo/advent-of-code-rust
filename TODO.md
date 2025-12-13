@@ -24,6 +24,12 @@
 - Convert zero(), one(), unit_x(), and unit_y() methods to be constants.
 - Complete implementation for Point3.
 
+### Graph
+- Move to standalone module.
+- Support non-string keys.
+- Support storing additional data in nodes.
+- Add tests, documentation.
+
 ### Misc
 - Finish counter module. 
   - Documentation.

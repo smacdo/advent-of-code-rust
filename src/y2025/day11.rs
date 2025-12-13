@@ -1,9 +1,12 @@
 use advent_of_code_data as aoc;
+use ube::graph::{is_acyclic, Graph};
 use yuletide as yt;
 
 use linkme::distributed_slice;
 
 use crate::SOLVERS;
+
+const EXAMPLE_INPUT: &str = "aaa: you hhh\n you: bbb ccc\n bbb: ddd eee\n ccc: ddd eee fff\n ddd: ggg\n eee: out\n fff: out\n ggg: out\n hhh: ccc fff iii\n iii: out";
 
 #[distributed_slice(SOLVERS)]
 static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
@@ -11,7 +14,7 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     part_one: yt::SolverPart {
         func: day_11_1,
         examples: &[yt::Example {
-            input: "aaa: you hhh\n you: bbb ccc\n bbb: ddd eee\n ccc: ddd eee fff\n ddd: ggg\n eee: out\n fff: out\n ggg: out\n hhh: ccc fff iii\n iii: out",
+            input: EXAMPLE_INPUT,
             expected: aoc::Answer::Int(0),
         }],
     },
@@ -24,29 +27,30 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     },
 };
 
-#[derive(Debug, PartialEq)]
-struct Device {
-    name: String,
-    outputs: Vec<String>,
-}
-
-fn parse_device_outputs(input: &str) -> Vec<Device> {
-    input
+fn parse_device_outputs(input: &str) -> Graph {
+    let elements = input
         .lines()
         .map(|line| {
             let (name_text, outputs_text) = line.split_once(':').unwrap();
-            Device {
-                name: name_text.trim().to_string(),
-                outputs: outputs_text
-                    .split_whitespace()
-                    .map(str::to_string)
-                    .collect::<Vec<_>>(),
-            }
+            (
+                name_text.trim(),
+                outputs_text.split_whitespace().collect::<Vec<_>>(),
+            )
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    // TODO: can this be moved into the graph module? maybe as a From<(&'str, Vec<'&str>)>?
+    Graph::from_iter(
+        elements
+            .iter()
+            .map(|(name, neighbors)| (*name, neighbors.as_slice())),
+    )
 }
 
 pub fn day_11_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let device_graph = parse_device_outputs(args.input);
+    assert!(is_acyclic(&device_graph));
+
     Err(yt::SolverError::NotFinished)
 }
 
@@ -60,22 +64,23 @@ mod tests {
 
     #[test]
     fn parse_input() {
+        let mut g = Graph::new();
+
+        g.add_node_with_neighbors("you", &["bbb", "ccc"]);
+        g.add_node_with_neighbors("bbb", &["ddd", "eee"]);
+        g.add_node_with_neighbors("ccc", &["ddd", "eee", "fff"]);
+
         assert_eq!(
             parse_device_outputs("you: bbb ccc\nbbb: ddd eee\nccc: ddd eee fff"),
-            vec![
-                Device {
-                    name: "you".to_string(),
-                    outputs: vec!["bbb".to_string(), "ccc".to_string()]
-                },
-                Device {
-                    name: "bbb".to_string(),
-                    outputs: vec!["ddd".to_string(), "eee".to_string()]
-                },
-                Device {
-                    name: "ccc".to_string(),
-                    outputs: vec!["ddd".to_string(), "eee".to_string(), "fff".to_string()]
-                },
-            ]
+            g
         );
     }
+
+    /*
+    #[test]
+    fn example_has_no_backflow() {
+        let devices_list = DeviceList::new(parse_device_outputs(EXAMPLE_INPUT));
+        assert!(!check_back_flow(&devices_list));
+    }
+    */
 }

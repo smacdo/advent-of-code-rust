@@ -1,6 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 pub mod counter;
+pub mod graph;
 pub mod intervals;
 pub mod spatial;
 pub mod union_find;
