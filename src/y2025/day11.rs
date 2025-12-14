@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use advent_of_code_data as aoc;
-use ube::graph::{is_acyclic, Graph};
+use ube::graph::{is_acyclic, Graph, GraphBuilder, NodeBuilder, NodeKey};
 use yuletide as yt;
 
 use linkme::distributed_slice;
@@ -27,28 +29,27 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     },
 };
 
-fn parse_device_outputs(input: &str) -> Graph {
-    let elements = input
-        .lines()
-        .map(|line| {
-            let (name_text, outputs_text) = line.split_once(':').unwrap();
-            (
-                name_text.trim(),
-                outputs_text.split_whitespace().collect::<Vec<_>>(),
-            )
-        })
-        .collect::<Vec<_>>();
+fn parse_device_outputs(input: &str) -> (Graph, HashMap<String, NodeKey>) {
+    let mut g_builder = GraphBuilder::new();
 
-    // TODO: can this be moved into the graph module? maybe as a From<(&'str, Vec<'&str>)>?
-    Graph::from_iter(
-        elements
-            .iter()
-            .map(|(name, neighbors)| (*name, neighbors.as_slice())),
-    )
+    input.lines().for_each(|line| {
+        let (name_text, outputs_text) = line.split_once(':').unwrap();
+
+        let mut n_builder = NodeBuilder::new();
+        n_builder.set_name(name_text);
+
+        for neighbor_name in outputs_text.split_whitespace() {
+            n_builder.add_edge(neighbor_name);
+        }
+
+        g_builder.add_node(n_builder);
+    });
+
+    g_builder.build()
 }
 
 pub fn day_11_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    let device_graph = parse_device_outputs(args.input);
+    let (device_graph, _name_to_node) = parse_device_outputs(args.input);
     assert!(is_acyclic(&device_graph));
 
     Err(yt::SolverError::NotFinished)
@@ -64,11 +65,19 @@ mod tests {
 
     #[test]
     fn parse_input() {
-        let mut g = Graph::new();
-
-        g.add_node_with_neighbors("you", &["bbb", "ccc"]);
-        g.add_node_with_neighbors("bbb", &["ddd", "eee"]);
-        g.add_node_with_neighbors("ccc", &["ddd", "eee", "fff"]);
+        let g = GraphBuilder::new()
+            .with_node(|n| n.with_name("you").with_edge("bbb").with_edge("ccc"))
+            .with_node(|n| n.with_name("bbb").with_edge("ddd").with_edge("eee"))
+            .with_node(|n| {
+                n.with_name("ccc")
+                    .with_edge("ddd")
+                    .with_edge("eee")
+                    .with_edge("fff")
+            })
+            .with_node(|n| n.with_name("ddd"))
+            .with_node(|n| n.with_name("eee"))
+            .with_node(|n| n.with_name("fff"))
+            .build();
 
         assert_eq!(
             parse_device_outputs("you: bbb ccc\nbbb: ddd eee\nccc: ddd eee fff"),
@@ -76,11 +85,9 @@ mod tests {
         );
     }
 
-    /*
     #[test]
     fn example_has_no_backflow() {
-        let devices_list = DeviceList::new(parse_device_outputs(EXAMPLE_INPUT));
-        assert!(!check_back_flow(&devices_list));
+        let (device_graph, _name_to_node) = parse_device_outputs(EXAMPLE_INPUT);
+        assert!(is_acyclic(&device_graph));
     }
-    */
 }

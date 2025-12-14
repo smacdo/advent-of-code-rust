@@ -29,6 +29,8 @@
 - Support non-string keys.
 - Support storing additional data in nodes.
 - Add tests, documentation.
+- Disallow $\d+ prefixed node names as they are reserved by the system.
+- Optimize the builder by reducing hte number of string copies that are happening.
 
 ### Misc
 - Finish counter module. 
