@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use slotmap::{SecondaryMap, SlotMap};
 
 #[derive(Debug, PartialEq)]
-struct Node {
+pub struct Node {
     id: usize,
     edges: Vec<NodeKey>,
 }
@@ -14,6 +14,10 @@ impl Node {
             id,
             edges: Default::default(),
         }
+    }
+
+    pub fn edges(&self) -> EdgeIter {
+        EdgeIter::new(&self.edges)
     }
 }
 
@@ -32,6 +36,18 @@ impl Graph {
             nodes: Default::default(),
             node_to_name: Default::default(),
             _next_id: 1,
+        }
+    }
+
+    pub fn node(&self, nk: NodeKey) -> &Node {
+        &self.nodes[nk]
+    }
+
+    pub fn find_node(&self, nk: NodeKey) -> Option<&Node> {
+        if self.nodes.contains_key(nk) {
+            Some(&self.nodes[nk])
+        } else {
+            None
         }
     }
 }
@@ -97,6 +113,32 @@ impl std::fmt::Display for Graph {
         }
 
         writeln!(f, "}}")
+    }
+}
+
+pub struct EdgeIter<'a> {
+    edges: &'a Vec<NodeKey>,
+    next_i: usize,
+}
+
+impl<'a> EdgeIter<'a> {
+    pub fn new(edges: &'a Vec<NodeKey>) -> Self {
+        Self { edges, next_i: 0 }
+    }
+}
+
+impl Iterator for EdgeIter<'_> {
+    type Item = NodeKey;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_i < self.edges.len() {
+            let nk = self.edges[self.next_i];
+            self.next_i += 1;
+
+            Some(nk)
+        } else {
+            None
+        }
     }
 }
 
