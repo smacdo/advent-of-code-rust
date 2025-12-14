@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, VecDeque};
 
 use slotmap::{SecondaryMap, SlotMap};
 
@@ -96,7 +96,7 @@ impl std::fmt::Display for Graph {
 
             write!(f, "\t\"{node_name}\": [")?;
 
-            for (edge_index, edge_nk) in edges.into_iter().enumerate() {
+            for (edge_index, edge_nk) in edges.iter().enumerate() {
                 write!(
                     f,
                     "\"{}{}\"",
@@ -321,4 +321,49 @@ fn is_acyclic_dfs(
 
     statuses[nk] = VisitStatus::Finished;
     true
+}
+
+pub struct VisitorNodeQueue<'a> {
+    queue: &'a mut VecDeque<NodeKey>,
+}
+
+impl<'a> VisitorNodeQueue<'a> {
+    pub fn new(queue: &'a mut VecDeque<NodeKey>) -> Self {
+        Self { queue }
+    }
+
+    pub fn add(&mut self, nk: NodeKey) {
+        self.queue.push_back(nk);
+    }
+}
+
+pub fn bfs<F>(g: &Graph, start: NodeKey, mut f: F)
+where
+    F: FnMut(&Graph, NodeKey, VisitorNodeQueue) -> bool,
+{
+    // TODO: Should the bfs function be more like fold where it takes mutable state and returns?
+    // TODO: Wrap the VecDeque with a simplified, restricted interface.
+    // TODO: Check for cycles and return an Err if it is one. (not an assert).
+    assert!(is_acyclic(g));
+
+    let mut to_visit = VecDeque::new();
+    to_visit.push_back(start);
+
+    while !to_visit.is_empty() {
+        let visit_count = to_visit.len();
+
+        for _ in 0..visit_count {
+            let nk = to_visit.pop_front().unwrap();
+
+            if !f(
+                g,
+                nk,
+                VisitorNodeQueue {
+                    queue: &mut to_visit,
+                },
+            ) {
+                break;
+            }
+        }
+    }
 }

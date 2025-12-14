@@ -31,6 +31,7 @@
 - Add tests, documentation.
 - Disallow $\d+ prefixed node names as they are reserved by the system.
 - Optimize the builder by reducing hte number of string copies that are happening.
+- Split graph module into submodules (graph, graph_builder, algorithms)
 
 ### Misc
 - Finish counter module. 

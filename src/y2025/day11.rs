@@ -1,7 +1,7 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 use advent_of_code_data as aoc;
-use ube::graph::{self, is_acyclic, Graph, GraphBuilder, NodeBuilder, NodeKey};
+use ube::graph::{bfs, Graph, GraphBuilder, NodeBuilder, NodeKey};
 use yuletide as yt;
 
 use linkme::distributed_slice;
@@ -48,36 +48,25 @@ fn parse_device_outputs(input: &str) -> (Graph, HashMap<String, NodeKey>) {
     g_builder.build()
 }
 
-pub fn count_paths(g: &Graph, start: NodeKey, end: NodeKey) -> usize {
-    let mut goal_count = 0;
-
-    let mut to_visit = VecDeque::new();
-    to_visit.push_back(start);
-
-    while !to_visit.is_empty() {
-        let visit_count = to_visit.len();
-
-        for _ in 0..visit_count {
-            let nk = to_visit.pop_front().unwrap();
-
-            if nk == end {
-                goal_count += 1;
-            } else {
-                for w_nk in g.node(nk).edges() {
-                    to_visit.push_back(w_nk);
-                }
-            }
-        }
-    }
-
-    goal_count
-}
-
 pub fn day_11_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     let (device_graph, name_to_node) = parse_device_outputs(args.input);
-    assert!(is_acyclic(&device_graph));
 
-    Ok(count_paths(&device_graph, name_to_node["you"], name_to_node["out"]).into())
+    let goal_nk = name_to_node["out"];
+    let mut goal_count: usize = 0;
+
+    bfs(&device_graph, name_to_node["you"], |g, nk, mut to_visit| {
+        if nk == goal_nk {
+            goal_count += 1;
+        } else {
+            for w_nk in g.node(nk).edges() {
+                to_visit.add(w_nk);
+            }
+        }
+
+        true
+    });
+
+    Ok(goal_count.into())
 }
 
 pub fn day_11_2(_args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
@@ -108,11 +97,5 @@ mod tests {
             parse_device_outputs("you: bbb ccc\nbbb: ddd eee\nccc: ddd eee fff"),
             g
         );
-    }
-
-    #[test]
-    fn example_has_no_backflow() {
-        let (device_graph, _name_to_node) = parse_device_outputs(EXAMPLE_INPUT);
-        assert!(is_acyclic(&device_graph));
     }
 }
