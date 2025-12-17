@@ -342,7 +342,6 @@ where
     F: FnMut(&Graph, NodeKey, VisitorNodeQueue) -> bool,
 {
     // TODO: Should the bfs function be more like fold where it takes mutable state and returns?
-    // TODO: Wrap the VecDeque with a simplified, restricted interface.
     // TODO: Check for cycles and return an Err if it is one. (not an assert).
     assert!(is_acyclic(g));
 
