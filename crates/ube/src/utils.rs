@@ -33,8 +33,8 @@ pub fn find_digits(text: &str) -> Vec<u8> {
 /// ```
 /// use ube::utils::find_ints;
 ///
-/// assert_eq!(find_ints("123   -57 \n  2321"), vec![123, -57, 2321]);
-/// assert_eq!(find_ints("123, -57xxx2321"), vec![123, -57, 2321]);
+/// assert_eq!(find_ints("123   -57 \n  2321"), Ok(vec![123, -57, 2321]));
+/// assert_eq!(find_ints("123, -57xxx2321"), Ok(vec![123, -57, 2321]));
 /// ```
 pub fn find_ints<F: FromStr>(text: &str) -> Result<Vec<F>, <F as FromStr>::Err> {
     let re = RE_CELL_FIND_INTS
