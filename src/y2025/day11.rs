@@ -8,7 +8,8 @@ use linkme::distributed_slice;
 
 use crate::SOLVERS;
 
-const EXAMPLE_INPUT: &str = "aaa: you hhh\n you: bbb ccc\n bbb: ddd eee\n ccc: ddd eee fff\n ddd: ggg\n eee: out\n fff: out\n ggg: out\n hhh: ccc fff iii\n iii: out";
+const EXAMPLE_INPUT_1: &str = "aaa: you hhh\n you: bbb ccc\n bbb: ddd eee\n ccc: ddd eee fff\n ddd: ggg\n eee: out\n fff: out\n ggg: out\n hhh: ccc fff iii\n iii: out";
+const EXAMPLE_INPUT_2: &str = "svr: aaa bbb\naaa: fft\nfft: ccc\nbbb: tty\ntty: ccc\nccc: ddd eee\nddd: hub\nhub: fff\neee: dac\ndac: fff\nfff: ggg hhh\nggg: out\nhhh: out";
 
 #[distributed_slice(SOLVERS)]
 static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
@@ -16,16 +17,16 @@ static SOLVER: yt::SolverAutoRegister = yt::SolverAutoRegister {
     part_one: yt::SolverPart {
         func: day_11_1,
         examples: &[yt::Example {
-            input: EXAMPLE_INPUT,
+            input: EXAMPLE_INPUT_1,
             expected: aoc::Answer::Int(0),
         }],
     },
     part_two: yt::SolverPart {
         func: day_11_2,
-        examples: &[/*yt::Example {
-            input: "",
-            expected: aoc::Answer::Int(0),
-        }*/],
+        examples: &[yt::Example {
+            input: EXAMPLE_INPUT_2,
+            expected: aoc::Answer::Int(2),
+        }],
     },
 };
 
@@ -46,6 +47,53 @@ fn parse_device_outputs(input: &str) -> (Graph, HashMap<String, NodeKey>) {
     });
 
     g_builder.build()
+}
+
+struct NodeKeys {
+    target: NodeKey,
+    dac: NodeKey,
+    fft: NodeKey,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+struct CacheKey {
+    node: NodeKey,
+    dac: bool,
+    fft: bool,
+}
+
+fn count_paths_recursive(
+    cache: &mut HashMap<CacheKey, usize>,
+    device_graph: &Graph,
+    node: NodeKey,
+    keys: &NodeKeys,
+    dac: bool,
+    fft: bool,
+) -> usize {
+    let mut cache_key = CacheKey { node, dac, fft };
+
+    if cache.contains_key(&cache_key) {
+        return cache[&cache_key];
+    }
+
+    if node == keys.target {
+        return if dac && fft { 1 } else { 0 };
+    }
+
+    if node == keys.dac {
+        cache_key.dac = true;
+    } else if node == keys.fft {
+        cache_key.fft = true;
+    }
+
+    let count = device_graph
+        .node(node)
+        .edges()
+        .map(|w| count_paths_recursive(cache, device_graph, w, keys, cache_key.dac, cache_key.fft))
+        .sum();
+
+    cache.insert(cache_key, count);
+    count
 }
 
 pub fn day_11_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
@@ -69,8 +117,23 @@ pub fn day_11_1(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
     Ok(goal_count.into())
 }
 
-pub fn day_11_2(_args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
-    Err(yt::SolverError::NotFinished)
+pub fn day_11_2(args: &yt::SolverArgs) -> yt::Result<aoc::Answer> {
+    let (device_graph, name_to_node) = parse_device_outputs(args.input);
+    let mut cache: HashMap<CacheKey, usize> = Default::default();
+
+    Ok(count_paths_recursive(
+        &mut cache,
+        &device_graph,
+        name_to_node["svr"],
+        &NodeKeys {
+            target: name_to_node["out"],
+            dac: name_to_node["dac"],
+            fft: name_to_node["fft"],
+        },
+        false,
+        false,
+    )
+    .into())
 }
 
 #[cfg(test)]
